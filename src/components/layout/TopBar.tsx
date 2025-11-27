@@ -18,7 +18,6 @@ import {
   Loader2,
   Terminal,
   HelpCircle,
-  Workflow,
   LogOut,
   User,
 } from 'lucide-react';
@@ -88,9 +87,7 @@ export function TopBar() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center">
-            <Workflow size={18} className="text-white" />
-          </div>
+          <img src="/logo.svg" alt="Data Flow Canvas" className="w-8 h-8 rounded-lg" />
           <div>
             <h1 className="text-body font-semibold text-text-primary">
               Data Flow Canvas
