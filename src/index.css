@@ -1,0 +1,140 @@
+/**
+ * @author Lavelle Hatcher Jr
+ * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Palette */
+    --color-deep-navy: 26 26 46;
+    --color-electric-indigo: 99 102 241;
+    --color-soft-violet: 139 92 246;
+    --color-fresh-teal: 20 184 166;
+    --color-warm-coral: 244 63 94;
+    --color-golden-amber: 245 158 11;
+
+    /* Light Mode */
+    --color-bg-primary: 255 255 255;
+    --color-bg-secondary: 248 250 252;
+    --color-bg-tertiary: 241 245 249;
+    --color-text-primary: 15 23 42;
+    --color-text-secondary: 71 85 105;
+    --color-text-muted: 148 163 184;
+    --color-border-default: 226 232 240;
+    --color-border-emphasis: 203 213 225;
+  }
+
+  .dark {
+    --color-bg-primary: 15 15 26;
+    --color-bg-secondary: 26 26 46;
+    --color-bg-tertiary: 37 37 68;
+    --color-text-primary: 248 250 252;
+    --color-text-secondary: 203 213 225;
+    --color-text-muted: 100 116 139;
+    --color-border-default: 51 65 85;
+    --color-border-emphasis: 71 85 105;
+  }
+
+  * {
+    @apply border-border-default;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .shadow-glow {
+    box-shadow: 0 0 20px rgb(var(--color-electric-indigo) / 0.3);
+  }
+
+  .shadow-glow-teal {
+    box-shadow: 0 0 20px rgb(var(--color-fresh-teal) / 0.3);
+  }
+
+  .shadow-glow-coral {
+    box-shadow: 0 0 20px rgb(var(--color-warm-coral) / 0.3);
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-electric-indigo to-soft-violet bg-clip-text text-transparent;
+  }
+
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  }
+}
+
+/* React Flow Customizations */
+.react-flow__node {
+  @apply !bg-transparent;
+}
+
+.react-flow__edge-path {
+  @apply stroke-fresh-teal;
+  stroke-width: 2;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dataFlow 2s linear infinite;
+}
+
+@keyframes dataFlow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Canvas Grid */
+.canvas-grid {
+  background-image: radial-gradient(circle, rgb(var(--color-border-default)) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg-secondary;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border-emphasis rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-text-muted;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  @apply outline-none ring-2 ring-electric-indigo ring-offset-2 ring-offset-bg-primary;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
