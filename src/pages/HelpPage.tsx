@@ -251,12 +251,12 @@ export default function HelpPage() {
           </nav>
 
           <div className="flex-1 md:flex-none" />
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center shadow-glow">
               <Workflow size={18} className="text-white" />
             </div>
             <span className="hidden sm:block font-semibold text-text-primary">Data Flow Canvas</span>
-          </div>
+          </Link>
         </div>
       </header>
 
