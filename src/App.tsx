@@ -13,6 +13,8 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const EditorPage = lazy(() => import('./pages/EditorPage'));
 const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage = lazy(() => import('./pages/TermsPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +48,8 @@ function App() {
               <Route path="/editor/:projectId" element={<EditorPage />} />
               <Route path="/projects" element={<ProjectsPage />} />
               <Route path="/help" element={<HelpPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
