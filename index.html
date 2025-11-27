@@ -1,0 +1,35 @@
+<!--
+  @author Lavelle Hatcher Jr
+  @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Data Flow Canvas - Canvas for Data Science. Build, execute, and share data transformation pipelines through an intuitive visual interface." />
+    <meta name="theme-color" content="#1a1a2e" />
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net blob:;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      connect-src 'self'
+        https://cdn.jsdelivr.net
+        https://*.supabase.co
+        wss://*.supabase.co
+        wss://signaling.yjs.dev
+        stun:stun.l.google.com:19302
+        stun:openrelay.metered.ca:80
+        ws://localhost:*;
+      img-src 'self' data: blob:;
+      worker-src 'self' blob:;
+    " />
+    <title>Data Flow Canvas - Visual Data Science Platform</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
