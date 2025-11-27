@@ -1150,15 +1150,33 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <a
-              href="#"
+            <Link
+              to="/help"
               className={cn(
                 'text-sm font-medium transition-colors hover:underline underline-offset-4',
                 isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
               )}
             >
               Documentation
-            </a>
+            </Link>
+            <Link
+              to="/terms"
+              className={cn(
+                'text-sm font-medium transition-colors hover:underline underline-offset-4',
+                isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
+              )}
+            >
+              Terms
+            </Link>
+            <Link
+              to="/privacy"
+              className={cn(
+                'text-sm font-medium transition-colors hover:underline underline-offset-4',
+                isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
+              )}
+            >
+              Privacy
+            </Link>
             <a
               href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas"
               target="_blank"
