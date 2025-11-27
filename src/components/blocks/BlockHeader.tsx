@@ -1,0 +1,195 @@
+/**
+ * @author Lavelle Hatcher Jr
+ * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
+ */
+
+import {
+  FileUp,
+  Database,
+  Filter,
+  Columns,
+  ArrowUpDown,
+  Group,
+  GitMerge,
+  Plus,
+  Eraser,
+  BarChart3,
+  TrendingUp,
+  Network,
+  PieChart,
+  Table,
+  Download,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  PenLine,
+  TextCursorInput,
+  Copy,
+  Shuffle,
+  ListFilter,
+  RotateCcw,
+  RotateCw,
+  Layers,
+  Scissors,
+  Combine,
+  GitBranch,
+  Minimize2,
+  AlertTriangle,
+  GitFork,
+  Activity,
+  FlaskConical,
+  Clock,
+  Award,
+  Repeat,
+  FileSearch,
+  Hash,
+  Grid3x3,
+  Scale,
+  Binary,
+  Grid2x2,
+  Music,
+  LayoutGrid,
+  AreaChart,
+  Circle,
+  ScatterChart,
+  Users,
+  Target,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import type { BlockType, BlockState } from '@/types';
+
+interface BlockHeaderProps {
+  type: BlockType;
+  label: string;
+  state: BlockState;
+  error?: string;
+}
+
+const icons: Record<string, LucideIcon> = {
+  FileUp,
+  Database,
+  Filter,
+  Columns,
+  ArrowUpDown,
+  Group,
+  GitMerge,
+  Plus,
+  Eraser,
+  BarChart3,
+  TrendingUp,
+  Network,
+  PieChart,
+  Table,
+  Download,
+  PenLine,
+  TextCursorInput,
+  Copy,
+  Shuffle,
+  ListFilter,
+  RotateCcw,
+  RotateCw,
+  Layers,
+  Scissors,
+  Combine,
+  GitBranch,
+  Minimize2,
+  AlertTriangle,
+  GitFork,
+  Activity,
+  FlaskConical,
+  Clock,
+  Award,
+  Repeat,
+  FileSearch,
+  Hash,
+  Grid3x3,
+  Scale,
+  Binary,
+  Grid2x2,
+  Music,
+  LayoutGrid,
+  AreaChart,
+  Circle,
+  ScatterChart,
+  Users,
+  Target,
+};
+
+const iconMap: Record<BlockType, string> = {
+  'load-data': 'FileUp',
+  'sample-data': 'Database',
+  'create-dataset': 'PenLine',
+  'filter-rows': 'Filter',
+  'select-columns': 'Columns',
+  'sort': 'ArrowUpDown',
+  'group-aggregate': 'Group',
+  'join': 'GitMerge',
+  'derive-column': 'Plus',
+  'handle-missing': 'Eraser',
+  'rename-columns': 'TextCursorInput',
+  'deduplicate': 'Copy',
+  'sample-rows': 'Shuffle',
+  'limit-rows': 'ListFilter',
+  'pivot': 'RotateCcw',
+  'unpivot': 'RotateCw',
+  'union': 'Layers',
+  'split-column': 'Scissors',
+  'merge-columns': 'Combine',
+  'conditional-column': 'GitBranch',
+  'statistics': 'BarChart3',
+  'regression': 'TrendingUp',
+  'clustering': 'Network',
+  'pca': 'Minimize2',
+  'outlier-detection': 'AlertTriangle',
+  'classification': 'GitFork',
+  'normality-test': 'Activity',
+  'hypothesis-testing': 'FlaskConical',
+  'time-series': 'Clock',
+  'feature-importance': 'Award',
+  'cross-validation': 'Repeat',
+  'data-profiling': 'FileSearch',
+  'value-counts': 'Hash',
+  'cross-tabulation': 'Grid3x3',
+  'scaling': 'Scale',
+  'encoding': 'Binary',
+  'ab-test': 'FlaskConical',
+  'cohort-analysis': 'Users',
+  'rfm-analysis': 'Target',
+  'chart': 'PieChart',
+  'table': 'Table',
+  'correlation-matrix': 'Grid2x2',
+  'violin-plot': 'Music',
+  'pair-plot': 'LayoutGrid',
+  'area-chart': 'AreaChart',
+  'stacked-chart': 'Layers',
+  'bubble-chart': 'Circle',
+  'qq-plot': 'ScatterChart',
+  'confusion-matrix': 'Grid3x3',
+  'roc-curve': 'TrendingUp',
+  'export': 'Download',
+};
+
+export function BlockHeader({ type, label, state, error }: BlockHeaderProps) {
+  const iconName = iconMap[type];
+  const IconComponent = icons[iconName] || Database;
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 border-b border-border-default">
+      <IconComponent size={16} className="text-text-muted" />
+      <span className="text-small font-medium text-text-primary flex-1 truncate">
+        {label}
+      </span>
+      {state === 'executing' && (
+        <Loader2 size={14} className="animate-spin text-electric-indigo" />
+      )}
+      {state === 'success' && (
+        <CheckCircle size={14} className="text-fresh-teal" />
+      )}
+      {state === 'error' && (
+        <span title={error}>
+          <AlertCircle size={14} className="text-warm-coral" />
+        </span>
+      )}
+    </div>
+  );
+}
