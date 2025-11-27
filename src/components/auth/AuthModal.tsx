@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, Building2, ArrowRight, Workflow } from 'lucide-react';
+import { Mail, Lock, User, Building2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/stores/authStore';
@@ -88,9 +88,7 @@ export function AuthModal() {
         <div className="bg-bg-secondary rounded-2xl border border-border-default shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-border-default bg-gradient-to-b from-electric-indigo/5 to-transparent">
-            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center mx-auto mb-4 shadow-glow">
-              <Workflow size={28} className="text-white" />
-            </div>
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-14 h-14 rounded-xl mx-auto mb-4 shadow-glow" />
             <h1 className="text-2xl font-bold text-text-primary">
               {mode === 'signup' ? 'Create your account' : 'Welcome back'}
             </h1>
