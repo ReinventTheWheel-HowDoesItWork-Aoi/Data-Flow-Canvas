@@ -27,7 +27,6 @@ import {
   MousePointer,
   Link2,
   Lightbulb,
-  Workflow,
   TextCursorInput,
   Copy,
   Shuffle,
@@ -252,9 +251,7 @@ export default function HelpPage() {
 
           <div className="flex-1 md:flex-none" />
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center shadow-glow">
-              <Workflow size={18} className="text-white" />
-            </div>
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-8 h-8 rounded-lg shadow-glow" />
             <span className="hidden sm:block font-semibold text-text-primary">Data Flow Canvas</span>
           </Link>
         </div>
@@ -649,9 +646,7 @@ export default function HelpPage() {
         {/* Footer */}
         <footer className="text-center py-12 border-t border-border-default">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center shadow-lg">
-              <Workflow size={20} className="text-white" />
-            </div>
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-10 h-10 rounded-xl shadow-lg" />
           </div>
           <p className="text-text-secondary font-medium mb-1">
             Data Flow Canvas
