@@ -1150,15 +1150,17 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            <Link
-              to="/help"
+            <a
+              href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas/blob/main/README.md"
+              target="_blank"
+              rel="noopener noreferrer"
               className={cn(
                 'text-sm font-medium transition-colors hover:underline underline-offset-4',
                 isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
               )}
             >
               Documentation
-            </Link>
+            </a>
             <Link
               to="/terms"
               className={cn(
