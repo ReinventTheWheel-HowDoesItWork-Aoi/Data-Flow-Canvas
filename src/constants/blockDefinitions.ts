@@ -65,10 +65,19 @@ elif dataset_name == 'wine':
     data = datasets.load_wine()
     df = pd.DataFrame(data.data, columns=data.feature_names)
     df['target'] = data.target
-elif dataset_name == 'diabetes':
-    data = datasets.load_diabetes()
-    df = pd.DataFrame(data.data, columns=data.feature_names)
-    df['target'] = data.target
+elif dataset_name == 'space_missions':
+    import numpy as np
+    np.random.seed(42)
+    n = 400
+    df = pd.DataFrame({
+        'mission_id': [f'M-{i:04d}' for i in range(1, n + 1)],
+        'crew_size': np.random.randint(2, 12, n),
+        'distance_ly': np.round(np.random.uniform(0.5, 50, n), 2),
+        'duration_days': np.random.randint(30, 500, n),
+        'fuel_tons': np.random.randint(100, 5000, n),
+        'spacecraft_age_yrs': np.random.randint(1, 20, n),
+        'success': np.random.choice([0, 1], n, p=[0.15, 0.85])
+    })
 
 output = df
 `,
