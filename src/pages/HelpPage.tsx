@@ -657,6 +657,15 @@ export default function HelpPage() {
           <p className="text-text-muted text-small mt-1">
             Licensed under AGPL-3.0. For commercial licensing, contact the author.
           </p>
+          <div className="flex items-center justify-center gap-4 mt-4 text-small">
+            <Link to="/terms" className="text-text-muted hover:text-text-primary transition-colors">
+              Terms of Service
+            </Link>
+            <span className="text-text-muted">|</span>
+            <Link to="/privacy" className="text-text-muted hover:text-text-primary transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
         </footer>
       </main>
     </div>
