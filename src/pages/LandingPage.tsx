@@ -19,7 +19,6 @@ import {
   GitBranch,
   BarChart3,
   MousePointerClick,
-  Workflow,
   Shield,
   Sun,
   Moon,
@@ -600,9 +599,7 @@ export default function LandingPage() {
             whileHover={{ scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 400 }}
           >
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center shadow-glow">
-              <Workflow size={24} className="text-white" />
-            </div>
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-11 h-11 rounded-xl shadow-glow" />
             <div className="absolute -inset-1 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet blur-lg opacity-40" />
           </motion.div>
           <span className="text-xl font-bold tracking-tight">Data Flow Canvas</span>
@@ -1141,9 +1138,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center shadow-sm">
-              <Workflow size={18} className="text-white" />
-            </div>
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-9 h-9 rounded-lg shadow-sm" />
             <span className={cn('font-medium', isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
               Data Flow Canvas — Open Source (AGPL-3.0)
             </span>
