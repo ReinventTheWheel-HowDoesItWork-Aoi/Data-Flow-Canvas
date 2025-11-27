@@ -246,6 +246,8 @@ const ConnectionLine = ({
   return (
     <motion.svg
       className="absolute inset-0 w-full h-full pointer-events-none"
+      viewBox="0 0 100 100"
+      preserveAspectRatio="none"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay }}
@@ -266,7 +268,7 @@ const ConnectionLine = ({
       </defs>
       {/* Background glow line */}
       <motion.path
-        d={`M ${x1}% ${y1}% Q ${(x1 + x2) / 2}% ${y1}%, ${(x1 + x2) / 2}% ${(y1 + y2) / 2}% T ${x2}% ${y2}%`}
+        d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${(y1 + y2) / 2} T ${x2} ${y2}`}
         fill="none"
         stroke={isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.15)'}
         strokeWidth="8"
@@ -278,7 +280,7 @@ const ConnectionLine = ({
       {/* Main line */}
       <motion.path
         id={pathId}
-        d={`M ${x1}% ${y1}% Q ${(x1 + x2) / 2}% ${y1}%, ${(x1 + x2) / 2}% ${(y1 + y2) / 2}% T ${x2}% ${y2}%`}
+        d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${(y1 + y2) / 2} T ${x2} ${y2}`}
         fill="none"
         stroke={`url(#${gradientId})`}
         strokeWidth="3"
