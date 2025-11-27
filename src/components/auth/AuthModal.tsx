@@ -1,0 +1,214 @@
+/**
+ * @author Lavelle Hatcher Jr
+ * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
+ */
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Mail, Lock, User, Building2, ArrowRight, Workflow } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils/cn';
+
+type AuthMode = 'signin' | 'signup';
+
+export function AuthModal() {
+  const [mode, setMode] = useState<AuthMode>('signup');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [company, setCompany] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { signIn, signUp, isLoading, error, clearError } = useAuthStore();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+    clearError();
+
+    // Validation
+    if (!email.trim()) {
+      setFormError('Email is required');
+      return;
+    }
+    if (!password.trim()) {
+      setFormError('Password is required');
+      return;
+    }
+    if (password.length < 6) {
+      setFormError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (mode === 'signup') {
+      if (!firstName.trim()) {
+        setFormError('First name is required');
+        return;
+      }
+      if (!lastName.trim()) {
+        setFormError('Last name is required');
+        return;
+      }
+
+      const result = await signUp(email, password, firstName, lastName, company || undefined);
+      if (!result.success) {
+        setFormError(result.error || 'Sign up failed');
+      }
+    } else {
+      const result = await signIn(email, password);
+      if (!result.success) {
+        setFormError(result.error || 'Sign in failed');
+      }
+    }
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setFormError(null);
+    clearError();
+  };
+
+  const displayError = formError || error;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Transparent backdrop - lets users see the editor behind */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+
+      {/* Auth Card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="relative z-10 w-full max-w-md mx-4"
+      >
+        <div className="bg-bg-secondary rounded-2xl border border-border-default shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="px-8 pt-8 pb-6 text-center border-b border-border-default bg-gradient-to-b from-electric-indigo/5 to-transparent">
+            <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center mx-auto mb-4 shadow-glow">
+              <Workflow size={28} className="text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-text-primary">
+              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            </h1>
+            <p className="text-text-secondary mt-2">
+              {mode === 'signup'
+                ? 'Sign up to start building data pipelines'
+                : 'Sign in to continue where you left off'}
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="p-8 space-y-4">
+            <AnimatePresence mode="wait">
+              {mode === 'signup' && (
+                <motion.div
+                  key="signup-fields"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-2 gap-4">
+                    <Input
+                      label="First name"
+                      placeholder="John"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      leftIcon={<User size={18} />}
+                      disabled={isLoading}
+                    />
+                    <Input
+                      label="Last name"
+                      placeholder="Doe"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Input
+                    label="Company (optional)"
+                    placeholder="Acme Inc."
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    leftIcon={<Building2 size={18} />}
+                    disabled={isLoading}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Input
+              label="Email"
+              type="email"
+              placeholder="john@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              leftIcon={<Mail size={18} />}
+              disabled={isLoading}
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              leftIcon={<Lock size={18} />}
+              disabled={isLoading}
+            />
+
+            {/* Error Message */}
+            <AnimatePresence>
+              {displayError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 rounded-lg bg-warm-coral/10 border border-warm-coral/20"
+                >
+                  <p className="text-sm text-warm-coral">{displayError}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              isLoading={isLoading}
+              className="w-full mt-6"
+              rightIcon={!isLoading ? <ArrowRight size={18} /> : undefined}
+            >
+              {mode === 'signup' ? 'Create Account' : 'Sign In'}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <div className="px-8 pb-8 text-center">
+            <p className="text-text-secondary text-sm">
+              {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="text-electric-indigo hover:text-soft-violet font-medium transition-colors"
+                disabled={isLoading}
+              >
+                {mode === 'signup' ? 'Sign in' : 'Sign up'}
+              </button>
+            </p>
+          </div>
+        </div>
+
+        {/* Privacy note */}
+        <p className="text-center text-text-muted text-xs mt-4 px-4">
+          Your data stays local. We only collect your profile information to personalize your experience.
+        </p>
+      </motion.div>
+    </div>
+  );
+}
