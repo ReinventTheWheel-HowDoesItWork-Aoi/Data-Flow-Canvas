@@ -6,7 +6,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, FileText, Trash2, Clock, Layers, Workflow } from 'lucide-react';
+import { Plus, FileText, Trash2, Clock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { useProjectStore } from '@/stores/projectStore';
@@ -22,9 +22,7 @@ export default function ProjectsPage() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center">
-                <Workflow size={22} className="text-white" />
-              </div>
+              <img src="/logo.svg" alt="Data Flow Canvas" className="w-10 h-10 rounded-xl" />
               <span className="text-xl font-semibold text-text-primary">
                 Data Flow Canvas
               </span>
