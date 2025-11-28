@@ -9,27 +9,33 @@
 ![React](https://img.shields.io/badge/react-18.3-61DAFB)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-3178C6)
 
-## Features
+<!-- Add your cleansed screenshot here -->
+![Data Flow Canvas Demo](public/demo-screenshot.png)
 
-### Privacy First
-- **100% client-side processing** — All data processing happens in your browser using WebAssembly
-- **No data upload** — Your data never leaves your device
-- **No account required** — Start using immediately without sign-up
+## ✨ Features
 
-### Visual Pipeline Builder
+### 🔒 Privacy First
+- **100% client-side processing** — All data transformation and analysis happens in your browser using WebAssembly
+- **Your data stays local** — CSV files and pipeline data are processed entirely in your browser and never uploaded to any server
+- **Secure authentication** — Account powered by Supabase; only your profile info is stored, not your data
+
+### 🎨 Visual Pipeline Builder
 - **Drag-and-drop interface** — Build pipelines visually with React Flow
 - **51 block types** — Data input, transformation, analysis, visualization, and export
 - **Real-time preview** — See data changes as you build
 
-### Python Powered
+### 🐍 Python Powered
 - **Pyodide integration** — Full Python data science stack (pandas, numpy, scikit-learn) running in WebAssembly
 - **No installation** — Everything runs in your browser
 
-### Real-time Collaboration
+### 👥 Real-time Collaboration
 - **P2P connections** — Work together using WebRTC
 - **CRDT sync** — Conflict-free collaborative editing with Y.js
 
-## Block Types
+### 🌍 Internationalization
+- **Multi-language support** — Available in English and Japanese
+
+## 📦 Block Types
 
 | Category | Blocks |
 |----------|--------|
@@ -39,7 +45,7 @@
 | **Visualization** | Chart, Table, Correlation Matrix, Violin Plot, Pair Plot, Area Chart, Stacked Chart, Bubble Chart, Q-Q Plot, Confusion Matrix, ROC Curve |
 | **Output** | Export |
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+
@@ -69,17 +75,18 @@ npm run build
 npm run preview
 ```
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS
 - **Canvas**: React Flow (@xyflow/react)
 - **State Management**: Zustand with Zundo (undo/redo)
 - **Python Runtime**: Pyodide (WebAssembly)
+- **Authentication**: Supabase
 - **Storage**: IndexedDB via Dexie.js
 - **Collaboration**: Y.js + WebRTC
 - **Build Tool**: Vite
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
@@ -103,7 +110,7 @@ src/
 └── test/              # Test utilities
 ```
 
-## Scripts
+## 📜 Scripts
 
 | Command | Description |
 |---------|-------------|
@@ -114,11 +121,11 @@ src/
 | `npm run test` | Run unit tests |
 | `npm run test:e2e` | Run E2E tests |
 
-## Author
+## 👤 Author
 
 **Lavelle Hatcher Jr** — Creator and maintainer of Data Flow Canvas
 
-## License
+## 📄 License
 
 This project is licensed under the **AGPL-3.0 License** — see the [LICENSE](LICENSE) file for details.
 
@@ -133,9 +140,10 @@ The AGPL-3.0 license requires that any modifications or derivative works also be
 
 💼 **Contact**: [Lavelle Hatcher Jr](https://www.linkedin.com/in/lavellemhatcherjr)
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - [Pyodide](https://pyodide.org/) — Python in the browser
 - [React Flow](https://reactflow.dev/) — Node-based graph library
 - [Y.js](https://yjs.dev/) — CRDT framework for collaborative editing
+- [Supabase](https://supabase.com/) — Authentication and database
 - [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS framework
