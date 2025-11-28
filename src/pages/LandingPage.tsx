@@ -5,6 +5,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import {
   ArrowRight,
@@ -27,6 +28,7 @@ import {
   Cpu,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { cn } from '@/lib/utils/cn';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -325,11 +327,13 @@ const FeatureCard = ({
   index,
   isDark,
   isLarge = false,
+  t,
 }: {
   feature: (typeof features)[0];
   index: number;
   isDark: boolean;
   isLarge?: boolean;
+  t: (key: string) => string;
 }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
@@ -420,7 +424,7 @@ const FeatureCard = ({
               isDark ? 'text-white' : 'text-slate-900'
             )}
           >
-            {feature.title}
+            {t(feature.titleKey)}
           </h3>
           <p
             className={cn(
@@ -428,7 +432,7 @@ const FeatureCard = ({
               isDark ? 'text-slate-400' : 'text-slate-600'
             )}
           >
-            {feature.description}
+            {t(feature.descriptionKey)}
           </p>
         </div>
       </motion.div>
@@ -442,11 +446,13 @@ const StepCard = ({
   index,
   isDark,
   total,
+  t,
 }: {
   step: (typeof steps)[0];
   index: number;
   isDark: boolean;
   total: number;
+  t: (key: string) => string;
 }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
@@ -505,16 +511,17 @@ const StepCard = ({
           isDark ? 'text-white' : 'text-slate-900'
         )}
       >
-        {step.title}
+        {t(step.titleKey)}
       </h3>
       <p className={cn('max-w-xs mx-auto', isDark ? 'text-slate-400' : 'text-slate-600')}>
-        {step.description}
+        {t(step.descriptionKey)}
       </p>
     </motion.div>
   );
 };
 
 export default function LandingPage() {
+  const { t } = useTranslation();
   const { isDarkMode, setDarkMode, toggleDarkMode } = useUIStore();
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -650,11 +657,13 @@ export default function LandingPage() {
             <span className="hidden sm:inline font-medium">GitHub</span>
           </motion.a>
 
+          <LanguageSelector variant="full" />
+
           <Link to="/editor">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button variant="primary" size="sm" className="shadow-glow">
                 <Play size={16} className="mr-1.5" />
-                Launch App
+                {t('header.launchApp')}
               </Button>
             </motion.div>
           </Link>
@@ -681,7 +690,7 @@ export default function LandingPage() {
                   isDarkMode ? 'text-slate-200' : 'text-slate-700'
                 )}
               >
-                100% Browser-Based
+                {t('landing.badge.browserBased')}
               </span>
               <span className={isDarkMode ? 'text-slate-600' : 'text-slate-300'}>•</span>
               <Shield size={14} className="text-fresh-teal" />
@@ -691,7 +700,7 @@ export default function LandingPage() {
                   isDarkMode ? 'text-slate-200' : 'text-slate-700'
                 )}
               >
-                Your Data Stays Local
+                {t('landing.badge.dataLocal')}
               </span>
             </ShimmerBadge>
 
@@ -701,10 +710,10 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
             >
-              <span className="gradient-text inline-block">Canvas for</span>
+              <span className="gradient-text inline-block">{t('landing.hero.titleLine1')}</span>
               <br />
               <span className={cn('inline-block', isDarkMode ? 'text-white' : 'text-slate-900')}>
-                Data Science
+                {t('landing.hero.titleLine2')}
               </span>
             </motion.h1>
 
@@ -717,8 +726,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              Build powerful data pipelines visually. Drag, drop, and connect blocks to transform,
-              analyze, and visualize your data  all without writing code.
+              {t('landing.hero.description')}
             </motion.p>
 
             {/* Tech Stack Badges */}
@@ -761,7 +769,7 @@ export default function LandingPage() {
                     rightIcon={<ArrowRight size={20} />}
                     className="shadow-glow text-base font-semibold px-8"
                   >
-                    Start Building Free
+                    {t('landing.hero.ctaPrimary')}
                   </Button>
                 </motion.div>
               </Link>
@@ -769,7 +777,7 @@ export default function LandingPage() {
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Button variant="secondary" size="lg" className="text-base font-semibold">
                     <MousePointerClick size={18} className="mr-2" />
-                    View Examples
+                    {t('landing.hero.ctaExamples')}
                   </Button>
                 </motion.div>
               </Link>
@@ -777,7 +785,7 @@ export default function LandingPage() {
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
                   <Button variant="ghost" size="lg" className="text-base font-semibold">
                     <BookOpen size={18} className="mr-2" />
-                    Get Started Guide
+                    {t('landing.hero.ctaGuide')}
                   </Button>
                 </motion.div>
               </Link>
@@ -794,7 +802,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6, delay: 0.7 }}
             >
               <Lock size={14} />
-              Free to use. Your data never leaves your browser.
+              {t('landing.hero.trustText')}
             </motion.p>
           </motion.div>
 
@@ -971,8 +979,8 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Everything you need to
-            <span className="gradient-text"> explore data</span>
+            {t('landing.features.sectionTitle')}
+            <span className="gradient-text"> {t('landing.features.sectionTitleHighlight')}</span>
           </motion.h2>
           <motion.p
             className={cn(
@@ -984,8 +992,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            A complete toolkit for data transformation and analysis, running entirely in your
-            browser.
+            {t('landing.features.sectionDescription')}
           </motion.p>
         </motion.div>
 
@@ -993,11 +1000,12 @@ export default function LandingPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
           {features.map((feature, index) => (
             <FeatureCard
-              key={feature.title}
+              key={feature.titleKey}
               feature={feature}
               index={index}
               isDark={isDarkMode}
               isLarge={index === 0 || index === 3}
+              t={t}
             />
           ))}
         </div>
@@ -1013,18 +1021,19 @@ export default function LandingPage() {
           transition={{ duration: 0.7 }}
         >
           <h2 className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
-            Simple as <span className="gradient-text">1, 2, 3</span>
+            {t('landing.howItWorks.title')} <span className="gradient-text">{t('landing.howItWorks.titleHighlight')}</span>
           </h2>
         </motion.div>
 
         <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
           {steps.map((step, index) => (
             <StepCard
-              key={step.title}
+              key={step.titleKey}
               step={step}
               index={index}
               isDark={isDarkMode}
               total={steps.length}
+              t={t}
             />
           ))}
         </div>
@@ -1080,7 +1089,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                Ready to transform your data?
+                {t('landing.cta.title')}
               </motion.h2>
               <motion.p
                 className={cn(
@@ -1092,8 +1101,7 @@ export default function LandingPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                Join thousands of data enthusiasts building pipelines without code. Free forever,
-                your data stays local.
+                {t('landing.cta.description')}
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -1113,7 +1121,7 @@ export default function LandingPage() {
                       rightIcon={<ArrowRight size={20} />}
                       className="shadow-glow text-base font-semibold px-10 py-4"
                     >
-                      Launch Data Flow Canvas
+                      {t('landing.cta.button')}
                     </Button>
                   </motion.div>
                 </Link>
@@ -1140,7 +1148,7 @@ export default function LandingPage() {
           >
             <img src="/logo.svg" alt="Data Flow Canvas" className="w-9 h-9 rounded-lg shadow-sm" />
             <span className={cn('font-medium', isDarkMode ? 'text-slate-400' : 'text-slate-500')}>
-              Data Flow Canvas — Open Source (AGPL-3.0)
+              {t('landing.footer.openSource')}
             </span>
           </motion.div>
           <motion.div
@@ -1159,7 +1167,7 @@ export default function LandingPage() {
                 isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
               )}
             >
-              Documentation
+              {t('landing.footer.documentation')}
             </a>
             <Link
               to="/terms"
@@ -1168,7 +1176,7 @@ export default function LandingPage() {
                 isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
               )}
             >
-              Terms
+              {t('landing.footer.terms')}
             </Link>
             <Link
               to="/privacy"
@@ -1177,7 +1185,7 @@ export default function LandingPage() {
                 isDarkMode ? 'hover:text-white' : 'hover:text-slate-900'
               )}
             >
-              Privacy
+              {t('landing.footer.privacy')}
             </Link>
             <a
               href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas"
@@ -1200,33 +1208,29 @@ export default function LandingPage() {
 
 const features = [
   {
-    title: 'Privacy First',
-    description:
-      'All processing happens locally in your browser. Your data never touches any server.',
+    titleKey: 'landing.features.privacyFirst.title',
+    descriptionKey: 'landing.features.privacyFirst.description',
     icon: Lock,
     bgColor: 'bg-fresh-teal/20',
     iconColor: 'text-fresh-teal',
   },
   {
-    title: 'Quick Start',
-    description:
-      'No installation needed. Create a free account and start building data pipelines immediately.',
+    titleKey: 'landing.features.quickStart.title',
+    descriptionKey: 'landing.features.quickStart.description',
     icon: Zap,
     bgColor: 'bg-electric-indigo/20',
     iconColor: 'text-electric-indigo',
   },
   {
-    title: 'Collaborate Live',
-    description:
-      'Work together with your team in real-time using secure peer-to-peer connections.',
+    titleKey: 'landing.features.collaborate.title',
+    descriptionKey: 'landing.features.collaborate.description',
     icon: Users,
     bgColor: 'bg-soft-violet/20',
     iconColor: 'text-soft-violet',
   },
   {
-    title: 'Python Powered',
-    description:
-      'Full data science stack running in WebAssembly. pandas, NumPy, and scikit-learn included.',
+    titleKey: 'landing.features.pythonPowered.title',
+    descriptionKey: 'landing.features.pythonPowered.description',
     icon: Code2,
     bgColor: 'bg-golden-amber/20',
     iconColor: 'text-golden-amber',
@@ -1235,15 +1239,15 @@ const features = [
 
 const steps = [
   {
-    title: 'Drop your data',
-    description: 'Upload CSV files or use our sample datasets to explore.',
+    titleKey: 'landing.howItWorks.step1.title',
+    descriptionKey: 'landing.howItWorks.step1.description',
   },
   {
-    title: 'Build your pipeline',
-    description: 'Drag blocks onto the canvas and connect them to create your data flow.',
+    titleKey: 'landing.howItWorks.step2.title',
+    descriptionKey: 'landing.howItWorks.step2.description',
   },
   {
-    title: 'See results instantly',
-    description: 'Run your pipeline and visualize results with charts and tables.',
+    titleKey: 'landing.howItWorks.step3.title',
+    descriptionKey: 'landing.howItWorks.step3.description',
   },
 ];
