@@ -230,6 +230,19 @@
     "signIn": "ログイン",
     "signUp": "新規登録",
     "privacyNote": "データはローカルに保持されます。お客様の体験をパーソナライズするためにプロフィール情報のみ収集します。",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "forgotSubtitle": "リセットリンクを受け取るメールアドレスを入力してください",
+    "forgotPasswordLink": "パスワードをお忘れですか？",
+    "sendResetLink": "リセットリンクを送信",
+    "resetEmailSent": "メールをご確認ください！パスワードリセット用のリンクを送信しました。",
+    "backToSignIn": "← ログインに戻る",
+    "resetPassword": "パスワードをリセット",
+    "resetPasswordSubtitle": "新しいパスワードを入力してください",
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "パスワードを確認",
+    "updatePasswordBtn": "パスワードを更新",
+    "passwordUpdated": "パスワードが更新されました！",
+    "redirecting": "エディタにリダイレクト中...",
     "errors": {
       "emailRequired": "メールアドレスは必須です",
       "passwordRequired": "パスワードは必須です",
@@ -237,7 +250,10 @@
       "firstNameRequired": "名は必須です",
       "lastNameRequired": "姓は必須です",
       "signUpFailed": "登録に失敗しました",
-      "signInFailed": "ログインに失敗しました"
+      "signInFailed": "ログインに失敗しました",
+      "resetFailed": "リセットメールの送信に失敗しました",
+      "passwordMismatch": "パスワードが一致しません",
+      "updateFailed": "パスワードの更新に失敗しました"
     }
   },
   "bottomPanel": {
