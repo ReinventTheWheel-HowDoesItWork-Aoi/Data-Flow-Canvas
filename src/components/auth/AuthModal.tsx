@@ -4,16 +4,19 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, User, Building2, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils/cn';
 
 type AuthMode = 'signin' | 'signup';
 
 export function AuthModal() {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<AuthMode>('signup');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -31,36 +34,36 @@ export function AuthModal() {
 
     // Validation
     if (!email.trim()) {
-      setFormError('Email is required');
+      setFormError(t('auth.errors.emailRequired'));
       return;
     }
     if (!password.trim()) {
-      setFormError('Password is required');
+      setFormError(t('auth.errors.passwordRequired'));
       return;
     }
     if (password.length < 6) {
-      setFormError('Password must be at least 6 characters');
+      setFormError(t('auth.errors.passwordLength'));
       return;
     }
 
     if (mode === 'signup') {
       if (!firstName.trim()) {
-        setFormError('First name is required');
+        setFormError(t('auth.errors.firstNameRequired'));
         return;
       }
       if (!lastName.trim()) {
-        setFormError('Last name is required');
+        setFormError(t('auth.errors.lastNameRequired'));
         return;
       }
 
       const result = await signUp(email, password, firstName, lastName, company || undefined);
       if (!result.success) {
-        setFormError(result.error || 'Sign up failed');
+        setFormError(result.error || t('auth.errors.signUpFailed'));
       }
     } else {
       const result = await signIn(email, password);
       if (!result.success) {
-        setFormError(result.error || 'Sign in failed');
+        setFormError(result.error || t('auth.errors.signInFailed'));
       }
     }
   };
@@ -88,14 +91,17 @@ export function AuthModal() {
         <div className="bg-bg-secondary rounded-2xl border border-border-default shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="px-8 pt-8 pb-6 text-center border-b border-border-default bg-gradient-to-b from-electric-indigo/5 to-transparent">
+            <div className="flex justify-end mb-2">
+              <LanguageSelector />
+            </div>
             <img src="/logo.svg" alt="Data Flow Canvas" className="w-14 h-14 rounded-xl mx-auto mb-4 shadow-glow" />
             <h1 className="text-2xl font-bold text-text-primary">
-              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              {mode === 'signup' ? t('auth.createAccount') : t('auth.welcomeBack')}
             </h1>
             <p className="text-text-secondary mt-2">
               {mode === 'signup'
-                ? 'Sign up to start building data pipelines'
-                : 'Sign in to continue where you left off'}
+                ? t('auth.signUpSubtitle')
+                : t('auth.signInSubtitle')}
             </p>
           </div>
 
@@ -113,7 +119,7 @@ export function AuthModal() {
                 >
                   <div className="grid grid-cols-2 gap-4">
                     <Input
-                      label="First name"
+                      label={t('auth.firstName')}
                       placeholder="John"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
@@ -121,7 +127,7 @@ export function AuthModal() {
                       disabled={isLoading}
                     />
                     <Input
-                      label="Last name"
+                      label={t('auth.lastName')}
                       placeholder="Doe"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
@@ -129,7 +135,7 @@ export function AuthModal() {
                     />
                   </div>
                   <Input
-                    label="Company (optional)"
+                    label={t('auth.company')}
                     placeholder="Acme Inc."
                     value={company}
                     onChange={(e) => setCompany(e.target.value)}
@@ -141,7 +147,7 @@ export function AuthModal() {
             </AnimatePresence>
 
             <Input
-              label="Email"
+              label={t('auth.email')}
               type="email"
               placeholder="john@example.com"
               value={email}
@@ -151,7 +157,7 @@ export function AuthModal() {
             />
 
             <Input
-              label="Password"
+              label={t('auth.password')}
               type="password"
               placeholder="••••••••"
               value={password}
@@ -182,21 +188,21 @@ export function AuthModal() {
               className="w-full mt-6"
               rightIcon={!isLoading ? <ArrowRight size={18} /> : undefined}
             >
-              {mode === 'signup' ? 'Create Account' : 'Sign In'}
+              {mode === 'signup' ? t('auth.createAccountBtn') : t('auth.signInBtn')}
             </Button>
           </form>
 
           {/* Footer */}
           <div className="px-8 pb-8 text-center">
             <p className="text-text-secondary text-sm">
-              {mode === 'signup' ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {mode === 'signup' ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{' '}
               <button
                 type="button"
                 onClick={toggleMode}
                 className="text-electric-indigo hover:text-soft-violet font-medium transition-colors"
                 disabled={isLoading}
               >
-                {mode === 'signup' ? 'Sign in' : 'Sign up'}
+                {mode === 'signup' ? t('auth.signIn') : t('auth.signUp')}
               </button>
             </p>
           </div>
@@ -204,7 +210,7 @@ export function AuthModal() {
 
         {/* Privacy note */}
         <p className="text-center text-text-muted text-xs mt-4 px-4">
-          Your data stays local. We only collect your profile information to personalize your experience.
+          {t('auth.privacyNote')}
         </p>
       </motion.div>
     </div>
