@@ -259,5 +259,87 @@
     "dataPreview": "Data Preview",
     "rows": "rows",
     "columns": "columns"
+  },
+  "help": {
+    "backToEditor": "Back to Editor",
+    "nav": {
+      "quickStart": "Quick Start",
+      "shortcuts": "Shortcuts",
+      "blockReference": "Block Reference",
+      "tips": "Tips"
+    },
+    "hero": {
+      "documentation": "Documentation",
+      "title": "Getting Started",
+      "description": "Learn how to use Data Flow Canvas to build visual data pipelines.",
+      "availableBlocks": "Available Blocks",
+      "stepsToStart": "Steps to Start",
+      "noCode": "No Code",
+      "required": "Required"
+    },
+    "quickStart": {
+      "title": "Quick Start Guide",
+      "subtitle": "Get up and running in 5 simple steps",
+      "step1": {
+        "title": "Add Data Input",
+        "description": "Drag a Load Data, Sample Data, or Create Dataset block from the sidebar onto the canvas."
+      },
+      "step2": {
+        "title": "Configure Your Block",
+        "description": "Click on the block to select it. The right panel will show configuration options. Upload a file, select a sample dataset, or enter data manually."
+      },
+      "step3": {
+        "title": "Add Transform Blocks",
+        "description": "Drag transform blocks (Filter, Sort, etc.) and connect them by dragging from the output handle (right) of one block to the input handle (left) of another."
+      },
+      "step4": {
+        "title": "Run Your Pipeline",
+        "description": "Click the Run button in the top bar or press Ctrl+Enter. The first run will take ~30 seconds to load Python."
+      },
+      "step5": {
+        "title": "View Results",
+        "description": "Select a block and check the Preview or Viz tab in the right panel to see the output data."
+      }
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "subtitle": "Speed up your workflow with these shortcuts",
+      "runPipeline": "Run pipeline",
+      "undo": "Undo",
+      "redo": "Redo",
+      "deleteBlocks": "Delete selected blocks",
+      "clearSelection": "Clear selection",
+      "toggleLogs": "Toggle bottom panel (logs)"
+    },
+    "blockReference": {
+      "title": "Block Reference",
+      "subtitle": "Explore all available blocks by category"
+    },
+    "tips": {
+      "title": "Tips",
+      "subtitle": "Pro tips to get the most out of Data Flow Canvas",
+      "selectingBlocks": {
+        "title": "Selecting Blocks",
+        "description": "Click on a block to select it and view its configuration. Hold Shift to select multiple blocks."
+      },
+      "connectingBlocks": {
+        "title": "Connecting Blocks",
+        "description": "Drag from the output handle (right side) of a block to the input handle (left side) of another to connect them."
+      },
+      "firstRun": {
+        "title": "First Run",
+        "description": "The first time you run a pipeline, it takes about 30 seconds to load Python (Pyodide). Subsequent runs are much faster."
+      },
+      "supportedFiles": {
+        "title": "Supported Files",
+        "description": "Upload CSV files to get started. You can also use the built-in sample datasets to explore."
+      }
+    },
+    "footer": {
+      "copyright": "© 2025 Lavelle Hatcher Jr. All rights reserved.",
+      "license": "Licensed under AGPL-3.0. For commercial licensing, contact the author.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    }
   }
 }
