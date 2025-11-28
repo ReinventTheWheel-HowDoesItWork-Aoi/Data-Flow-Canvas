@@ -6,48 +6,79 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, ArrowRight, CheckCircle } from 'lucide-react';
+import { Mail, ArrowRight, CheckCircle, User, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useAuthStore } from '@/stores/authStore';
+import { cn } from '@/lib/utils/cn';
+
+type AuthMode = 'signin' | 'signup';
 
 export function AuthModal() {
   const { t } = useTranslation();
+  const [mode, setMode] = useState<AuthMode>('signup');
   const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [company, setCompany] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
-  const { signInWithMagicLink, isLoading, error, clearError } = useAuthStore();
+  const { signInWithMagicLink, signUpWithMagicLink, isLoading, error, clearError } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     clearError();
 
-    // Validation
+    // Email validation
     if (!email.trim()) {
       setFormError(t('auth.errors.emailRequired'));
       return;
     }
 
-    // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setFormError(t('auth.errors.emailInvalid'));
       return;
     }
 
-    const result = await signInWithMagicLink(email);
-    if (result.success) {
-      setMagicLinkSent(true);
+    // Sign up validation
+    if (mode === 'signup') {
+      if (!firstName.trim()) {
+        setFormError(t('auth.errors.firstNameRequired'));
+        return;
+      }
+      if (!lastName.trim()) {
+        setFormError(t('auth.errors.lastNameRequired'));
+        return;
+      }
+
+      const result = await signUpWithMagicLink(email, firstName.trim(), lastName.trim(), company.trim() || undefined);
+      if (result.success) {
+        setMagicLinkSent(true);
+      } else {
+        setFormError(result.error || t('auth.errors.magicLinkFailed'));
+      }
     } else {
-      setFormError(result.error || t('auth.errors.magicLinkFailed'));
+      const result = await signInWithMagicLink(email);
+      if (result.success) {
+        setMagicLinkSent(true);
+      } else {
+        setFormError(result.error || t('auth.errors.magicLinkFailed'));
+      }
     }
   };
 
   const handleResend = () => {
     setMagicLinkSent(false);
+    setFormError(null);
+    clearError();
+  };
+
+  const toggleMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
     setFormError(null);
     clearError();
   };
@@ -74,14 +105,52 @@ export function AuthModal() {
             </div>
             <img src="/logo.svg" alt="Data Flow Canvas" className="w-14 h-14 rounded-xl mx-auto mb-4 shadow-glow" />
             <h1 className="text-2xl font-bold text-text-primary">
-              {magicLinkSent ? t('auth.checkEmail') : t('auth.welcome')}
+              {magicLinkSent
+                ? t('auth.checkEmail')
+                : mode === 'signup'
+                  ? t('auth.createAccount')
+                  : t('auth.welcomeBack')}
             </h1>
             <p className="text-text-secondary mt-2">
               {magicLinkSent
                 ? t('auth.magicLinkSentSubtitle')
-                : t('auth.magicLinkSubtitle')}
+                : mode === 'signup'
+                  ? t('auth.signUpSubtitle')
+                  : t('auth.signInSubtitle')}
             </p>
           </div>
+
+          {/* Mode Toggle */}
+          {!magicLinkSent && (
+            <div className="px-8 pt-6">
+              <div className="flex rounded-xl bg-bg-tertiary p-1">
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup'); setFormError(null); clearError(); }}
+                  className={cn(
+                    'flex-1 py-2.5 text-sm font-medium rounded-lg transition-all',
+                    mode === 'signup'
+                      ? 'bg-bg-secondary text-text-primary shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  {t('auth.signUp')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signin'); setFormError(null); clearError(); }}
+                  className={cn(
+                    'flex-1 py-2.5 text-sm font-medium rounded-lg transition-all',
+                    mode === 'signin'
+                      ? 'bg-bg-secondary text-text-primary shadow-sm'
+                      : 'text-text-secondary hover:text-text-primary'
+                  )}
+                >
+                  {t('auth.signIn')}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Form */}
           <div className="p-8">
@@ -118,13 +187,45 @@ export function AuthModal() {
                 </motion.div>
               ) : (
                 <motion.form
-                  key="form"
+                  key={mode}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   onSubmit={handleSubmit}
                   className="space-y-4"
                 >
+                  {/* Sign Up Fields */}
+                  {mode === 'signup' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          label={t('auth.firstName')}
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          leftIcon={<User size={18} />}
+                          disabled={isLoading}
+                          autoFocus
+                        />
+                        <Input
+                          label={t('auth.lastName')}
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          disabled={isLoading}
+                        />
+                      </div>
+                      <Input
+                        label={t('auth.company')}
+                        placeholder="Acme Inc. (optional)"
+                        value={company}
+                        onChange={(e) => setCompany(e.target.value)}
+                        leftIcon={<Building2 size={18} />}
+                        disabled={isLoading}
+                      />
+                    </>
+                  )}
+
                   <Input
                     label={t('auth.email')}
                     type="email"
@@ -133,7 +234,7 @@ export function AuthModal() {
                     onChange={(e) => setEmail(e.target.value)}
                     leftIcon={<Mail size={18} />}
                     disabled={isLoading}
-                    autoFocus
+                    autoFocus={mode === 'signin'}
                   />
 
                   {/* Error Message */}
