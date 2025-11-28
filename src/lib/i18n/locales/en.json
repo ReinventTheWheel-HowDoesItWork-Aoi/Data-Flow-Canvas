@@ -1,0 +1,216 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "error": "Error",
+    "success": "Success",
+    "language": "Language",
+    "english": "English",
+    "japanese": "Japanese"
+  },
+  "topBar": {
+    "unsavedChanges": "Unsaved changes",
+    "loadingPython": "Loading Python...",
+    "run": "Run",
+    "stop": "Stop",
+    "runPipelineTooltip": "Run pipeline (Ctrl+Enter)",
+    "waitingForPython": "Waiting for Python engine to load...",
+    "toggleLogs": "Toggle logs (Ctrl+J)",
+    "saveProject": "Save project (Ctrl+S)",
+    "collaborate": "Collaborate",
+    "share": "Share",
+    "helpDocs": "Help & Documentation",
+    "lightMode": "Light mode",
+    "darkMode": "Dark mode",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "sidebar": {
+    "blocks": "Blocks",
+    "dragToCanvas": "Drag blocks to the canvas"
+  },
+  "categories": {
+    "dataInput": "Data Input",
+    "transform": "Transform",
+    "analysis": "Analysis",
+    "visualization": "Visualization",
+    "output": "Output"
+  },
+  "blocks": {
+    "loadData": "Load CSV",
+    "sampleData": "Sample Data",
+    "createDataset": "Create Dataset",
+    "filterRows": "Filter Rows",
+    "selectColumns": "Select Columns",
+    "sort": "Sort",
+    "groupAggregate": "Group & Aggregate",
+    "join": "Join",
+    "deriveColumn": "Derive Column",
+    "handleMissing": "Handle Missing",
+    "renameColumns": "Rename Columns",
+    "deduplicate": "Deduplicate",
+    "sampleRows": "Sample Rows",
+    "limitRows": "Limit Rows",
+    "pivot": "Pivot",
+    "unpivot": "Unpivot",
+    "union": "Union",
+    "splitColumn": "Split Column",
+    "mergeColumns": "Merge Columns",
+    "conditionalColumn": "Conditional Column",
+    "statistics": "Statistics",
+    "regression": "Regression",
+    "clustering": "Clustering",
+    "pca": "PCA",
+    "outlierDetection": "Outlier Detection",
+    "classification": "Classification",
+    "normalityTest": "Normality Test",
+    "hypothesisTesting": "Hypothesis Testing",
+    "timeSeries": "Time Series",
+    "featureImportance": "Feature Importance",
+    "crossValidation": "Cross Validation",
+    "dataProfiling": "Data Profiling",
+    "valueCounts": "Value Counts",
+    "crossTabulation": "Cross Tabulation",
+    "scaling": "Scaling",
+    "encoding": "Encoding",
+    "abTest": "A/B Test",
+    "cohortAnalysis": "Cohort Analysis",
+    "rfmAnalysis": "RFM Analysis",
+    "chart": "Chart",
+    "table": "Table",
+    "correlationMatrix": "Correlation Matrix",
+    "violinPlot": "Violin Plot",
+    "pairPlot": "Pair Plot",
+    "areaChart": "Area Chart",
+    "stackedChart": "Stacked Chart",
+    "bubbleChart": "Bubble Chart",
+    "qqPlot": "Q-Q Plot",
+    "confusionMatrix": "Confusion Matrix",
+    "rocCurve": "ROC Curve",
+    "export": "Export"
+  },
+  "blockDescriptions": {
+    "loadData": "Import data from CSV files",
+    "sampleData": "Load built-in sample datasets for learning",
+    "createDataset": "Manually create a dataset by entering data",
+    "filterRows": "Filter rows based on conditions",
+    "selectColumns": "Select specific columns to keep",
+    "sort": "Sort data by one or more columns",
+    "groupAggregate": "Group data and apply aggregate functions",
+    "join": "Combine two datasets based on common columns",
+    "deriveColumn": "Create new columns using expressions",
+    "handleMissing": "Handle missing values in your data",
+    "renameColumns": "Rename columns in your dataset",
+    "deduplicate": "Remove duplicate rows",
+    "sampleRows": "Take a random sample of rows",
+    "limitRows": "Limit the number of rows",
+    "pivot": "Pivot data from long to wide format",
+    "unpivot": "Unpivot data from wide to long format",
+    "union": "Combine datasets vertically",
+    "splitColumn": "Split a column into multiple columns",
+    "mergeColumns": "Merge multiple columns into one",
+    "conditionalColumn": "Create columns based on conditions",
+    "statistics": "Calculate descriptive statistics",
+    "regression": "Perform regression analysis",
+    "clustering": "Cluster data into groups",
+    "pca": "Principal Component Analysis",
+    "outlierDetection": "Detect outliers in your data",
+    "classification": "Train classification models",
+    "normalityTest": "Test data for normality",
+    "hypothesisTesting": "Perform hypothesis tests",
+    "timeSeries": "Time series analysis",
+    "featureImportance": "Analyze feature importance",
+    "crossValidation": "Cross-validation for model evaluation",
+    "dataProfiling": "Generate data profile report",
+    "valueCounts": "Count unique values",
+    "crossTabulation": "Create cross-tabulation tables",
+    "scaling": "Scale and normalize data",
+    "encoding": "Encode categorical variables",
+    "abTest": "A/B testing analysis",
+    "cohortAnalysis": "Analyze user cohorts",
+    "rfmAnalysis": "RFM customer analysis",
+    "chart": "Create visualizations",
+    "table": "Display data in a table",
+    "correlationMatrix": "Visualize correlations",
+    "violinPlot": "Create violin plots",
+    "pairPlot": "Create pair plots",
+    "areaChart": "Create area charts",
+    "stackedChart": "Create stacked charts",
+    "bubbleChart": "Create bubble charts",
+    "qqPlot": "Create Q-Q plots",
+    "confusionMatrix": "Visualize confusion matrix",
+    "rocCurve": "Plot ROC curves",
+    "export": "Export data to file"
+  },
+  "landing": {
+    "badge": {
+      "browserBased": "100% Browser-Based",
+      "dataLocal": "Your Data Stays Local"
+    },
+    "hero": {
+      "titleLine1": "Canvas for",
+      "titleLine2": "Data Science",
+      "description": "Build powerful data pipelines visually. Drag, drop, and connect blocks to transform, analyze, and visualize your data — all without writing code.",
+      "ctaPrimary": "Start Building Free",
+      "ctaExamples": "View Examples",
+      "ctaGuide": "Get Started Guide",
+      "trustText": "Free to use. Your data never leaves your browser."
+    },
+    "features": {
+      "sectionTitle": "Everything you need to",
+      "sectionTitleHighlight": "explore data",
+      "sectionDescription": "A complete toolkit for data transformation and analysis, running entirely in your browser.",
+      "privacyFirst": {
+        "title": "Privacy First",
+        "description": "All processing happens locally in your browser. Your data never touches any server."
+      },
+      "quickStart": {
+        "title": "Quick Start",
+        "description": "No installation needed. Create a free account and start building data pipelines immediately."
+      },
+      "collaborate": {
+        "title": "Collaborate Live",
+        "description": "Work together with your team in real-time using secure peer-to-peer connections."
+      },
+      "pythonPowered": {
+        "title": "Python Powered",
+        "description": "Full data science stack running in WebAssembly. pandas, NumPy, and scikit-learn included."
+      }
+    },
+    "howItWorks": {
+      "title": "Simple as",
+      "titleHighlight": "1, 2, 3",
+      "step1": {
+        "title": "Drop your data",
+        "description": "Upload CSV files or use our sample datasets to explore."
+      },
+      "step2": {
+        "title": "Build your pipeline",
+        "description": "Drag blocks onto the canvas and connect them to create your data flow."
+      },
+      "step3": {
+        "title": "See results instantly",
+        "description": "Run your pipeline and visualize results with charts and tables."
+      }
+    },
+    "cta": {
+      "title": "Ready to transform your data?",
+      "description": "Join thousands of data enthusiasts building pipelines without code. Free forever, your data stays local.",
+      "button": "Launch Data Flow Canvas"
+    },
+    "footer": {
+      "openSource": "Data Flow Canvas — Open Source (AGPL-3.0)",
+      "documentation": "Documentation",
+      "terms": "Terms",
+      "privacy": "Privacy"
+    }
+  },
+  "header": {
+    "launchApp": "Launch App"
+  }
+}
