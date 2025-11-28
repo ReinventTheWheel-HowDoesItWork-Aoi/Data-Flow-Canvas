@@ -15,7 +15,6 @@ const ProjectsPage = lazy(() => import('./pages/ProjectsPage'));
 const HelpPage = lazy(() => import('./pages/HelpPage'));
 const PrivacyPage = lazy(() => import('./pages/PrivacyPage'));
 const TermsPage = lazy(() => import('./pages/TermsPage'));
-const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -51,7 +50,6 @@ function App() {
               <Route path="/help" element={<HelpPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Routes>
           </Suspense>
         </BrowserRouter>
