@@ -1,0 +1,216 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "confirm": "確認",
+    "error": "エラー",
+    "success": "成功",
+    "language": "言語",
+    "english": "English",
+    "japanese": "日本語"
+  },
+  "topBar": {
+    "unsavedChanges": "未保存の変更があります",
+    "loadingPython": "Python を読み込み中...",
+    "run": "実行",
+    "stop": "停止",
+    "runPipelineTooltip": "パイプラインを実行 (Ctrl+Enter)",
+    "waitingForPython": "Python エンジンの読み込みを待っています...",
+    "toggleLogs": "ログの表示切替 (Ctrl+J)",
+    "saveProject": "プロジェクトを保存 (Ctrl+S)",
+    "collaborate": "コラボレーション",
+    "share": "共有",
+    "helpDocs": "ヘルプとドキュメント",
+    "lightMode": "ライトモード",
+    "darkMode": "ダークモード",
+    "settings": "設定",
+    "signOut": "ログアウト"
+  },
+  "sidebar": {
+    "blocks": "ブロック",
+    "dragToCanvas": "ブロックをキャンバスにドラッグ"
+  },
+  "categories": {
+    "dataInput": "データ入力",
+    "transform": "変換",
+    "analysis": "分析",
+    "visualization": "可視化",
+    "output": "出力"
+  },
+  "blocks": {
+    "loadData": "CSV 読み込み",
+    "sampleData": "サンプルデータ",
+    "createDataset": "データセット作成",
+    "filterRows": "行フィルター",
+    "selectColumns": "列選択",
+    "sort": "並べ替え",
+    "groupAggregate": "グループ化と集計",
+    "join": "結合",
+    "deriveColumn": "派生列",
+    "handleMissing": "欠損値処理",
+    "renameColumns": "列名変更",
+    "deduplicate": "重複削除",
+    "sampleRows": "行サンプリング",
+    "limitRows": "行数制限",
+    "pivot": "ピボット",
+    "unpivot": "アンピボット",
+    "union": "ユニオン",
+    "splitColumn": "列分割",
+    "mergeColumns": "列結合",
+    "conditionalColumn": "条件付き列",
+    "statistics": "統計",
+    "regression": "回帰分析",
+    "clustering": "クラスタリング",
+    "pca": "主成分分析",
+    "outlierDetection": "外れ値検出",
+    "classification": "分類",
+    "normalityTest": "正規性検定",
+    "hypothesisTesting": "仮説検定",
+    "timeSeries": "時系列分析",
+    "featureImportance": "特徴量重要度",
+    "crossValidation": "交差検証",
+    "dataProfiling": "データプロファイリング",
+    "valueCounts": "値カウント",
+    "crossTabulation": "クロス集計",
+    "scaling": "スケーリング",
+    "encoding": "エンコーディング",
+    "abTest": "A/Bテスト",
+    "cohortAnalysis": "コホート分析",
+    "rfmAnalysis": "RFM分析",
+    "chart": "チャート",
+    "table": "テーブル",
+    "correlationMatrix": "相関行列",
+    "violinPlot": "バイオリンプロット",
+    "pairPlot": "ペアプロット",
+    "areaChart": "エリアチャート",
+    "stackedChart": "積み上げチャート",
+    "bubbleChart": "バブルチャート",
+    "qqPlot": "Q-Qプロット",
+    "confusionMatrix": "混同行列",
+    "rocCurve": "ROC曲線",
+    "export": "エクスポート"
+  },
+  "blockDescriptions": {
+    "loadData": "CSVファイルからデータをインポート",
+    "sampleData": "学習用の組み込みサンプルデータセットを読み込む",
+    "createDataset": "データを入力してデータセットを手動作成",
+    "filterRows": "条件に基づいて行をフィルタリング",
+    "selectColumns": "保持する列を選択",
+    "sort": "1つ以上の列でデータを並べ替え",
+    "groupAggregate": "データをグループ化して集計関数を適用",
+    "join": "共通の列に基づいて2つのデータセットを結合",
+    "deriveColumn": "式を使用して新しい列を作成",
+    "handleMissing": "データの欠損値を処理",
+    "renameColumns": "データセットの列名を変更",
+    "deduplicate": "重複行を削除",
+    "sampleRows": "行のランダムサンプルを取得",
+    "limitRows": "行数を制限",
+    "pivot": "データを縦長から横長形式に変換",
+    "unpivot": "データを横長から縦長形式に変換",
+    "union": "データセットを縦方向に結合",
+    "splitColumn": "列を複数の列に分割",
+    "mergeColumns": "複数の列を1つに結合",
+    "conditionalColumn": "条件に基づいて列を作成",
+    "statistics": "記述統計量を計算",
+    "regression": "回帰分析を実行",
+    "clustering": "データをグループにクラスタリング",
+    "pca": "主成分分析",
+    "outlierDetection": "データの外れ値を検出",
+    "classification": "分類モデルを学習",
+    "normalityTest": "データの正規性を検定",
+    "hypothesisTesting": "仮説検定を実行",
+    "timeSeries": "時系列分析",
+    "featureImportance": "特徴量の重要度を分析",
+    "crossValidation": "モデル評価のための交差検証",
+    "dataProfiling": "データプロファイルレポートを生成",
+    "valueCounts": "ユニーク値をカウント",
+    "crossTabulation": "クロス集計表を作成",
+    "scaling": "データのスケーリングと正規化",
+    "encoding": "カテゴリ変数をエンコード",
+    "abTest": "A/Bテスト分析",
+    "cohortAnalysis": "ユーザーコホートを分析",
+    "rfmAnalysis": "RFM顧客分析",
+    "chart": "可視化を作成",
+    "table": "データをテーブルで表示",
+    "correlationMatrix": "相関を可視化",
+    "violinPlot": "バイオリンプロットを作成",
+    "pairPlot": "ペアプロットを作成",
+    "areaChart": "エリアチャートを作成",
+    "stackedChart": "積み上げチャートを作成",
+    "bubbleChart": "バブルチャートを作成",
+    "qqPlot": "Q-Qプロットを作成",
+    "confusionMatrix": "混同行列を可視化",
+    "rocCurve": "ROC曲線をプロット",
+    "export": "データをファイルにエクスポート"
+  },
+  "landing": {
+    "badge": {
+      "browserBased": "100%ブラウザベース",
+      "dataLocal": "データはローカルに保持"
+    },
+    "hero": {
+      "titleLine1": "データサイエンスの",
+      "titleLine2": "キャンバス",
+      "description": "視覚的に強力なデータパイプラインを構築。ブロックをドラッグ＆ドロップして接続し、コードを書かずにデータの変換、分析、可視化を実現。",
+      "ctaPrimary": "無料で始める",
+      "ctaExamples": "サンプルを見る",
+      "ctaGuide": "入門ガイド",
+      "trustText": "無料でご利用いただけます。データはブラウザから外に出ません。"
+    },
+    "features": {
+      "sectionTitle": "データ探索に",
+      "sectionTitleHighlight": "必要なすべてを",
+      "sectionDescription": "ブラウザ内で完全に動作する、データ変換と分析のための完全なツールキット。",
+      "privacyFirst": {
+        "title": "プライバシー優先",
+        "description": "すべての処理はブラウザ内でローカルに行われます。データがサーバーに送信されることはありません。"
+      },
+      "quickStart": {
+        "title": "すぐに開始",
+        "description": "インストール不要。無料アカウントを作成して、すぐにデータパイプラインの構築を開始できます。"
+      },
+      "collaborate": {
+        "title": "リアルタイムコラボレーション",
+        "description": "安全なピアツーピア接続を使用して、チームとリアルタイムで共同作業。"
+      },
+      "pythonPowered": {
+        "title": "Python搭載",
+        "description": "WebAssemblyで動作する完全なデータサイエンススタック。pandas、NumPy、scikit-learn を搭載。"
+      }
+    },
+    "howItWorks": {
+      "title": "シンプルな",
+      "titleHighlight": "3ステップ",
+      "step1": {
+        "title": "データを追加",
+        "description": "CSVファイルをアップロードするか、サンプルデータセットを使用して探索。"
+      },
+      "step2": {
+        "title": "パイプラインを構築",
+        "description": "ブロックをキャンバスにドラッグして接続し、データフローを作成。"
+      },
+      "step3": {
+        "title": "結果を即座に確認",
+        "description": "パイプラインを実行し、チャートやテーブルで結果を可視化。"
+      }
+    },
+    "cta": {
+      "title": "データを変換する準備はできましたか？",
+      "description": "コードなしでパイプラインを構築する多くのデータ愛好家に参加しましょう。永久無料、データはローカルに保持されます。",
+      "button": "Data Flow Canvas を起動"
+    },
+    "footer": {
+      "openSource": "Data Flow Canvas — オープンソース (AGPL-3.0)",
+      "documentation": "ドキュメント",
+      "terms": "利用規約",
+      "privacy": "プライバシー"
+    }
+  },
+  "header": {
+    "launchApp": "アプリを起動"
+  }
+}
