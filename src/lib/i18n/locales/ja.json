@@ -181,7 +181,7 @@
       },
       "collaborate": {
         "title": "リアルタイムコラボレーション",
-        "description": "安全なピアツーピア接続を使用して、チームとリアルタイムで共同作業。"
+        "description": "チームとリアルタイムで共同作業。IPアドレスは他のユーザーから隠されます。"
       },
       "pythonPowered": {
         "title": "Python搭載",
@@ -292,6 +292,36 @@
         "name": "線形回帰",
         "description": "可視化を伴うシンプルな回帰モデルを構築します。"
       }
+    }
+  },
+  "collaboration": {
+    "title": "コラボレーション",
+    "subtitle": "リアルタイムで共同作業",
+    "connectedTo": "ルーム {{roomId}} に接続中",
+    "startSession": "新しいセッションを開始",
+    "joinSession": "既存のセッションに参加",
+    "join": "参加",
+    "leave": "セッションを退出",
+    "roomId": "ルームID",
+    "enterRoomId": "ルームIDを入力",
+    "connected": "接続中",
+    "connecting": "接続中...",
+    "disconnected": "切断",
+    "participants": "参加者",
+    "copyLink": "招待リンクをコピー",
+    "linkCopied": "リンクをコピーしました！",
+    "or": "または",
+    "howItWorks": "使い方",
+    "info1": "セッションを開始して共有可能なルームIDを取得",
+    "info2": "最大2人にIDを共有",
+    "info3": "あなたのIPアドレスは他のユーザーから隠されます",
+    "privacyNote": "接続はSupabase経由で安全にルーティングされます。IPアドレスが公開されることはありません。",
+    "errors": {
+      "startFailed": "セッションの開始に失敗しました。もう一度お試しください。",
+      "joinFailed": "セッションへの参加に失敗しました。もう一度お試しください。",
+      "roomIdRequired": "ルームIDを入力してください",
+      "sessionFull": "このセッションは満員です（3/3人）",
+      "globalFull": "現在コラボレーションは最大容量に達しています。後でもう一度お試しください。"
     }
   },
   "help": {
