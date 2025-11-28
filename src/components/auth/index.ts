@@ -4,3 +4,4 @@
  */
 
 export { AuthModal } from './AuthModal';
+export { ProfileCompletionModal } from './ProfileCompletionModal';
