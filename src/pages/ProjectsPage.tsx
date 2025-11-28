@@ -5,15 +5,45 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Plus, FileText, Trash2, Clock, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useProjectStore } from '@/stores/projectStore';
 import { cn } from '@/lib/utils/cn';
 
 export default function ProjectsPage() {
+  const { t } = useTranslation();
   const { projectList } = useProjectStore();
+
+  const sampleProjects = [
+    {
+      id: 'iris-analysis',
+      nameKey: 'projects.samples.irisClassification.name',
+      descriptionKey: 'projects.samples.irisClassification.description',
+      icon: Layers,
+      bgColor: 'bg-electric-indigo/20',
+      iconColor: 'text-electric-indigo',
+    },
+    {
+      id: 'data-cleaning',
+      nameKey: 'projects.samples.dataCleaningPipeline.name',
+      descriptionKey: 'projects.samples.dataCleaningPipeline.description',
+      icon: FileText,
+      bgColor: 'bg-fresh-teal/20',
+      iconColor: 'text-fresh-teal',
+    },
+    {
+      id: 'regression',
+      nameKey: 'projects.samples.linearRegression.name',
+      descriptionKey: 'projects.samples.linearRegression.description',
+      icon: Layers,
+      bgColor: 'bg-soft-violet/20',
+      iconColor: 'text-soft-violet',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-bg-primary">
@@ -29,25 +59,28 @@ export default function ProjectsPage() {
             </Link>
           </div>
 
-          <Link to="/editor">
-            <Button variant="primary" leftIcon={<Plus size={18} />}>
-              New Project
-            </Button>
-          </Link>
+          <div className="flex items-center gap-4">
+            <LanguageSelector variant="full" />
+            <Link to="/editor">
+              <Button variant="primary" leftIcon={<Plus size={18} />}>
+                {t('projects.newProject')}
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-h1 text-text-primary mb-2">Your Projects</h1>
+          <h1 className="text-h1 text-text-primary mb-2">{t('projects.yourProjects')}</h1>
           <p className="text-text-secondary">
-            All your projects are stored locally in your browser.
+            {t('projects.storedLocally')}
           </p>
         </div>
 
         {projectList.length === 0 ? (
-          <EmptyState />
+          <EmptyState t={t} />
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projectList.map((project, index) => (
@@ -57,7 +90,7 @@ export default function ProjectsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <ProjectCard project={project} />
+                <ProjectCard project={project} t={t} />
               </motion.div>
             ))}
           </div>
@@ -65,7 +98,7 @@ export default function ProjectsPage() {
 
         {/* Sample Projects */}
         <div className="mt-12">
-          <h2 className="text-h2 text-text-primary mb-4">Example Pipelines</h2>
+          <h2 className="text-h2 text-text-primary mb-4">{t('projects.examplePipelines')}</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sampleProjects.map((sample, index) => (
               <motion.div
@@ -74,7 +107,7 @@ export default function ProjectsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, delay: index * 0.05 }}
               >
-                <SampleProjectCard sample={sample} />
+                <SampleProjectCard sample={sample} t={t} />
               </motion.div>
             ))}
           </div>
@@ -84,26 +117,26 @@ export default function ProjectsPage() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: (key: string) => string }) {
   return (
     <Card className="max-w-md mx-auto text-center py-12">
       <div className="w-16 h-16 rounded-2xl bg-bg-tertiary flex items-center justify-center mx-auto mb-4">
         <FileText size={32} className="text-text-muted" />
       </div>
-      <h3 className="text-h3 text-text-primary mb-2">No projects yet</h3>
+      <h3 className="text-h3 text-text-primary mb-2">{t('projects.noProjectsYet')}</h3>
       <p className="text-text-secondary mb-6">
-        Create your first data pipeline project to get started.
+        {t('projects.createFirstProject')}
       </p>
       <Link to="/editor">
         <Button variant="primary" leftIcon={<Plus size={18} />}>
-          Create Project
+          {t('projects.createProject')}
         </Button>
       </Link>
     </Card>
   );
 }
 
-function ProjectCard({ project }: { project: any }) {
+function ProjectCard({ project, t }: { project: any; t: (key: string) => string }) {
   const { removeFromProjectList } = useProjectStore();
 
   return (
@@ -132,7 +165,7 @@ function ProjectCard({ project }: { project: any }) {
           <div className="flex items-center gap-4 text-small text-text-muted">
             <div className="flex items-center gap-1">
               <Layers size={14} />
-              <span>{project.blockCount} blocks</span>
+              <span>{project.blockCount} {t('projects.blocks')}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock size={14} />
@@ -147,7 +180,7 @@ function ProjectCard({ project }: { project: any }) {
   );
 }
 
-function SampleProjectCard({ sample }: { sample: any }) {
+function SampleProjectCard({ sample, t }: { sample: any; t: (key: string) => string }) {
   return (
     <Card
       className={cn(
@@ -165,39 +198,12 @@ function SampleProjectCard({ sample }: { sample: any }) {
           >
             <sample.icon size={20} className={sample.iconColor} />
           </div>
-          <CardTitle>{sample.name}</CardTitle>
+          <CardTitle>{t(sample.nameKey)}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-small text-text-muted">{sample.description}</p>
+          <p className="text-small text-text-muted">{t(sample.descriptionKey)}</p>
         </CardContent>
       </Link>
     </Card>
   );
 }
-
-const sampleProjects = [
-  {
-    id: 'iris-analysis',
-    name: 'Iris Classification',
-    description: 'Explore the classic Iris dataset with clustering and visualization.',
-    icon: Layers,
-    bgColor: 'bg-electric-indigo/20',
-    iconColor: 'text-electric-indigo',
-  },
-  {
-    id: 'data-cleaning',
-    name: 'Data Cleaning Pipeline',
-    description: 'Handle missing values, filter rows, and transform columns.',
-    icon: FileText,
-    bgColor: 'bg-fresh-teal/20',
-    iconColor: 'text-fresh-teal',
-  },
-  {
-    id: 'regression',
-    name: 'Linear Regression',
-    description: 'Build a simple regression model with visualization.',
-    icon: Layers,
-    bgColor: 'bg-soft-violet/20',
-    iconColor: 'text-soft-violet',
-  },
-];
