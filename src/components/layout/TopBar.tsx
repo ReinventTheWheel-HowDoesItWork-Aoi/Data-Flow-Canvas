@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Play,
   Square,
@@ -33,6 +34,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/Dropdown';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
 import { useAuthStore } from '@/stores/authStore';
@@ -40,6 +42,7 @@ import { useExecution } from '@/hooks/useExecution';
 import { useProject } from '@/hooks/useProject';
 
 export function TopBar() {
+  const { t } = useTranslation();
   const {
     isDarkMode,
     toggleDarkMode,
@@ -93,7 +96,7 @@ export function TopBar() {
               Data Flow Canvas
             </h1>
             {hasUnsavedChanges && (
-              <span className="text-small text-text-muted">Unsaved changes</span>
+              <span className="text-small text-text-muted">{t('topBar.unsavedChanges')}</span>
             )}
           </div>
         </div>
@@ -104,7 +107,7 @@ export function TopBar() {
         {isPyodideLoading && (
           <div className="flex items-center gap-2 text-text-muted text-small mr-2">
             <Loader2 size={14} className="animate-spin" />
-            <span>Loading Python...</span>
+            <span>{t('topBar.loadingPython')}</span>
           </div>
         )}
 
@@ -125,13 +128,13 @@ export function TopBar() {
                 )
               }
             >
-              {isRunning ? 'Stop' : 'Run'}
+              {isRunning ? t('topBar.stop') : t('topBar.run')}
             </Button>
           </TooltipTrigger>
           <TooltipContent>
             {isPyodideReady
-              ? 'Run pipeline (Ctrl+Enter)'
-              : 'Waiting for Python engine to load...'}
+              ? t('topBar.runPipelineTooltip')
+              : t('topBar.waitingForPython')}
           </TooltipContent>
         </Tooltip>
 
@@ -145,7 +148,7 @@ export function TopBar() {
               <Terminal size={18} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Toggle logs (Ctrl+J)</TooltipContent>
+          <TooltipContent>{t('topBar.toggleLogs')}</TooltipContent>
         </Tooltip>
       </div>
 
@@ -162,7 +165,7 @@ export function TopBar() {
               <Save size={18} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Save project (Ctrl+S)</TooltipContent>
+          <TooltipContent>{t('topBar.saveProject')}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -171,7 +174,7 @@ export function TopBar() {
               <Users size={18} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Collaborate</TooltipContent>
+          <TooltipContent>{t('topBar.collaborate')}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -180,7 +183,7 @@ export function TopBar() {
               <Share2 size={18} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Share</TooltipContent>
+          <TooltipContent>{t('topBar.share')}</TooltipContent>
         </Tooltip>
 
         <div className="w-px h-6 bg-border-default mx-1" />
@@ -193,7 +196,7 @@ export function TopBar() {
               </Button>
             </Link>
           </TooltipTrigger>
-          <TooltipContent>Help & Documentation</TooltipContent>
+          <TooltipContent>{t('topBar.helpDocs')}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -203,9 +206,11 @@ export function TopBar() {
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {isDarkMode ? 'Light mode' : 'Dark mode'}
+            {isDarkMode ? t('topBar.lightMode') : t('topBar.darkMode')}
           </TooltipContent>
         </Tooltip>
+
+        <LanguageSelector />
 
         <Tooltip>
           <TooltipTrigger asChild>
@@ -213,7 +218,7 @@ export function TopBar() {
               <Settings size={18} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Settings</TooltipContent>
+          <TooltipContent>{t('topBar.settings')}</TooltipContent>
         </Tooltip>
 
         {/* User Menu */}
@@ -250,7 +255,7 @@ export function TopBar() {
                 </div>
                 <DropdownMenuItem onClick={handleSignOut} className="text-warm-coral">
                   <LogOut size={16} className="mr-2" />
-                  Sign out
+                  {t('topBar.signOut')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
