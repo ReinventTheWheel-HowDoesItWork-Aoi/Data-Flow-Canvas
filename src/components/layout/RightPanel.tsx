@@ -26,6 +26,116 @@ import { ChartVisualization, TableVisualization } from '@/components/visualizati
 import type { BlockType, BlockConfig, PipelineBlock } from '@/types';
 import { cn } from '@/lib/utils/cn';
 
+// Map block types to translation keys
+const blockTranslationKeys: Record<BlockType, string> = {
+  'load-data': 'blocks.loadData',
+  'sample-data': 'blocks.sampleData',
+  'create-dataset': 'blocks.createDataset',
+  'filter-rows': 'blocks.filterRows',
+  'select-columns': 'blocks.selectColumns',
+  'sort': 'blocks.sort',
+  'group-aggregate': 'blocks.groupAggregate',
+  'join': 'blocks.join',
+  'derive-column': 'blocks.deriveColumn',
+  'handle-missing': 'blocks.handleMissing',
+  'rename-columns': 'blocks.renameColumns',
+  'deduplicate': 'blocks.deduplicate',
+  'sample-rows': 'blocks.sampleRows',
+  'limit-rows': 'blocks.limitRows',
+  'pivot': 'blocks.pivot',
+  'unpivot': 'blocks.unpivot',
+  'union': 'blocks.union',
+  'split-column': 'blocks.splitColumn',
+  'merge-columns': 'blocks.mergeColumns',
+  'conditional-column': 'blocks.conditionalColumn',
+  'statistics': 'blocks.statistics',
+  'regression': 'blocks.regression',
+  'clustering': 'blocks.clustering',
+  'pca': 'blocks.pca',
+  'outlier-detection': 'blocks.outlierDetection',
+  'classification': 'blocks.classification',
+  'normality-test': 'blocks.normalityTest',
+  'hypothesis-testing': 'blocks.hypothesisTesting',
+  'time-series': 'blocks.timeSeries',
+  'feature-importance': 'blocks.featureImportance',
+  'cross-validation': 'blocks.crossValidation',
+  'data-profiling': 'blocks.dataProfiling',
+  'value-counts': 'blocks.valueCounts',
+  'cross-tabulation': 'blocks.crossTabulation',
+  'scaling': 'blocks.scaling',
+  'encoding': 'blocks.encoding',
+  'ab-test': 'blocks.abTest',
+  'cohort-analysis': 'blocks.cohortAnalysis',
+  'rfm-analysis': 'blocks.rfmAnalysis',
+  'chart': 'blocks.chart',
+  'table': 'blocks.table',
+  'correlation-matrix': 'blocks.correlationMatrix',
+  'violin-plot': 'blocks.violinPlot',
+  'pair-plot': 'blocks.pairPlot',
+  'area-chart': 'blocks.areaChart',
+  'stacked-chart': 'blocks.stackedChart',
+  'bubble-chart': 'blocks.bubbleChart',
+  'qq-plot': 'blocks.qqPlot',
+  'confusion-matrix': 'blocks.confusionMatrix',
+  'roc-curve': 'blocks.rocCurve',
+  'export': 'blocks.export',
+};
+
+// Map block types to description translation keys
+const blockDescriptionKeys: Record<BlockType, string> = {
+  'load-data': 'blockDescriptions.loadData',
+  'sample-data': 'blockDescriptions.sampleData',
+  'create-dataset': 'blockDescriptions.createDataset',
+  'filter-rows': 'blockDescriptions.filterRows',
+  'select-columns': 'blockDescriptions.selectColumns',
+  'sort': 'blockDescriptions.sort',
+  'group-aggregate': 'blockDescriptions.groupAggregate',
+  'join': 'blockDescriptions.join',
+  'derive-column': 'blockDescriptions.deriveColumn',
+  'handle-missing': 'blockDescriptions.handleMissing',
+  'rename-columns': 'blockDescriptions.renameColumns',
+  'deduplicate': 'blockDescriptions.deduplicate',
+  'sample-rows': 'blockDescriptions.sampleRows',
+  'limit-rows': 'blockDescriptions.limitRows',
+  'pivot': 'blockDescriptions.pivot',
+  'unpivot': 'blockDescriptions.unpivot',
+  'union': 'blockDescriptions.union',
+  'split-column': 'blockDescriptions.splitColumn',
+  'merge-columns': 'blockDescriptions.mergeColumns',
+  'conditional-column': 'blockDescriptions.conditionalColumn',
+  'statistics': 'blockDescriptions.statistics',
+  'regression': 'blockDescriptions.regression',
+  'clustering': 'blockDescriptions.clustering',
+  'pca': 'blockDescriptions.pca',
+  'outlier-detection': 'blockDescriptions.outlierDetection',
+  'classification': 'blockDescriptions.classification',
+  'normality-test': 'blockDescriptions.normalityTest',
+  'hypothesis-testing': 'blockDescriptions.hypothesisTesting',
+  'time-series': 'blockDescriptions.timeSeries',
+  'feature-importance': 'blockDescriptions.featureImportance',
+  'cross-validation': 'blockDescriptions.crossValidation',
+  'data-profiling': 'blockDescriptions.dataProfiling',
+  'value-counts': 'blockDescriptions.valueCounts',
+  'cross-tabulation': 'blockDescriptions.crossTabulation',
+  'scaling': 'blockDescriptions.scaling',
+  'encoding': 'blockDescriptions.encoding',
+  'ab-test': 'blockDescriptions.abTest',
+  'cohort-analysis': 'blockDescriptions.cohortAnalysis',
+  'rfm-analysis': 'blockDescriptions.rfmAnalysis',
+  'chart': 'blockDescriptions.chart',
+  'table': 'blockDescriptions.table',
+  'correlation-matrix': 'blockDescriptions.correlationMatrix',
+  'violin-plot': 'blockDescriptions.violinPlot',
+  'pair-plot': 'blockDescriptions.pairPlot',
+  'area-chart': 'blockDescriptions.areaChart',
+  'stacked-chart': 'blockDescriptions.stackedChart',
+  'bubble-chart': 'blockDescriptions.bubbleChart',
+  'qq-plot': 'blockDescriptions.qqPlot',
+  'confusion-matrix': 'blockDescriptions.confusionMatrix',
+  'roc-curve': 'blockDescriptions.rocCurve',
+  'export': 'blockDescriptions.export',
+};
+
 // Helper function to convert ArrayBuffer to Base64 (handles large files)
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -63,7 +173,7 @@ export function RightPanel() {
       <div className="flex items-center justify-between p-4 border-b border-border-default">
         <h2 className="text-h3 text-text-primary">
           {selectedBlock
-            ? blockDefinitions[selectedBlock.data.type].label
+            ? t(blockTranslationKeys[selectedBlock.data.type], { defaultValue: blockDefinitions[selectedBlock.data.type].label })
             : t('rightPanel.properties')}
         </h2>
         <Button variant="ghost" size="sm" onClick={toggleRightPanel}>
@@ -132,6 +242,7 @@ interface BlockConfigEditorProps {
 }
 
 function BlockConfigEditor({ block, onUpdate }: BlockConfigEditorProps) {
+  const { t } = useTranslation();
   const { type, config } = block.data;
   const definition = blockDefinitions[type];
   const { edges } = useCanvasStore();
@@ -160,13 +271,17 @@ function BlockConfigEditor({ block, onUpdate }: BlockConfigEditorProps) {
     [config, onUpdate]
   );
 
+  // Get translated label and description
+  const translatedLabel = t(blockTranslationKeys[type], { defaultValue: definition.label });
+  const translatedDescription = t(blockDescriptionKeys[type], { defaultValue: definition.description });
+
   return (
     <div className="space-y-4">
       <div>
         <h4 className="text-small font-medium text-text-primary mb-1">
-          {definition.label}
+          {translatedLabel}
         </h4>
-        <p className="text-small text-text-muted">{definition.description}</p>
+        <p className="text-small text-text-muted">{translatedDescription}</p>
       </div>
 
       <div className="space-y-4">
