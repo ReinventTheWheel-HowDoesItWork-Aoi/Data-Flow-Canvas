@@ -37,6 +37,8 @@ interface AuthState {
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
+  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
 }
 
@@ -189,6 +191,50 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error) {
       console.error('Error signing out:', error);
       set({ isLoading: false });
+    }
+  },
+
+  // Reset password - sends email with reset link
+  resetPassword: async (email: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        set({ isLoading: false, error: error.message });
+        return { success: false, error: error.message };
+      }
+
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send reset email';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
+    }
+  },
+
+  // Update password - called after user clicks reset link
+  updatePassword: async (newPassword: string) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) {
+        set({ isLoading: false, error: error.message });
+        return { success: false, error: error.message };
+      }
+
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update password';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
     }
   },
 
