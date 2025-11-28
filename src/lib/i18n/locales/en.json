@@ -148,6 +148,12 @@
     "export": "Export data to file"
   },
   "landing": {
+    "previewNodes": {
+      "loadCsv": "Load CSV",
+      "filterRows": "Filter Rows",
+      "groupBy": "Group By",
+      "barChart": "Bar Chart"
+    },
     "badge": {
       "browserBased": "100% Browser-Based",
       "dataLocal": "Your Data Stays Local"
