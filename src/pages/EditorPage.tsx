@@ -29,19 +29,11 @@ export default function EditorPage() {
   const isDarkMode = useUIStore((state) => state.isDarkMode);
   const setDarkMode = useUIStore((state) => state.setDarkMode);
   const { loadProject, createNewProject, currentProject } = useProject();
-  const { user, isInitialized, needsProfileCompletion, initialize } = useAuthStore();
+  const { user, isInitialized, needsProfileCompletion } = useAuthStore();
   const initialized = useRef(false);
-  const authInitialized = useRef(false);
 
   // Register keyboard shortcuts
   useKeyboardShortcuts();
-
-  // Initialize auth on mount
-  useEffect(() => {
-    if (authInitialized.current) return;
-    authInitialized.current = true;
-    initialize();
-  }, [initialize]);
 
   // Initialize dark mode on mount only
   useEffect(() => {
