@@ -53,3 +53,4 @@ export {
   TooltipTrigger,
   TooltipContent,
 } from './Tooltip';
+export { LanguageSelector } from './LanguageSelector';
