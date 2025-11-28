@@ -51,7 +51,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Initialize auth state and listen for changes
   initialize: async () => {
     try {
-      // Get initial session
+      // Set up auth state change listener FIRST
+      // This is critical for handling magic link callbacks
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('Auth state changed:', event);
+
+          if (session?.user) {
+            const profile = extractProfile(session.user);
+            const needsProfile = !profile.firstName || !profile.lastName;
+            set({
+              user: session.user,
+              session,
+              profile,
+              needsProfileCompletion: needsProfile,
+              isInitialized: true,
+              isLoading: false,
+            });
+          } else {
+            set({
+              user: null,
+              session: null,
+              profile: null,
+              needsProfileCompletion: false,
+              isInitialized: true,
+              isLoading: false,
+            });
+          }
+        }
+      );
+
+      // Then get initial session (for page refreshes when already logged in)
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
@@ -74,27 +104,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         set({ isInitialized: true, isLoading: false });
       }
-
-      // Listen for auth state changes
-      supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          const profile = extractProfile(session.user);
-          const needsProfile = !profile.firstName || !profile.lastName;
-          set({
-            user: session.user,
-            session,
-            profile,
-            needsProfileCompletion: needsProfile,
-          });
-        } else {
-          set({
-            user: null,
-            session: null,
-            profile: null,
-            needsProfileCompletion: false,
-          });
-        }
-      });
     } catch (error) {
       console.error('Error initializing auth:', error);
       set({ isInitialized: true, isLoading: false });
