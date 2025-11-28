@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FileUp,
   Database,
@@ -93,7 +94,72 @@ const categoryColors: Record<BlockCategory, string> = {
   'output': 'text-warm-coral',
 };
 
+// Map category IDs to translation keys
+const categoryTranslationKeys: Record<string, string> = {
+  'data-input': 'categories.dataInput',
+  'transform': 'categories.transform',
+  'analysis': 'categories.analysis',
+  'visualization': 'categories.visualization',
+  'output': 'categories.output',
+};
+
+// Map block types to translation keys
+const blockTranslationKeys: Record<string, string> = {
+  'load-data': 'blocks.loadData',
+  'sample-data': 'blocks.sampleData',
+  'create-dataset': 'blocks.createDataset',
+  'filter-rows': 'blocks.filterRows',
+  'select-columns': 'blocks.selectColumns',
+  'sort': 'blocks.sort',
+  'group-aggregate': 'blocks.groupAggregate',
+  'join': 'blocks.join',
+  'derive-column': 'blocks.deriveColumn',
+  'handle-missing': 'blocks.handleMissing',
+  'rename-columns': 'blocks.renameColumns',
+  'deduplicate': 'blocks.deduplicate',
+  'sample-rows': 'blocks.sampleRows',
+  'limit-rows': 'blocks.limitRows',
+  'pivot': 'blocks.pivot',
+  'unpivot': 'blocks.unpivot',
+  'union': 'blocks.union',
+  'split-column': 'blocks.splitColumn',
+  'merge-columns': 'blocks.mergeColumns',
+  'conditional-column': 'blocks.conditionalColumn',
+  'statistics': 'blocks.statistics',
+  'regression': 'blocks.regression',
+  'clustering': 'blocks.clustering',
+  'pca': 'blocks.pca',
+  'outlier-detection': 'blocks.outlierDetection',
+  'classification': 'blocks.classification',
+  'normality-test': 'blocks.normalityTest',
+  'hypothesis-testing': 'blocks.hypothesisTesting',
+  'time-series': 'blocks.timeSeries',
+  'feature-importance': 'blocks.featureImportance',
+  'cross-validation': 'blocks.crossValidation',
+  'data-profiling': 'blocks.dataProfiling',
+  'value-counts': 'blocks.valueCounts',
+  'cross-tabulation': 'blocks.crossTabulation',
+  'scaling': 'blocks.scaling',
+  'encoding': 'blocks.encoding',
+  'ab-test': 'blocks.abTest',
+  'cohort-analysis': 'blocks.cohortAnalysis',
+  'rfm-analysis': 'blocks.rfmAnalysis',
+  'chart': 'blocks.chart',
+  'table': 'blocks.table',
+  'correlation-matrix': 'blocks.correlationMatrix',
+  'violin-plot': 'blocks.violinPlot',
+  'pair-plot': 'blocks.pairPlot',
+  'area-chart': 'blocks.areaChart',
+  'stacked-chart': 'blocks.stackedChart',
+  'bubble-chart': 'blocks.bubbleChart',
+  'qq-plot': 'blocks.qqPlot',
+  'confusion-matrix': 'blocks.confusionMatrix',
+  'roc-curve': 'blocks.rocCurve',
+  'export': 'blocks.export',
+};
+
 export function Sidebar() {
+  const { t } = useTranslation();
   const { isSidebarOpen } = useUIStore();
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     blockCategories.map((c) => c.id)
@@ -122,9 +188,9 @@ export function Sidebar() {
   return (
     <aside className="w-64 bg-bg-secondary border-r border-border-default flex flex-col overflow-hidden">
       <div className="p-4 border-b border-border-default">
-        <h2 className="text-h3 text-text-primary">Blocks</h2>
+        <h2 className="text-h3 text-text-primary">{t('sidebar.blocks')}</h2>
         <p className="text-small text-text-muted mt-1">
-          Drag blocks to the canvas
+          {t('sidebar.dragToCanvas')}
         </p>
       </div>
 
@@ -148,7 +214,7 @@ export function Sidebar() {
                   className={categoryColors[category.id as BlockCategory]}
                 />
                 <span className="flex-1 text-small font-medium">
-                  {category.label}
+                  {t(categoryTranslationKeys[category.id] || category.label)}
                 </span>
                 {isExpanded ? (
                   <ChevronDown size={16} className="text-text-muted" />
@@ -192,7 +258,7 @@ export function Sidebar() {
                             />
                             <div className="flex-1 min-w-0">
                               <p className="text-small text-text-primary truncate">
-                                {definition.label}
+                                {t(blockTranslationKeys[blockType] || definition.label)}
                               </p>
                             </div>
                           </div>
