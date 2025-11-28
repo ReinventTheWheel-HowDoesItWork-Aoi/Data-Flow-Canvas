@@ -29,8 +29,9 @@
 - **No installation** — Everything runs in your browser
 
 ### 👥 Real-time Collaboration
-- **P2P connections** — Work together using WebRTC
-- **CRDT sync** — Conflict-free collaborative editing with Y.js
+- **Secure server-relayed connections** — Work together through Supabase Realtime (IP addresses hidden)
+- **Authentication required** — Only signed-in users can collaborate
+- **Smart limits** — 30 max concurrent collaborators globally, 3 per session
 
 ### 🌍 Internationalization
 - **Multi-language support** — Available in English and Japanese
@@ -83,7 +84,7 @@ npm run preview
 - **Python Runtime**: Pyodide (WebAssembly)
 - **Authentication**: Supabase
 - **Storage**: IndexedDB via Dexie.js
-- **Collaboration**: Y.js + WebRTC
+- **Collaboration**: Supabase Realtime (Broadcast + Presence)
 - **Build Tool**: Vite
 
 ## 📁 Project Structure
@@ -104,7 +105,7 @@ src/
 │   ├── pyodide/       # Pyodide integration
 │   ├── execution/     # Pipeline execution engine
 │   ├── storage/       # IndexedDB storage
-│   ├── collaboration/ # WebRTC collaboration
+│   ├── collaboration/ # Supabase Realtime collaboration
 │   ├── utils/         # Utility functions
 │   ├── i18n/          # Internationalization
 │   └── supabase/      # Supabase client
@@ -147,6 +148,5 @@ The AGPL-3.0 license requires that any modifications or derivative works also be
 
 - [Pyodide](https://pyodide.org/) — Python in the browser
 - [React Flow](https://reactflow.dev/) — Node-based graph library
-- [Y.js](https://yjs.dev/) — CRDT framework for collaborative editing
-- [Supabase](https://supabase.com/) — Authentication and database
+- [Supabase](https://supabase.com/) — Authentication, database, and real-time collaboration
 - [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS framework
