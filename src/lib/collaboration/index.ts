@@ -3,4 +3,4 @@
  * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
  */
 
-export { CollaborationManager, collaborationManager } from './webrtcManager';
+export { SupabaseCollaborationManager, collaborationManager } from './supabaseRealtime';
