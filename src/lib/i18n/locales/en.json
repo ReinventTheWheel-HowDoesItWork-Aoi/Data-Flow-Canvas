@@ -230,6 +230,19 @@
     "signIn": "Sign in",
     "signUp": "Sign up",
     "privacyNote": "Your data stays local. We only collect your profile information to personalize your experience.",
+    "forgotPassword": "Forgot password?",
+    "forgotSubtitle": "Enter your email to receive a reset link",
+    "forgotPasswordLink": "Forgot password?",
+    "sendResetLink": "Send Reset Link",
+    "resetEmailSent": "Check your email! We've sent you a link to reset your password.",
+    "backToSignIn": "← Back to Sign In",
+    "resetPassword": "Reset Password",
+    "resetPasswordSubtitle": "Enter your new password below",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm password",
+    "updatePasswordBtn": "Update Password",
+    "passwordUpdated": "Password Updated!",
+    "redirecting": "Redirecting to the editor...",
     "errors": {
       "emailRequired": "Email is required",
       "passwordRequired": "Password is required",
@@ -237,7 +250,10 @@
       "firstNameRequired": "First name is required",
       "lastNameRequired": "Last name is required",
       "signUpFailed": "Sign up failed",
-      "signInFailed": "Sign in failed"
+      "signInFailed": "Sign in failed",
+      "resetFailed": "Failed to send reset email",
+      "passwordMismatch": "Passwords do not match",
+      "updateFailed": "Failed to update password"
     }
   },
   "bottomPanel": {
