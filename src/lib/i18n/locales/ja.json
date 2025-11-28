@@ -221,6 +221,12 @@
   },
   "auth": {
     "welcome": "Data Flow Canvas へようこそ",
+    "createAccount": "アカウントを作成",
+    "welcomeBack": "おかえりなさい",
+    "signUp": "新規登録",
+    "signIn": "ログイン",
+    "signUpSubtitle": "Data Flow Canvas を始めましょう",
+    "signInSubtitle": "ログインリンクを受け取るメールアドレスを入力してください",
     "magicLinkSubtitle": "ログインリンクを受け取るメールアドレスを入力してください",
     "checkEmail": "メールをご確認ください",
     "magicLinkSentSubtitle": "ログイン用のマジックリンクを送信しました",
