@@ -29,6 +29,12 @@ interface AuthState {
   signInWithMagicLink: (
     email: string
   ) => Promise<{ success: boolean; error?: string }>;
+  signUpWithMagicLink: (
+    email: string,
+    firstName: string,
+    lastName: string,
+    company?: string
+  ) => Promise<{ success: boolean; error?: string }>;
   completeProfile: (
     firstName: string,
     lastName: string,
@@ -110,7 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  // Sign in with magic link (passwordless)
+  // Sign in with magic link (passwordless) - for existing users
   signInWithMagicLink: async (email) => {
     set({ isLoading: true, error: null });
 
@@ -119,6 +125,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/editor`,
+        },
+      });
+
+      if (error) {
+        set({ isLoading: false, error: error.message });
+        return { success: false, error: error.message };
+      }
+
+      set({ isLoading: false });
+      return { success: true };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send magic link';
+      set({ isLoading: false, error: message });
+      return { success: false, error: message };
+    }
+  },
+
+  // Sign up with magic link (passwordless) - for new users with profile data
+  signUpWithMagicLink: async (email, firstName, lastName, company) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/editor`,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            company: company || null,
+          },
         },
       });
 
