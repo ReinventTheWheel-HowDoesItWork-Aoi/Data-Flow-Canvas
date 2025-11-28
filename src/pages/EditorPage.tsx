@@ -21,7 +21,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useProject } from '@/hooks/useProject';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils/cn';
-import { AuthModal } from '@/components/auth';
+import { AuthModal, ProfileCompletionModal } from '@/components/auth';
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId?: string }>();
@@ -29,7 +29,7 @@ export default function EditorPage() {
   const isDarkMode = useUIStore((state) => state.isDarkMode);
   const setDarkMode = useUIStore((state) => state.setDarkMode);
   const { loadProject, createNewProject, currentProject } = useProject();
-  const { user, isInitialized, initialize } = useAuthStore();
+  const { user, isInitialized, needsProfileCompletion, initialize } = useAuthStore();
   const initialized = useRef(false);
   const authInitialized = useRef(false);
 
@@ -104,6 +104,9 @@ export default function EditorPage() {
 
             {/* Auth Modal - shows when user is not logged in */}
             {!user && <AuthModal />}
+
+            {/* Profile Completion Modal - shows when user needs to complete their profile */}
+            {user && needsProfileCompletion && <ProfileCompletionModal />}
           </ReactFlowProvider>
         </TooltipProvider>
       </PyodideProvider>
