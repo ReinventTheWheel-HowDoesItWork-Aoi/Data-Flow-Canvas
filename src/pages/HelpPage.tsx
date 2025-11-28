@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import {
   ChevronLeft,
   FileUp,
@@ -176,13 +178,78 @@ const categoryColors: Record<Category, { bg: string; text: string; border: strin
 
 // Navigation sections
 const navSections = [
-  { id: 'quick-start', label: 'Quick Start', icon: Zap },
-  { id: 'shortcuts', label: 'Shortcuts', icon: Keyboard },
-  { id: 'blocks', label: 'Block Reference', icon: Box },
-  { id: 'tips', label: 'Tips', icon: Lightbulb },
+  { id: 'quick-start', labelKey: 'help.nav.quickStart', icon: Zap },
+  { id: 'shortcuts', labelKey: 'help.nav.shortcuts', icon: Keyboard },
+  { id: 'blocks', labelKey: 'help.nav.blockReference', icon: Box },
+  { id: 'tips', labelKey: 'help.nav.tips', icon: Lightbulb },
 ];
 
+// Map category names to translation keys
+const categoryTranslationKeys: Record<Category, string> = {
+  'Data Input': 'categories.dataInput',
+  'Transform': 'categories.transform',
+  'Analysis': 'categories.analysis',
+  'Visualization': 'categories.visualization',
+  'Output': 'categories.output',
+};
+
+// Map block names to translation keys
+const blockTranslationKeys: Record<string, { name: string; description: string }> = {
+  'Load CSV': { name: 'blocks.loadData', description: 'blockDescriptions.loadData' },
+  'Sample Data': { name: 'blocks.sampleData', description: 'blockDescriptions.sampleData' },
+  'Create Dataset': { name: 'blocks.createDataset', description: 'blockDescriptions.createDataset' },
+  'Filter Rows': { name: 'blocks.filterRows', description: 'blockDescriptions.filterRows' },
+  'Select Columns': { name: 'blocks.selectColumns', description: 'blockDescriptions.selectColumns' },
+  'Sort': { name: 'blocks.sort', description: 'blockDescriptions.sort' },
+  'Group & Aggregate': { name: 'blocks.groupAggregate', description: 'blockDescriptions.groupAggregate' },
+  'Join': { name: 'blocks.join', description: 'blockDescriptions.join' },
+  'Derive Column': { name: 'blocks.deriveColumn', description: 'blockDescriptions.deriveColumn' },
+  'Handle Missing': { name: 'blocks.handleMissing', description: 'blockDescriptions.handleMissing' },
+  'Rename Columns': { name: 'blocks.renameColumns', description: 'blockDescriptions.renameColumns' },
+  'Deduplicate': { name: 'blocks.deduplicate', description: 'blockDescriptions.deduplicate' },
+  'Sample Rows': { name: 'blocks.sampleRows', description: 'blockDescriptions.sampleRows' },
+  'Limit Rows': { name: 'blocks.limitRows', description: 'blockDescriptions.limitRows' },
+  'Pivot': { name: 'blocks.pivot', description: 'blockDescriptions.pivot' },
+  'Unpivot': { name: 'blocks.unpivot', description: 'blockDescriptions.unpivot' },
+  'Union': { name: 'blocks.union', description: 'blockDescriptions.union' },
+  'Split Column': { name: 'blocks.splitColumn', description: 'blockDescriptions.splitColumn' },
+  'Merge Columns': { name: 'blocks.mergeColumns', description: 'blockDescriptions.mergeColumns' },
+  'Conditional Column': { name: 'blocks.conditionalColumn', description: 'blockDescriptions.conditionalColumn' },
+  'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
+  'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
+  'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
+  'PCA': { name: 'blocks.pca', description: 'blockDescriptions.pca' },
+  'Outlier Detection': { name: 'blocks.outlierDetection', description: 'blockDescriptions.outlierDetection' },
+  'Classification': { name: 'blocks.classification', description: 'blockDescriptions.classification' },
+  'Normality Test': { name: 'blocks.normalityTest', description: 'blockDescriptions.normalityTest' },
+  'Hypothesis Testing': { name: 'blocks.hypothesisTesting', description: 'blockDescriptions.hypothesisTesting' },
+  'Time Series Analysis': { name: 'blocks.timeSeries', description: 'blockDescriptions.timeSeries' },
+  'Feature Importance': { name: 'blocks.featureImportance', description: 'blockDescriptions.featureImportance' },
+  'Cross-Validation': { name: 'blocks.crossValidation', description: 'blockDescriptions.crossValidation' },
+  'Data Profiling': { name: 'blocks.dataProfiling', description: 'blockDescriptions.dataProfiling' },
+  'Value Counts': { name: 'blocks.valueCounts', description: 'blockDescriptions.valueCounts' },
+  'Cross-Tabulation': { name: 'blocks.crossTabulation', description: 'blockDescriptions.crossTabulation' },
+  'Scaling / Normalization': { name: 'blocks.scaling', description: 'blockDescriptions.scaling' },
+  'Encoding': { name: 'blocks.encoding', description: 'blockDescriptions.encoding' },
+  'A/B Test Analysis': { name: 'blocks.abTest', description: 'blockDescriptions.abTest' },
+  'Cohort Analysis': { name: 'blocks.cohortAnalysis', description: 'blockDescriptions.cohortAnalysis' },
+  'RFM Analysis': { name: 'blocks.rfmAnalysis', description: 'blockDescriptions.rfmAnalysis' },
+  'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
+  'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
+  'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
+  'Violin Plot': { name: 'blocks.violinPlot', description: 'blockDescriptions.violinPlot' },
+  'Pair Plot': { name: 'blocks.pairPlot', description: 'blockDescriptions.pairPlot' },
+  'Area Chart': { name: 'blocks.areaChart', description: 'blockDescriptions.areaChart' },
+  'Stacked Bar/Area': { name: 'blocks.stackedChart', description: 'blockDescriptions.stackedChart' },
+  'Bubble Chart': { name: 'blocks.bubbleChart', description: 'blockDescriptions.bubbleChart' },
+  'Q-Q Plot': { name: 'blocks.qqPlot', description: 'blockDescriptions.qqPlot' },
+  'Confusion Matrix': { name: 'blocks.confusionMatrix', description: 'blockDescriptions.confusionMatrix' },
+  'ROC Curve': { name: 'blocks.rocCurve', description: 'blockDescriptions.rocCurve' },
+  'Export CSV': { name: 'blocks.export', description: 'blockDescriptions.export' },
+};
+
 export default function HelpPage() {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<Category>('Data Input');
   const [activeSection, setActiveSection] = useState('quick-start');
 
@@ -226,7 +293,7 @@ export default function HelpPage() {
             <div className="p-1.5 rounded-lg bg-bg-tertiary group-hover:bg-electric-indigo/10 transition-colors">
               <ChevronLeft size={18} className="group-hover:text-electric-indigo transition-colors" />
             </div>
-            <span className="text-small font-medium">Back to Editor</span>
+            <span className="text-small font-medium">{t('help.backToEditor')}</span>
           </Link>
           <div className="flex-1" />
 
@@ -244,11 +311,12 @@ export default function HelpPage() {
                 )}
               >
                 <section.icon size={14} />
-                <span>{section.label}</span>
+                <span>{t(section.labelKey)}</span>
               </button>
             ))}
           </nav>
 
+          <LanguageSelector variant="full" />
           <div className="flex-1 md:flex-none" />
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <img src="/logo.svg" alt="Data Flow Canvas" className="w-8 h-8 rounded-lg shadow-glow" />
@@ -267,14 +335,14 @@ export default function HelpPage() {
           <div className="flex items-center gap-2 mb-4">
             <div className="flex items-center gap-1.5 px-3 py-1 bg-electric-indigo/10 rounded-full">
               <BookOpen size={14} className="text-electric-indigo" />
-              <span className="text-small font-medium text-electric-indigo">Documentation</span>
+              <span className="text-small font-medium text-electric-indigo">{t('help.hero.documentation')}</span>
             </div>
           </div>
           <h1 className="text-display md:text-[56px] font-bold text-text-primary mb-4 tracking-tight">
-            Getting Started
+            {t('help.hero.title')}
           </h1>
           <p className="text-h3 text-text-secondary font-normal max-w-2xl leading-relaxed">
-            Learn how to use Data Flow Canvas to build visual data pipelines.
+            {t('help.hero.description')}
           </p>
 
           {/* Quick stats */}
@@ -285,7 +353,7 @@ export default function HelpPage() {
               </div>
               <div>
                 <p className="text-h2 font-bold text-text-primary">50+</p>
-                <p className="text-small text-text-muted">Available Blocks</p>
+                <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -294,7 +362,7 @@ export default function HelpPage() {
               </div>
               <div>
                 <p className="text-h2 font-bold text-text-primary">5</p>
-                <p className="text-small text-text-muted">Steps to Start</p>
+                <p className="text-small text-text-muted">{t('help.hero.stepsToStart')}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -302,8 +370,8 @@ export default function HelpPage() {
                 <Sparkles size={22} className="text-golden-amber" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">No Code</p>
-                <p className="text-small text-text-muted">Required</p>
+                <p className="text-h2 font-bold text-text-primary">{t('help.hero.noCode')}</p>
+                <p className="text-small text-text-muted">{t('help.hero.required')}</p>
               </div>
             </div>
           </div>
@@ -319,8 +387,8 @@ export default function HelpPage() {
               <Lightbulb size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-h2 text-text-primary">Quick Start Guide</h2>
-              <p className="text-small text-text-muted">Get up and running in 5 simple steps</p>
+              <h2 className="text-h2 text-text-primary">{t('help.quickStart.title')}</h2>
+              <p className="text-small text-text-muted">{t('help.quickStart.subtitle')}</p>
             </div>
           </div>
 
@@ -332,37 +400,37 @@ export default function HelpPage() {
               {[
                 {
                   step: 1,
-                  title: 'Add Data Input',
-                  description: 'Drag a Load Data, Sample Data, or Create Dataset block from the sidebar onto the canvas.',
+                  titleKey: 'help.quickStart.step1.title',
+                  descriptionKey: 'help.quickStart.step1.description',
                   icon: Database,
                   color: 'electric-indigo',
                 },
                 {
                   step: 2,
-                  title: 'Configure Your Block',
-                  description: 'Click on the block to select it. The right panel will show configuration options. Upload a file, select a sample dataset, or enter data manually.',
+                  titleKey: 'help.quickStart.step2.title',
+                  descriptionKey: 'help.quickStart.step2.description',
                   icon: PenLine,
                   color: 'soft-violet',
                 },
                 {
                   step: 3,
-                  title: 'Add Transform Blocks',
-                  description: 'Drag transform blocks (Filter, Sort, etc.) and connect them by dragging from the output handle (right) of one block to the input handle (left) of another.',
+                  titleKey: 'help.quickStart.step3.title',
+                  descriptionKey: 'help.quickStart.step3.description',
                   icon: GitMerge,
                   color: 'electric-indigo',
                 },
                 {
                   step: 4,
-                  title: 'Run Your Pipeline',
-                  description: 'Click the Run button in the top bar or press Ctrl+Enter. The first run will take ~30 seconds to load Python.',
+                  titleKey: 'help.quickStart.step4.title',
+                  descriptionKey: 'help.quickStart.step4.description',
                   icon: Play,
                   color: 'fresh-teal',
                   kbd: 'Ctrl+Enter',
                 },
                 {
                   step: 5,
-                  title: 'View Results',
-                  description: 'Select a block and check the Preview or Viz tab in the right panel to see the output data.',
+                  titleKey: 'help.quickStart.step5.title',
+                  descriptionKey: 'help.quickStart.step5.description',
                   icon: BarChart3,
                   color: 'golden-amber',
                 },
@@ -393,11 +461,11 @@ export default function HelpPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-h3 text-text-primary">{item.title}</h3>
+                        <h3 className="text-h3 text-text-primary">{t(item.titleKey)}</h3>
                         <item.icon size={18} className="text-text-muted" />
                       </div>
                       <p className="text-text-secondary leading-relaxed">
-                        {item.description}
+                        {t(item.descriptionKey)}
                         {item.kbd && (
                           <kbd className="ml-2 px-2 py-0.5 bg-bg-tertiary rounded-md text-small font-mono text-text-muted border border-border-default">
                             {item.kbd}
@@ -420,19 +488,19 @@ export default function HelpPage() {
               <Keyboard size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-h2 text-text-primary">Keyboard Shortcuts</h2>
-              <p className="text-small text-text-muted">Speed up your workflow with these shortcuts</p>
+              <h2 className="text-h2 text-text-primary">{t('help.shortcuts.title')}</h2>
+              <p className="text-small text-text-muted">{t('help.shortcuts.subtitle')}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
-              { keys: ['Ctrl', 'Enter'], action: 'Run pipeline', icon: Play, color: 'fresh-teal' },
-              { keys: ['Ctrl', 'Z'], action: 'Undo', icon: RotateCcw, color: 'electric-indigo' },
-              { keys: ['Ctrl', 'Shift', 'Z'], action: 'Redo', icon: RotateCw, color: 'electric-indigo' },
-              { keys: ['Delete'], action: 'Delete selected blocks', icon: Eraser, color: 'warm-coral' },
-              { keys: ['Escape'], action: 'Clear selection', icon: MousePointer, color: 'soft-violet' },
-              { keys: ['Ctrl', 'J'], action: 'Toggle bottom panel (logs)', icon: Layers, color: 'golden-amber' },
+              { keys: ['Ctrl', 'Enter'], actionKey: 'help.shortcuts.runPipeline', icon: Play, color: 'fresh-teal' },
+              { keys: ['Ctrl', 'Z'], actionKey: 'help.shortcuts.undo', icon: RotateCcw, color: 'electric-indigo' },
+              { keys: ['Ctrl', 'Shift', 'Z'], actionKey: 'help.shortcuts.redo', icon: RotateCw, color: 'electric-indigo' },
+              { keys: ['Delete'], actionKey: 'help.shortcuts.deleteBlocks', icon: Eraser, color: 'warm-coral' },
+              { keys: ['Escape'], actionKey: 'help.shortcuts.clearSelection', icon: MousePointer, color: 'soft-violet' },
+              { keys: ['Ctrl', 'J'], actionKey: 'help.shortcuts.toggleLogs', icon: Layers, color: 'golden-amber' },
             ].map((shortcut, index) => (
               <div
                 key={index}
@@ -472,7 +540,7 @@ export default function HelpPage() {
                         </React.Fragment>
                       ))}
                     </div>
-                    <p className="text-small text-text-secondary">{shortcut.action}</p>
+                    <p className="text-small text-text-secondary">{t(shortcut.actionKey)}</p>
                   </div>
                 </div>
               </div>
@@ -487,8 +555,8 @@ export default function HelpPage() {
               <Box size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-h2 text-text-primary">Block Reference</h2>
-              <p className="text-small text-text-muted">Explore all available blocks by category</p>
+              <h2 className="text-h2 text-text-primary">{t('help.blockReference.title')}</h2>
+              <p className="text-small text-text-muted">{t('help.blockReference.subtitle')}</p>
             </div>
           </div>
 
@@ -508,7 +576,7 @@ export default function HelpPage() {
                       : 'text-text-muted hover:text-text-primary hover:bg-bg-tertiary'
                   )}
                 >
-                  <span>{category}</span>
+                  <span>{t(categoryTranslationKeys[category])}</span>
                   <span className={cn(
                     'px-1.5 py-0.5 rounded-md text-[10px] font-semibold',
                     activeCategory === category
@@ -546,8 +614,12 @@ export default function HelpPage() {
                         <block.icon size={20} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-text-primary mb-0.5">{block.name}</h4>
-                        <p className="text-small text-text-secondary leading-relaxed">{block.description}</p>
+                        <h4 className="font-semibold text-text-primary mb-0.5">
+                          {blockTranslationKeys[block.name] ? t(blockTranslationKeys[block.name].name) : block.name}
+                        </h4>
+                        <p className="text-small text-text-secondary leading-relaxed">
+                          {blockTranslationKeys[block.name] ? t(blockTranslationKeys[block.name].description) : block.description}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -563,8 +635,8 @@ export default function HelpPage() {
               <Lightbulb size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-h2 text-text-primary">Tips</h2>
-              <p className="text-small text-text-muted">Pro tips to get the most out of Data Flow Canvas</p>
+              <h2 className="text-h2 text-text-primary">{t('help.tips.title')}</h2>
+              <p className="text-small text-text-muted">{t('help.tips.subtitle')}</p>
             </div>
           </div>
 
@@ -572,35 +644,35 @@ export default function HelpPage() {
             {[
               {
                 icon: MousePointer,
-                title: 'Selecting Blocks',
-                description: 'Click on a block to select it and view its configuration. Hold Shift to select multiple blocks.',
+                titleKey: 'help.tips.selectingBlocks.title',
+                descriptionKey: 'help.tips.selectingBlocks.description',
                 color: 'electric-indigo',
                 gradient: 'from-electric-indigo to-soft-violet',
               },
               {
                 icon: Link2,
-                title: 'Connecting Blocks',
-                description: 'Drag from the output handle (right side) of a block to the input handle (left side) of another to connect them.',
+                titleKey: 'help.tips.connectingBlocks.title',
+                descriptionKey: 'help.tips.connectingBlocks.description',
                 color: 'fresh-teal',
                 gradient: 'from-fresh-teal to-electric-indigo',
               },
               {
                 icon: Play,
-                title: 'First Run',
-                description: 'The first time you run a pipeline, it takes about 30 seconds to load Python (Pyodide). Subsequent runs are much faster.',
+                titleKey: 'help.tips.firstRun.title',
+                descriptionKey: 'help.tips.firstRun.description',
                 color: 'golden-amber',
                 gradient: 'from-golden-amber to-warm-coral',
               },
               {
                 icon: FileUp,
-                title: 'Supported Files',
-                description: 'Upload CSV files to get started. You can also use the built-in sample datasets to explore.',
+                titleKey: 'help.tips.supportedFiles.title',
+                descriptionKey: 'help.tips.supportedFiles.description',
                 color: 'soft-violet',
                 gradient: 'from-soft-violet to-electric-indigo',
               },
             ].map((tip, index) => (
               <div
-                key={tip.title}
+                key={tip.titleKey}
                 className="group relative bg-bg-secondary rounded-2xl border border-border-default p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-black/5 hover:-translate-y-1"
               >
                 {/* Decorative gradient */}
@@ -632,10 +704,10 @@ export default function HelpPage() {
                               tip.color === 'soft-violet' ? '#8b5cf6' : '#6366f1'
                       }} />
                     </div>
-                    <h3 className="font-semibold text-text-primary text-h3">{tip.title}</h3>
+                    <h3 className="font-semibold text-text-primary text-h3">{t(tip.titleKey)}</h3>
                   </div>
                   <p className="text-text-secondary leading-relaxed">
-                    {tip.description}
+                    {t(tip.descriptionKey)}
                   </p>
                 </div>
               </div>
@@ -652,18 +724,18 @@ export default function HelpPage() {
             Data Flow Canvas
           </p>
           <p className="text-text-muted text-small">
-            &copy; 2025 Lavelle Hatcher Jr. All rights reserved.
+            {t('help.footer.copyright')}
           </p>
           <p className="text-text-muted text-small mt-1">
-            Licensed under AGPL-3.0. For commercial licensing, contact the author.
+            {t('help.footer.license')}
           </p>
           <div className="flex items-center justify-center gap-4 mt-4 text-small">
             <Link to="/terms" className="text-text-muted hover:text-text-primary transition-colors">
-              Terms of Service
+              {t('help.footer.terms')}
             </Link>
             <span className="text-text-muted">|</span>
             <Link to="/privacy" className="text-text-muted hover:text-text-primary transition-colors">
-              Privacy Policy
+              {t('help.footer.privacy')}
             </Link>
           </div>
         </footer>
