@@ -924,7 +924,7 @@ export default function LandingPage() {
                 <AnimatedNode
                   x={3}
                   y={15}
-                  label="Load CSV"
+                  label={t('landing.previewNodes.loadCsv')}
                   color="bg-electric-indigo"
                   icon={Database}
                   delay={0.5}
@@ -933,7 +933,7 @@ export default function LandingPage() {
                 <AnimatedNode
                   x={32}
                   y={40}
-                  label="Filter Rows"
+                  label={t('landing.previewNodes.filterRows')}
                   color="bg-soft-violet"
                   icon={GitBranch}
                   delay={0.7}
@@ -942,7 +942,7 @@ export default function LandingPage() {
                 <AnimatedNode
                   x={65}
                   y={25}
-                  label="Group By"
+                  label={t('landing.previewNodes.groupBy')}
                   color="bg-fresh-teal"
                   icon={Cpu}
                   delay={0.9}
@@ -951,7 +951,7 @@ export default function LandingPage() {
                 <AnimatedNode
                   x={65}
                   y={62}
-                  label="Bar Chart"
+                  label={t('landing.previewNodes.barChart')}
                   color="bg-golden-amber"
                   icon={BarChart3}
                   delay={1.1}
