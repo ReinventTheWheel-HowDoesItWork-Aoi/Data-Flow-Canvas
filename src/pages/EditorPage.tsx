@@ -22,6 +22,7 @@ import { useProject } from '@/hooks/useProject';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils/cn';
 import { AuthModal, ProfileCompletionModal } from '@/components/auth';
+import { CollaborationModal } from '@/components/collaboration';
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId?: string }>();
@@ -99,6 +100,9 @@ export default function EditorPage() {
 
             {/* Profile Completion Modal - shows when user needs to complete their profile */}
             {user && needsProfileCompletion && <ProfileCompletionModal />}
+
+            {/* Collaboration Modal - shows when collaborate button is clicked */}
+            <CollaborationModal />
           </ReactFlowProvider>
         </TooltipProvider>
       </PyodideProvider>
