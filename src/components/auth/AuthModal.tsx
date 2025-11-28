@@ -13,7 +13,7 @@ import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils/cn';
 
-type AuthMode = 'signin' | 'signup';
+type AuthMode = 'signin' | 'signup' | 'forgot';
 
 export function AuthModal() {
   const { t } = useTranslation();
@@ -24,8 +24,9 @@ export function AuthModal() {
   const [password, setPassword] = useState('');
   const [company, setCompany] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  const { signIn, signUp, isLoading, error, clearError } = useAuthStore();
+  const { signIn, signUp, resetPassword, isLoading, error, clearError } = useAuthStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +38,18 @@ export function AuthModal() {
       setFormError(t('auth.errors.emailRequired'));
       return;
     }
+
+    // Handle forgot password
+    if (mode === 'forgot') {
+      const result = await resetPassword(email);
+      if (result.success) {
+        setResetEmailSent(true);
+      } else {
+        setFormError(result.error || t('auth.errors.resetFailed'));
+      }
+      return;
+    }
+
     if (!password.trim()) {
       setFormError(t('auth.errors.passwordRequired'));
       return;
@@ -71,6 +84,21 @@ export function AuthModal() {
   const toggleMode = () => {
     setMode(mode === 'signin' ? 'signup' : 'signin');
     setFormError(null);
+    setResetEmailSent(false);
+    clearError();
+  };
+
+  const goToForgotPassword = () => {
+    setMode('forgot');
+    setFormError(null);
+    setResetEmailSent(false);
+    clearError();
+  };
+
+  const backToSignIn = () => {
+    setMode('signin');
+    setFormError(null);
+    setResetEmailSent(false);
     clearError();
   };
 
@@ -96,11 +124,13 @@ export function AuthModal() {
             </div>
             <img src="/logo.svg" alt="Data Flow Canvas" className="w-14 h-14 rounded-xl mx-auto mb-4 shadow-glow" />
             <h1 className="text-2xl font-bold text-text-primary">
-              {mode === 'signup' ? t('auth.createAccount') : t('auth.welcomeBack')}
+              {mode === 'signup' ? t('auth.createAccount') : mode === 'forgot' ? t('auth.forgotPassword') : t('auth.welcomeBack')}
             </h1>
             <p className="text-text-secondary mt-2">
               {mode === 'signup'
                 ? t('auth.signUpSubtitle')
+                : mode === 'forgot'
+                ? t('auth.forgotSubtitle')
                 : t('auth.signInSubtitle')}
             </p>
           </div>
@@ -156,15 +186,43 @@ export function AuthModal() {
               disabled={isLoading}
             />
 
-            <Input
-              label={t('auth.password')}
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock size={18} />}
-              disabled={isLoading}
-            />
+            {mode !== 'forgot' && (
+              <div>
+                <Input
+                  label={t('auth.password')}
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  leftIcon={<Lock size={18} />}
+                  disabled={isLoading}
+                />
+                {mode === 'signin' && (
+                  <button
+                    type="button"
+                    onClick={goToForgotPassword}
+                    className="text-sm text-electric-indigo hover:text-soft-violet font-medium transition-colors mt-2"
+                    disabled={isLoading}
+                  >
+                    {t('auth.forgotPasswordLink')}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Reset Email Sent Success */}
+            <AnimatePresence>
+              {resetEmailSent && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="p-3 rounded-lg bg-fresh-mint/10 border border-fresh-mint/20"
+                >
+                  <p className="text-sm text-fresh-mint">{t('auth.resetEmailSent')}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Error Message */}
             <AnimatePresence>
@@ -180,31 +238,44 @@ export function AuthModal() {
               )}
             </AnimatePresence>
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              isLoading={isLoading}
-              className="w-full mt-6"
-              rightIcon={!isLoading ? <ArrowRight size={18} /> : undefined}
-            >
-              {mode === 'signup' ? t('auth.createAccountBtn') : t('auth.signInBtn')}
-            </Button>
+            {!resetEmailSent && (
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                isLoading={isLoading}
+                className="w-full mt-6"
+                rightIcon={!isLoading ? <ArrowRight size={18} /> : undefined}
+              >
+                {mode === 'signup' ? t('auth.createAccountBtn') : mode === 'forgot' ? t('auth.sendResetLink') : t('auth.signInBtn')}
+              </Button>
+            )}
           </form>
 
           {/* Footer */}
           <div className="px-8 pb-8 text-center">
-            <p className="text-text-secondary text-sm">
-              {mode === 'signup' ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{' '}
+            {mode === 'forgot' ? (
               <button
                 type="button"
-                onClick={toggleMode}
-                className="text-electric-indigo hover:text-soft-violet font-medium transition-colors"
+                onClick={backToSignIn}
+                className="text-sm text-electric-indigo hover:text-soft-violet font-medium transition-colors"
                 disabled={isLoading}
               >
-                {mode === 'signup' ? t('auth.signIn') : t('auth.signUp')}
+                {t('auth.backToSignIn')}
               </button>
-            </p>
+            ) : (
+              <p className="text-text-secondary text-sm">
+                {mode === 'signup' ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{' '}
+                <button
+                  type="button"
+                  onClick={toggleMode}
+                  className="text-electric-indigo hover:text-soft-violet font-medium transition-colors"
+                  disabled={isLoading}
+                >
+                  {mode === 'signup' ? t('auth.signIn') : t('auth.signUp')}
+                </button>
+              </p>
+            )}
           </div>
         </div>
 
