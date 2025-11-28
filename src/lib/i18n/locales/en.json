@@ -212,5 +212,52 @@
   },
   "header": {
     "launchApp": "Launch App"
+  },
+  "auth": {
+    "createAccount": "Create your account",
+    "welcomeBack": "Welcome back",
+    "signUpSubtitle": "Sign up to start building data pipelines",
+    "signInSubtitle": "Sign in to continue where you left off",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "company": "Company (optional)",
+    "email": "Email",
+    "password": "Password",
+    "createAccountBtn": "Create Account",
+    "signInBtn": "Sign In",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "privacyNote": "Your data stays local. We only collect your profile information to personalize your experience.",
+    "errors": {
+      "emailRequired": "Email is required",
+      "passwordRequired": "Password is required",
+      "passwordLength": "Password must be at least 6 characters",
+      "firstNameRequired": "First name is required",
+      "lastNameRequired": "Last name is required",
+      "signUpFailed": "Sign up failed",
+      "signInFailed": "Sign in failed"
+    }
+  },
+  "bottomPanel": {
+    "logs": "Logs",
+    "output": "Output",
+    "noLogs": "No logs yet. Run the pipeline to see execution logs.",
+    "outputPlaceholder": "Pipeline output will appear here"
+  },
+  "rightPanel": {
+    "properties": "Properties",
+    "config": "Config",
+    "preview": "Preview",
+    "visualization": "Viz",
+    "selectBlock": "Select a block to configure",
+    "executionError": "Execution Error",
+    "runToPreview": "Run the pipeline to see data preview",
+    "noVisualization": "Select a visualization block to see results",
+    "runVisualization": "Run the pipeline to see visualization",
+    "dataPreview": "Data Preview",
+    "rows": "rows",
+    "columns": "columns"
   }
 }
