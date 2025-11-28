@@ -221,6 +221,12 @@
   },
   "auth": {
     "welcome": "Welcome to Data Flow Canvas",
+    "createAccount": "Create your account",
+    "welcomeBack": "Welcome back",
+    "signUp": "Sign Up",
+    "signIn": "Sign In",
+    "signUpSubtitle": "Get started with Data Flow Canvas",
+    "signInSubtitle": "Enter your email to receive a sign-in link",
     "magicLinkSubtitle": "Enter your email to receive a sign-in link",
     "checkEmail": "Check your email",
     "magicLinkSentSubtitle": "We've sent you a magic link to sign in",
