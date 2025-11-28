@@ -95,7 +95,8 @@ src/
 │   ├── blocks/        # Pipeline block components
 │   ├── canvas/        # React Flow canvas
 │   ├── visualization/ # Chart and table renderers
-│   └── layout/        # Layout components
+│   ├── layout/        # Layout components
+│   └── auth/          # Authentication components
 ├── pages/             # Route pages
 ├── stores/            # Zustand stores
 ├── hooks/             # Custom React hooks
@@ -104,7 +105,9 @@ src/
 │   ├── execution/     # Pipeline execution engine
 │   ├── storage/       # IndexedDB storage
 │   ├── collaboration/ # WebRTC collaboration
-│   └── utils/         # Utility functions
+│   ├── utils/         # Utility functions
+│   ├── i18n/          # Internationalization
+│   └── supabase/      # Supabase client
 ├── types/             # TypeScript type definitions
 ├── constants/         # Block definitions, etc.
 └── test/              # Test utilities
