@@ -282,6 +282,30 @@
     "rows": "rows",
     "columns": "columns"
   },
+  "projects": {
+    "newProject": "New Project",
+    "yourProjects": "Your Projects",
+    "storedLocally": "All your projects are stored locally in your browser.",
+    "noProjectsYet": "No projects yet",
+    "createFirstProject": "Create your first data pipeline project to get started.",
+    "createProject": "Create Project",
+    "blocks": "blocks",
+    "examplePipelines": "Example Pipelines",
+    "samples": {
+      "irisClassification": {
+        "name": "Iris Classification",
+        "description": "Explore the classic Iris dataset with clustering and visualization."
+      },
+      "dataCleaningPipeline": {
+        "name": "Data Cleaning Pipeline",
+        "description": "Handle missing values, filter rows, and transform columns."
+      },
+      "linearRegression": {
+        "name": "Linear Regression",
+        "description": "Build a simple regression model with visualization."
+      }
+    }
+  },
   "help": {
     "backToEditor": "Back to Editor",
     "nav": {
