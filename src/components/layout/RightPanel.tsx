@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Upload, Database, BarChart3, Table2, Loader2, CheckCircle, AlertCircle, AlertTriangle, Download } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
@@ -38,6 +39,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 }
 
 export function RightPanel() {
+  const { t } = useTranslation();
   const { isRightPanelOpen, rightPanelTab, setRightPanelTab, toggleRightPanel } =
     useUIStore();
   const { blocks, selectedBlockIds, updateBlock } = useCanvasStore();
@@ -62,7 +64,7 @@ export function RightPanel() {
         <h2 className="text-h3 text-text-primary">
           {selectedBlock
             ? blockDefinitions[selectedBlock.data.type].label
-            : 'Properties'}
+            : t('rightPanel.properties')}
         </h2>
         <Button variant="ghost" size="sm" onClick={toggleRightPanel}>
           <X size={18} />
@@ -75,9 +77,9 @@ export function RightPanel() {
         className="flex-1 flex flex-col"
       >
         <TabsList className="mx-4 mt-2">
-          <TabsTrigger value="config">Config</TabsTrigger>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="visualization">Viz</TabsTrigger>
+          <TabsTrigger value="config">{t('rightPanel.config')}</TabsTrigger>
+          <TabsTrigger value="preview">{t('rightPanel.preview')}</TabsTrigger>
+          <TabsTrigger value="visualization">{t('rightPanel.visualization')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="config" className="flex-1 p-4 overflow-y-auto">
@@ -90,7 +92,7 @@ export function RightPanel() {
             />
           ) : (
             <div className="text-center text-text-muted py-8">
-              <p>Select a block to configure</p>
+              <p>{t('rightPanel.selectBlock')}</p>
             </div>
           )}
         </TabsContent>
@@ -101,14 +103,14 @@ export function RightPanel() {
           ) : selectedResult?.error ? (
             <div className="text-center py-8">
               <AlertCircle size={48} className="mx-auto mb-4 text-warm-coral opacity-70" />
-              <p className="text-warm-coral font-medium mb-2">Execution Error</p>
+              <p className="text-warm-coral font-medium mb-2">{t('rightPanel.executionError')}</p>
               <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg text-left overflow-auto max-h-40">
                 {selectedResult.error}
               </p>
             </div>
           ) : (
             <div className="text-center text-text-muted py-8">
-              <p>Run the pipeline to see data preview</p>
+              <p>{t('rightPanel.runToPreview')}</p>
             </div>
           )}
         </TabsContent>
