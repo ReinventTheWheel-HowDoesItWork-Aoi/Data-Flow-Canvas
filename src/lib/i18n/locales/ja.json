@@ -259,5 +259,87 @@
     "dataPreview": "データプレビュー",
     "rows": "行",
     "columns": "列"
+  },
+  "help": {
+    "backToEditor": "エディタに戻る",
+    "nav": {
+      "quickStart": "クイックスタート",
+      "shortcuts": "ショートカット",
+      "blockReference": "ブロック一覧",
+      "tips": "ヒント"
+    },
+    "hero": {
+      "documentation": "ドキュメント",
+      "title": "はじめに",
+      "description": "Data Flow Canvas を使って視覚的なデータパイプラインを構築する方法を学びましょう。",
+      "availableBlocks": "利用可能なブロック",
+      "stepsToStart": "開始ステップ",
+      "noCode": "コード不要",
+      "required": "必要"
+    },
+    "quickStart": {
+      "title": "クイックスタートガイド",
+      "subtitle": "5つの簡単なステップで始めましょう",
+      "step1": {
+        "title": "データ入力を追加",
+        "description": "サイドバーからLoad Data、Sample Data、またはCreate Datasetブロックをキャンバスにドラッグします。"
+      },
+      "step2": {
+        "title": "ブロックを設定",
+        "description": "ブロックをクリックして選択します。右パネルに設定オプションが表示されます。ファイルをアップロード、サンプルデータセットを選択、またはデータを手動入力してください。"
+      },
+      "step3": {
+        "title": "変換ブロックを追加",
+        "description": "変換ブロック（フィルター、ソートなど）をドラッグし、あるブロックの出力ハンドル（右側）から別のブロックの入力ハンドル（左側）にドラッグして接続します。"
+      },
+      "step4": {
+        "title": "パイプラインを実行",
+        "description": "トップバーの実行ボタンをクリックするか、Ctrl+Enterを押します。初回実行時はPythonの読み込みに約30秒かかります。"
+      },
+      "step5": {
+        "title": "結果を確認",
+        "description": "ブロックを選択し、右パネルのプレビューまたはVizタブで出力データを確認します。"
+      }
+    },
+    "shortcuts": {
+      "title": "キーボードショートカット",
+      "subtitle": "これらのショートカットでワークフローを高速化",
+      "runPipeline": "パイプラインを実行",
+      "undo": "元に戻す",
+      "redo": "やり直し",
+      "deleteBlocks": "選択したブロックを削除",
+      "clearSelection": "選択を解除",
+      "toggleLogs": "下部パネル（ログ）を切り替え"
+    },
+    "blockReference": {
+      "title": "ブロック一覧",
+      "subtitle": "カテゴリ別に利用可能なブロックを探索"
+    },
+    "tips": {
+      "title": "ヒント",
+      "subtitle": "Data Flow Canvas を最大限に活用するためのプロのヒント",
+      "selectingBlocks": {
+        "title": "ブロックの選択",
+        "description": "ブロックをクリックして選択し、設定を表示します。Shiftキーを押しながらクリックすると複数のブロックを選択できます。"
+      },
+      "connectingBlocks": {
+        "title": "ブロックの接続",
+        "description": "ブロックの出力ハンドル（右側）から別のブロックの入力ハンドル（左側）にドラッグして接続します。"
+      },
+      "firstRun": {
+        "title": "初回実行",
+        "description": "初めてパイプラインを実行するとき、Python（Pyodide）の読み込みに約30秒かかります。2回目以降の実行はより高速です。"
+      },
+      "supportedFiles": {
+        "title": "サポートされているファイル",
+        "description": "CSVファイルをアップロードして開始できます。組み込みのサンプルデータセットを使用して探索することもできます。"
+      }
+    },
+    "footer": {
+      "copyright": "© 2025 Lavelle Hatcher Jr. All rights reserved.",
+      "license": "AGPL-3.0ライセンス。商用ライセンスについては作者にお問い合わせください。",
+      "terms": "利用規約",
+      "privacy": "プライバシーポリシー"
+    }
   }
 }
