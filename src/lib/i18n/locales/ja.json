@@ -148,6 +148,12 @@
     "export": "データをファイルにエクスポート"
   },
   "landing": {
+    "previewNodes": {
+      "loadCsv": "CSV読込",
+      "filterRows": "行フィルタ",
+      "groupBy": "グループ化",
+      "barChart": "棒グラフ"
+    },
     "badge": {
       "browserBased": "100%ブラウザベース",
       "dataLocal": "データはローカルに保持"
