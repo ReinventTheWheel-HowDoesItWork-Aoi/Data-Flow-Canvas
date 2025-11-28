@@ -178,13 +178,8 @@ export default function PrivacyPage() {
               <tbody className="divide-y divide-border-default">
                 <tr>
                   <td className="py-3">Supabase</td>
-                  <td className="py-3">Authentication</td>
-                  <td className="py-3">Email, password, profile info</td>
-                </tr>
-                <tr>
-                  <td className="py-3">Y.js Signaling Server</td>
-                  <td className="py-3">Peer discovery for collaboration</td>
-                  <td className="py-3">Session ID only (no personal data)</td>
+                  <td className="py-3">Authentication & Collaboration</td>
+                  <td className="py-3">Email, password, profile info, collaboration session data</td>
                 </tr>
                 <tr>
                   <td className="py-3">Google Fonts</td>
@@ -195,11 +190,6 @@ export default function PrivacyPage() {
                   <td className="py-3">jsDelivr CDN</td>
                   <td className="py-3">Pyodide runtime delivery</td>
                   <td className="py-3">None</td>
-                </tr>
-                <tr>
-                  <td className="py-3">STUN Servers</td>
-                  <td className="py-3">WebRTC connection setup</td>
-                  <td className="py-3">Connection metadata only</td>
                 </tr>
               </tbody>
             </table>
@@ -219,13 +209,14 @@ export default function PrivacyPage() {
 
         <Section icon={Users} title="Real-Time Collaboration" color="#8b5cf6">
           <p>
-            When you use collaboration features, connections are established directly between
-            participants using WebRTC (peer-to-peer). This means:
+            When you use collaboration features, connections are routed through Supabase
+            (our authentication and database provider). This means:
           </p>
           <ul className="list-disc list-inside space-y-2 ml-4">
-            <li>Collaboration data flows directly between users, not through our servers</li>
+            <li>Your IP address is hidden from other collaborators</li>
             <li>Only your display name and cursor position are shared with collaborators</li>
-            <li>The Y.js signaling server only facilitates initial peer discovery</li>
+            <li>You must be signed in to use collaboration features</li>
+            <li>Collaboration sessions are limited to 30 concurrent users globally, 3 per session</li>
           </ul>
         </Section>
 
