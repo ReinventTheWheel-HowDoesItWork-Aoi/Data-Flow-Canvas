@@ -282,6 +282,30 @@
     "rows": "行",
     "columns": "列"
   },
+  "projects": {
+    "newProject": "新規プロジェクト",
+    "yourProjects": "あなたのプロジェクト",
+    "storedLocally": "すべてのプロジェクトはブラウザにローカル保存されています。",
+    "noProjectsYet": "プロジェクトがありません",
+    "createFirstProject": "最初のデータパイプラインプロジェクトを作成して始めましょう。",
+    "createProject": "プロジェクトを作成",
+    "blocks": "ブロック",
+    "examplePipelines": "サンプルパイプライン",
+    "samples": {
+      "irisClassification": {
+        "name": "アイリス分類",
+        "description": "クラシックなアイリスデータセットをクラスタリングと可視化で探索します。"
+      },
+      "dataCleaningPipeline": {
+        "name": "データクリーニングパイプライン",
+        "description": "欠損値の処理、行のフィルタリング、列の変換を行います。"
+      },
+      "linearRegression": {
+        "name": "線形回帰",
+        "description": "可視化を伴うシンプルな回帰モデルを構築します。"
+      }
+    }
+  },
   "help": {
     "backToEditor": "エディタに戻る",
     "nav": {
