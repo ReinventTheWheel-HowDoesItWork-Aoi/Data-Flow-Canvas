@@ -13,7 +13,6 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/Dropdown';
 import { Button } from '@/components/ui/Button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/Tooltip';
 import { cn } from '@/lib/utils/cn';
 
 interface LanguageSelectorProps {
@@ -72,16 +71,11 @@ export function LanguageSelector({ variant = 'icon', className }: LanguageSelect
 
   return (
     <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className={className}>
-              <Languages size={18} />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>{t('common.language')}</TooltipContent>
-      </Tooltip>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className={className} title={t('common.language')}>
+          <Languages size={18} />
+        </Button>
+      </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[140px]">
         {languages.map((lang) => (
           <DropdownMenuItem
