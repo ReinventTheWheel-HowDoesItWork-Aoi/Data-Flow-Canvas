@@ -117,7 +117,7 @@ export default function TermsPage() {
           <ul className="list-disc list-inside space-y-2 ml-4">
             <li>Create and manage data transformation pipelines visually</li>
             <li>Process data locally in your browser using Python (via WebAssembly)</li>
-            <li>Collaborate with others in real-time using peer-to-peer connections</li>
+            <li>Collaborate with others in real-time through secure server-relayed connections</li>
             <li>Export and visualize your data</li>
           </ul>
           <p>
