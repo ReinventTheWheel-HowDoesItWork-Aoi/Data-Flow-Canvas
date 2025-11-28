@@ -181,7 +181,7 @@
       },
       "collaborate": {
         "title": "Collaborate Live",
-        "description": "Work together with your team in real-time using secure peer-to-peer connections."
+        "description": "Work together with your team in real-time. Your IP address stays hidden from other users."
       },
       "pythonPowered": {
         "title": "Python Powered",
@@ -292,6 +292,36 @@
         "name": "Linear Regression",
         "description": "Build a simple regression model with visualization."
       }
+    }
+  },
+  "collaboration": {
+    "title": "Collaborate",
+    "subtitle": "Work together in real-time",
+    "connectedTo": "Connected to room {{roomId}}",
+    "startSession": "Start New Session",
+    "joinSession": "Join Existing Session",
+    "join": "Join",
+    "leave": "Leave Session",
+    "roomId": "Room ID",
+    "enterRoomId": "Enter Room ID",
+    "connected": "Connected",
+    "connecting": "Connecting...",
+    "disconnected": "Disconnected",
+    "participants": "Participants",
+    "copyLink": "Copy Invite Link",
+    "linkCopied": "Link Copied!",
+    "or": "or",
+    "howItWorks": "How it works",
+    "info1": "Start a session to get a shareable room ID",
+    "info2": "Share the ID with up to 2 other people",
+    "info3": "Your IP address is hidden from other users",
+    "privacyNote": "Connections are secure and routed through Supabase. Your IP is never exposed.",
+    "errors": {
+      "startFailed": "Failed to start session. Please try again.",
+      "joinFailed": "Failed to join session. Please try again.",
+      "roomIdRequired": "Please enter a room ID",
+      "sessionFull": "This session is full (3/3 participants)",
+      "globalFull": "Collaboration is currently at capacity. Please try again later."
     }
   },
   "help": {
