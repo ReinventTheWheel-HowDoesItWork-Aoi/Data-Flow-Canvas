@@ -21,24 +21,20 @@ interface AuthState {
   profile: UserProfile | null;
   isLoading: boolean;
   isInitialized: boolean;
+  needsProfileCompletion: boolean;
   error: string | null;
 
   // Actions
   initialize: () => Promise<void>;
-  signUp: (
-    email: string,
-    password: string,
+  signInWithMagicLink: (
+    email: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  completeProfile: (
     firstName: string,
     lastName: string,
     company?: string
   ) => Promise<{ success: boolean; error?: string }>;
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
-  updatePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
 }
 
@@ -49,6 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   isLoading: false,
   isInitialized: false,
+  needsProfileCompletion: false,
   error: null,
 
   // Initialize auth state and listen for changes
@@ -65,10 +62,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (session?.user) {
         const profile = extractProfile(session.user);
+        const needsProfile = !profile.firstName || !profile.lastName;
         set({
           user: session.user,
           session,
           profile,
+          needsProfileCompletion: needsProfile,
           isInitialized: true,
           isLoading: false,
         });
@@ -80,16 +79,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       supabase.auth.onAuthStateChange((_event, session) => {
         if (session?.user) {
           const profile = extractProfile(session.user);
+          const needsProfile = !profile.firstName || !profile.lastName;
           set({
             user: session.user,
             session,
             profile,
+            needsProfileCompletion: needsProfile,
           });
         } else {
           set({
             user: null,
             session: null,
             profile: null,
+            needsProfileCompletion: false,
           });
         }
       });
@@ -99,20 +101,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  // Sign up with email and password
-  signUp: async (email, password, firstName, lastName, company) => {
+  // Sign in with magic link (passwordless)
+  signInWithMagicLink: async (email) => {
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
-        password,
         options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-            company: company || null,
-          },
+          emailRedirectTo: `${window.location.origin}/editor`,
         },
       });
 
@@ -121,34 +118,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: error.message };
       }
 
-      if (data.user) {
-        const profile = extractProfile(data.user);
-        set({
-          user: data.user,
-          session: data.session,
-          profile,
-          isLoading: false,
-        });
-        return { success: true };
-      }
-
       set({ isLoading: false });
       return { success: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign up failed';
+      const message = error instanceof Error ? error.message : 'Failed to send magic link';
       set({ isLoading: false, error: message });
       return { success: false, error: message };
     }
   },
 
-  // Sign in with email and password
-  signIn: async (email, password) => {
+  // Complete profile after first magic link sign-in
+  completeProfile: async (firstName, lastName, company) => {
     set({ isLoading: true, error: null });
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          company: company || null,
+        },
       });
 
       if (error) {
@@ -156,21 +145,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: error.message };
       }
 
-      if (data.user) {
-        const profile = extractProfile(data.user);
+      // Update local profile state
+      const { user } = get();
+      if (user) {
         set({
-          user: data.user,
-          session: data.session,
-          profile,
+          profile: {
+            firstName,
+            lastName,
+            email: user.email || '',
+            company: company || undefined,
+          },
+          needsProfileCompletion: false,
           isLoading: false,
         });
-        return { success: true };
+      } else {
+        set({ isLoading: false });
       }
 
-      set({ isLoading: false });
-      return { success: false, error: 'Sign in failed' };
+      return { success: true };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Sign in failed';
+      const message = error instanceof Error ? error.message : 'Failed to update profile';
       set({ isLoading: false, error: message });
       return { success: false, error: message };
     }
@@ -186,55 +180,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         session: null,
         profile: null,
+        needsProfileCompletion: false,
         isLoading: false,
       });
     } catch (error) {
       console.error('Error signing out:', error);
       set({ isLoading: false });
-    }
-  },
-
-  // Reset password - sends email with reset link
-  resetPassword: async (email: string) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        set({ isLoading: false, error: error.message });
-        return { success: false, error: error.message };
-      }
-
-      set({ isLoading: false });
-      return { success: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to send reset email';
-      set({ isLoading: false, error: message });
-      return { success: false, error: message };
-    }
-  },
-
-  // Update password - called after user clicks reset link
-  updatePassword: async (newPassword: string) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-      if (error) {
-        set({ isLoading: false, error: error.message });
-        return { success: false, error: error.message };
-      }
-
-      set({ isLoading: false });
-      return { success: true };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update password';
-      set({ isLoading: false, error: message });
-      return { success: false, error: message };
     }
   },
 
