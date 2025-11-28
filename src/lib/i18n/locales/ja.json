@@ -212,5 +212,52 @@
   },
   "header": {
     "launchApp": "アプリを起動"
+  },
+  "auth": {
+    "createAccount": "アカウントを作成",
+    "welcomeBack": "おかえりなさい",
+    "signUpSubtitle": "データパイプラインの構築を始めましょう",
+    "signInSubtitle": "続きから作業を再開しましょう",
+    "firstName": "名",
+    "lastName": "姓",
+    "company": "会社名（任意）",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "createAccountBtn": "アカウント作成",
+    "signInBtn": "ログイン",
+    "alreadyHaveAccount": "すでにアカウントをお持ちですか？",
+    "dontHaveAccount": "アカウントをお持ちでないですか？",
+    "signIn": "ログイン",
+    "signUp": "新規登録",
+    "privacyNote": "データはローカルに保持されます。お客様の体験をパーソナライズするためにプロフィール情報のみ収集します。",
+    "errors": {
+      "emailRequired": "メールアドレスは必須です",
+      "passwordRequired": "パスワードは必須です",
+      "passwordLength": "パスワードは6文字以上必要です",
+      "firstNameRequired": "名は必須です",
+      "lastNameRequired": "姓は必須です",
+      "signUpFailed": "登録に失敗しました",
+      "signInFailed": "ログインに失敗しました"
+    }
+  },
+  "bottomPanel": {
+    "logs": "ログ",
+    "output": "出力",
+    "noLogs": "ログがありません。パイプラインを実行すると実行ログが表示されます。",
+    "outputPlaceholder": "パイプラインの出力がここに表示されます"
+  },
+  "rightPanel": {
+    "properties": "プロパティ",
+    "config": "設定",
+    "preview": "プレビュー",
+    "visualization": "可視化",
+    "selectBlock": "設定するブロックを選択してください",
+    "executionError": "実行エラー",
+    "runToPreview": "パイプラインを実行するとデータプレビューが表示されます",
+    "noVisualization": "可視化ブロックを選択すると結果が表示されます",
+    "runVisualization": "パイプラインを実行すると可視化が表示されます",
+    "dataPreview": "データプレビュー",
+    "rows": "行",
+    "columns": "列"
   }
 }
