@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ import { useExecutionStore } from '@/stores/executionStore';
 import { cn } from '@/lib/utils/cn';
 
 export function BottomPanel() {
+  const { t } = useTranslation();
   const { isBottomPanelOpen, bottomPanelTab, setBottomPanelTab, toggleBottomPanel } =
     useUIStore();
   const { logs, progress, isRunning } = useExecutionStore();
@@ -30,14 +32,14 @@ export function BottomPanel() {
         >
           <TabsList>
             <TabsTrigger value="logs">
-              Logs
+              {t('bottomPanel.logs')}
               {logs.length > 0 && (
                 <Badge variant="info" className="ml-2">
                   {logs.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="output">Output</TabsTrigger>
+            <TabsTrigger value="output">{t('bottomPanel.output')}</TabsTrigger>
           </TabsList>
         </Tabs>
 
@@ -60,14 +62,14 @@ export function BottomPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {bottomPanelTab === 'logs' && <LogsView logs={logs} />}
-        {bottomPanelTab === 'output' && <OutputView />}
+        {bottomPanelTab === 'logs' && <LogsView logs={logs} t={t} />}
+        {bottomPanelTab === 'output' && <OutputView t={t} />}
       </div>
     </div>
   );
 }
 
-function LogsView({ logs }: { logs: any[] }) {
+function LogsView({ logs, t }: { logs: any[]; t: (key: string) => string }) {
   const getIcon = (level: string) => {
     switch (level) {
       case 'error':
@@ -83,7 +85,7 @@ function LogsView({ logs }: { logs: any[] }) {
   if (logs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-text-muted">
-        <p>No logs yet. Run the pipeline to see execution logs.</p>
+        <p>{t('bottomPanel.noLogs')}</p>
       </div>
     );
   }
@@ -110,10 +112,10 @@ function LogsView({ logs }: { logs: any[] }) {
   );
 }
 
-function OutputView() {
+function OutputView({ t }: { t: (key: string) => string }) {
   return (
     <div className="flex items-center justify-center h-full text-text-muted">
-      <p>Pipeline output will appear here</p>
+      <p>{t('bottomPanel.outputPlaceholder')}</p>
     </div>
   );
 }
