@@ -81,6 +81,11 @@ import {
   MessageSquare,
   DollarSign,
   UserMinus,
+  GitCompareArrows,
+  Gauge,
+  BarChart2,
+  CheckCircle,
+  GitCommitHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -129,7 +134,7 @@ const blocks: BlockInfo[] = [
   { icon: AlignJustify, name: 'String Pad', description: 'Pad strings to a fixed length with specified character', category: 'Transform' },
   { icon: TrendingUp, name: 'Cumulative Operations', description: 'Calculate running totals, cumulative counts, and percentages', category: 'Transform' },
 
-  // Analysis (52 blocks)
+  // Analysis (58 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -182,6 +187,12 @@ const blocks: BlockInfo[] = [
   { icon: GitBranch, name: 'Attribution Modeling', description: 'Multi-touch marketing attribution analysis', category: 'Analysis' },
   { icon: Scale, name: 'Break-even Analysis', description: 'Calculate financial break-even point', category: 'Analysis' },
   { icon: ArrowLeftRight, name: 'Confidence Intervals', description: 'Calculate confidence intervals for means and proportions', category: 'Analysis' },
+  { icon: RefreshCw, name: 'Bootstrap Analysis', description: 'Non-parametric bootstrap resampling for confidence intervals', category: 'Analysis' },
+  { icon: GitCompareArrows, name: 'Post-hoc Tests', description: 'Multiple comparison tests after ANOVA', category: 'Analysis' },
+  { icon: Gauge, name: 'Power Analysis', description: 'Sample size and power calculations', category: 'Analysis' },
+  { icon: BarChart2, name: 'Bayesian Inference', description: 'Bayesian estimation for common scenarios', category: 'Analysis' },
+  { icon: CheckCircle, name: 'Data Quality Score', description: 'Comprehensive data quality assessment', category: 'Analysis' },
+  { icon: GitCommitHorizontal, name: 'Change Point Detection', description: 'Detect structural breaks in time series', category: 'Analysis' },
 
   // Visualization (11 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -341,6 +352,12 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Attribution Modeling': { name: 'blocks.attributionModeling', description: 'blockDescriptions.attributionModeling' },
   'Break-even Analysis': { name: 'blocks.breakevenAnalysis', description: 'blockDescriptions.breakevenAnalysis' },
   'Confidence Intervals': { name: 'blocks.confidenceIntervals', description: 'blockDescriptions.confidenceIntervals' },
+  'Bootstrap Analysis': { name: 'blocks.bootstrapAnalysis', description: 'blockDescriptions.bootstrapAnalysis' },
+  'Post-hoc Tests': { name: 'blocks.posthocTests', description: 'blockDescriptions.posthocTests' },
+  'Power Analysis': { name: 'blocks.powerAnalysis', description: 'blockDescriptions.powerAnalysis' },
+  'Bayesian Inference': { name: 'blocks.bayesianInference', description: 'blockDescriptions.bayesianInference' },
+  'Data Quality Score': { name: 'blocks.dataQualityScore', description: 'blockDescriptions.dataQualityScore' },
+  'Change Point Detection': { name: 'blocks.changepointDetection', description: 'blockDescriptions.changepointDetection' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -459,7 +476,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">97</p>
+                <p className="text-h2 font-bold text-text-primary">103</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
