@@ -66,6 +66,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (session?.user) {
             const profile = extractProfile(session.user);
             const needsProfile = !profile.firstName || !profile.lastName;
+
+            // Sync profile to database when user signs in or signs up
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+              await syncProfileToDatabase(session.user);
+            }
+
             set({
               user: session.user,
               session,
@@ -191,9 +197,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, error: error.message };
       }
 
-      // Update local profile state
+      // Update local profile state and sync to database
       const { user } = get();
       if (user) {
+        // Sync completed profile to database
+        await syncProfileToDatabase({
+          ...user,
+          user_metadata: {
+            ...user.user_metadata,
+            first_name: firstName,
+            last_name: lastName,
+            company: company || null,
+          },
+        });
+
         set({
           profile: {
             firstName,
@@ -248,4 +265,35 @@ function extractProfile(user: User): UserProfile {
     email: user.email || '',
     company: metadata.company || undefined,
   };
+}
+
+// Sync user profile to the profiles table in the database
+async function syncProfileToDatabase(user: User): Promise<void> {
+  const profile = extractProfile(user);
+
+  // Only sync if we have the required profile data
+  if (!profile.firstName || !profile.lastName) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        first_name: profile.firstName,
+        last_name: profile.lastName,
+        email: profile.email,
+        company: profile.company || null,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'id',
+      });
+
+    if (error) {
+      console.error('Error syncing profile to database:', error);
+    }
+  } catch (error) {
+    console.error('Error syncing profile to database:', error);
+  }
 }
