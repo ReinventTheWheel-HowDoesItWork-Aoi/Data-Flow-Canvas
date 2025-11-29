@@ -101,6 +101,12 @@ export type BlockType =
   | 'attribution-modeling'
   | 'breakeven-analysis'
   | 'confidence-intervals'
+  | 'bootstrap-analysis'
+  | 'posthoc-tests'
+  | 'power-analysis'
+  | 'bayesian-inference'
+  | 'data-quality-score'
+  | 'changepoint-detection'
   // Visualization
   | 'chart'
   | 'table'
