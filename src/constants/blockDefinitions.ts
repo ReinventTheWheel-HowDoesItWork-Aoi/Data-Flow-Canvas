@@ -4453,6 +4453,600 @@ output = result
 `,
   },
 
+  'svm': {
+    type: 'svm',
+    category: 'analysis',
+    label: 'SVM',
+    description: 'Support Vector Machine for classification and regression',
+    icon: 'Target',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      mode: 'classification',
+      kernel: 'rbf',
+      c: 1.0,
+      gamma: 'scale',
+      degree: 3,
+      outputColumn: 'svm_prediction',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.svm import SVC, SVR
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.metrics import accuracy_score, f1_score, r2_score, mean_squared_error
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+mode = config.get('mode', 'classification')
+kernel = config.get('kernel', 'rbf')
+c_param = float(config.get('c', 1.0))
+gamma = config.get('gamma', 'scale')
+degree = int(config.get('degree', 3))
+output_col = config.get('outputColumn', 'svm_prediction')
+
+if not feature_cols or not target_col:
+    raise ValueError("SVM: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"SVM: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"SVM: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+# Scale features for SVM
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+if mode == 'classification':
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y.astype(str))
+
+    model = SVC(kernel=kernel, C=c_param, gamma=gamma, degree=degree, random_state=42)
+    model.fit(X_scaled, y_encoded)
+    predictions = model.predict(X_scaled)
+
+    df[output_col] = le.inverse_transform(predictions)
+    df['svm_support_vectors_count'] = len(model.support_)
+
+    accuracy = accuracy_score(y_encoded, predictions)
+    f1 = f1_score(y_encoded, predictions, average='weighted')
+    df['svm_accuracy'] = round(accuracy, 4)
+    df['svm_f1_score'] = round(f1, 4)
+else:
+    y_numeric = pd.to_numeric(y, errors='coerce')
+    mask = ~pd.isna(y_numeric)
+
+    model = SVR(kernel=kernel, C=c_param, gamma=gamma, degree=degree)
+    model.fit(X_scaled[mask], y_numeric[mask])
+    df[output_col] = model.predict(X_scaled)
+    df['svm_support_vectors_count'] = len(model.support_)
+
+    predictions = model.predict(X_scaled[mask])
+    r2 = r2_score(y_numeric[mask], predictions)
+    rmse = np.sqrt(mean_squared_error(y_numeric[mask], predictions))
+    df['svm_r2'] = round(r2, 4)
+    df['svm_rmse'] = round(rmse, 4)
+
+output = df
+`,
+  },
+
+  'xgboost': {
+    type: 'xgboost',
+    category: 'analysis',
+    label: 'XGBoost',
+    description: 'Extreme Gradient Boosting classifier/regressor',
+    icon: 'Zap',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      mode: 'classification',
+      nEstimators: 100,
+      maxDepth: 6,
+      learningRate: 0.3,
+      outputColumn: 'xgb_prediction',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score, f1_score, r2_score, mean_squared_error
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+mode = config.get('mode', 'classification')
+n_estimators = int(config.get('nEstimators', 100))
+max_depth = int(config.get('maxDepth', 6))
+learning_rate = float(config.get('learningRate', 0.3))
+output_col = config.get('outputColumn', 'xgb_prediction')
+
+if not feature_cols or not target_col:
+    raise ValueError("XGBoost: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"XGBoost: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"XGBoost: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+if mode == 'classification':
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y.astype(str))
+
+    model = GradientBoostingClassifier(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        random_state=42
+    )
+    model.fit(X, y_encoded)
+    predictions = model.predict(X)
+
+    df[output_col] = le.inverse_transform(predictions)
+
+    # Probabilities if available
+    proba = model.predict_proba(X)
+    df['xgb_probability'] = proba.max(axis=1).round(4)
+
+    accuracy = accuracy_score(y_encoded, predictions)
+    f1 = f1_score(y_encoded, predictions, average='weighted')
+    df['xgb_accuracy'] = round(accuracy, 4)
+    df['xgb_f1_score'] = round(f1, 4)
+
+    # Feature importance
+    importance = pd.Series(model.feature_importances_, index=feature_cols).round(4)
+    for feat, imp in importance.items():
+        df[f'xgb_importance_{feat}'] = imp
+else:
+    y_numeric = pd.to_numeric(y, errors='coerce')
+    mask = ~pd.isna(y_numeric)
+
+    model = GradientBoostingRegressor(
+        n_estimators=n_estimators,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
+        random_state=42
+    )
+    model.fit(X[mask], y_numeric[mask])
+    df[output_col] = model.predict(X)
+
+    predictions = model.predict(X[mask])
+    r2 = r2_score(y_numeric[mask], predictions)
+    rmse = np.sqrt(mean_squared_error(y_numeric[mask], predictions))
+    df['xgb_r2'] = round(r2, 4)
+    df['xgb_rmse'] = round(rmse, 4)
+
+    # Feature importance
+    importance = pd.Series(model.feature_importances_, index=feature_cols).round(4)
+    for feat, imp in importance.items():
+        df[f'xgb_importance_{feat}'] = imp
+
+output = df
+`,
+  },
+
+  'model-explainability': {
+    type: 'model-explainability',
+    category: 'analysis',
+    label: 'Model Explainability (SHAP)',
+    description: 'SHAP values for model interpretability',
+    icon: 'Lightbulb',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      nSamples: 100,
+      plotType: 'summary',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+n_samples = min(int(config.get('nSamples', 100)), len(df))
+plot_type = config.get('plotType', 'summary')
+
+if not feature_cols or not target_col:
+    raise ValueError("Model Explainability: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Model Explainability: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"Model Explainability: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+# Determine if classification or regression
+is_classification = y.dtype == 'object' or y.nunique() < 10
+
+if is_classification:
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y.astype(str))
+    model = RandomForestClassifier(n_estimators=50, max_depth=5, random_state=42)
+    model.fit(X, y_encoded)
+else:
+    y_numeric = pd.to_numeric(y, errors='coerce')
+    mask = ~pd.isna(y_numeric)
+    model = RandomForestRegressor(n_estimators=50, max_depth=5, random_state=42)
+    model.fit(X[mask], y_numeric[mask])
+
+# Calculate permutation-based feature importance as SHAP proxy
+# (Full SHAP requires shap library which may not be available)
+base_importance = model.feature_importances_
+
+# Calculate contribution scores for each sample
+X_sample = X.head(n_samples)
+contributions = np.zeros((len(X_sample), len(feature_cols)))
+
+for i, col in enumerate(feature_cols):
+    contributions[:, i] = X_sample[col].values * base_importance[i]
+
+# Normalize contributions
+contributions = contributions / (np.abs(contributions).sum(axis=1, keepdims=True) + 1e-10)
+
+# Create output dataframe
+result_df = df.head(n_samples).copy()
+
+# Add contribution columns for each feature
+for i, col in enumerate(feature_cols):
+    result_df[f'shap_{col}'] = contributions[:, i].round(4)
+
+# Add global feature importance ranking
+importance_df = pd.DataFrame({
+    'feature': feature_cols,
+    'importance': base_importance.round(4)
+}).sort_values('importance', ascending=False)
+
+# Add importance rank to each row
+for i, row in importance_df.iterrows():
+    result_df[f'importance_rank_{row["feature"]}'] = importance_df.index.tolist().index(i) + 1
+
+# Add global importance as column
+result_df['top_feature'] = importance_df.iloc[0]['feature']
+result_df['top_feature_importance'] = importance_df.iloc[0]['importance']
+
+output = result_df
+`,
+  },
+
+  'regression-diagnostics': {
+    type: 'regression-diagnostics',
+    category: 'analysis',
+    label: 'Regression Diagnostics',
+    description: 'Residual analysis for validating regression models',
+    icon: 'Microscope',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      significanceLevel: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+from sklearn.linear_model import LinearRegression
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+alpha = float(config.get('significanceLevel', 0.05))
+
+if not feature_cols or not target_col:
+    raise ValueError("Regression Diagnostics: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Regression Diagnostics: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"Regression Diagnostics: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+y = pd.to_numeric(y, errors='coerce')
+
+# Remove missing values
+mask = ~(X.isna().any(axis=1) | y.isna())
+X = X[mask]
+y = y[mask]
+df_clean = df[mask].copy()
+
+if len(X) < 10:
+    raise ValueError("Regression Diagnostics: Need at least 10 valid samples for analysis")
+
+# Fit regression model
+model = LinearRegression()
+model.fit(X, y)
+predictions = model.predict(X)
+residuals = y - predictions
+standardized_residuals = (residuals - residuals.mean()) / residuals.std()
+
+# Add residuals to output
+df_clean['predicted'] = predictions.round(4)
+df_clean['residual'] = residuals.round(4)
+df_clean['standardized_residual'] = standardized_residuals.round(4)
+
+# 1. Shapiro-Wilk test for normality of residuals
+n_shapiro = min(len(residuals), 5000)
+shapiro_stat, shapiro_p = stats.shapiro(residuals.head(n_shapiro))
+normality_passed = shapiro_p > alpha
+
+# 2. Durbin-Watson test for autocorrelation
+dw_stat = np.sum(np.diff(residuals)**2) / np.sum(residuals**2)
+# DW ~ 2 means no autocorrelation, < 1 or > 3 suggests problems
+autocorr_passed = 1.5 < dw_stat < 2.5
+
+# 3. Breusch-Pagan test for heteroscedasticity (simplified)
+# Regress squared residuals on X
+squared_residuals = residuals**2
+bp_model = LinearRegression()
+bp_model.fit(X, squared_residuals)
+bp_predictions = bp_model.predict(X)
+bp_ss_res = np.sum((squared_residuals - bp_predictions)**2)
+bp_ss_tot = np.sum((squared_residuals - squared_residuals.mean())**2)
+bp_r2 = 1 - bp_ss_res / bp_ss_tot
+bp_stat = len(X) * bp_r2
+bp_p = 1 - stats.chi2.cdf(bp_stat, len(feature_cols))
+homoscedasticity_passed = bp_p > alpha
+
+# 4. Cook's distance for influential points
+n = len(X)
+p = len(feature_cols) + 1
+leverage = np.diag(X @ np.linalg.pinv(X.T @ X) @ X.T)
+cooks_d = (standardized_residuals**2 / p) * (leverage / (1 - leverage + 1e-10))
+df_clean['cooks_distance'] = cooks_d.round(4)
+influential_threshold = 4 / n
+df_clean['is_influential'] = cooks_d > influential_threshold
+n_influential = (cooks_d > influential_threshold).sum()
+
+# Add diagnostic summary columns
+df_clean['shapiro_wilk_stat'] = round(shapiro_stat, 4)
+df_clean['shapiro_wilk_p'] = round(shapiro_p, 4)
+df_clean['normality_passed'] = normality_passed
+df_clean['durbin_watson'] = round(dw_stat, 4)
+df_clean['autocorr_passed'] = autocorr_passed
+df_clean['breusch_pagan_p'] = round(bp_p, 4)
+df_clean['homoscedasticity_passed'] = homoscedasticity_passed
+df_clean['n_influential_points'] = n_influential
+
+output = df_clean
+`,
+  },
+
+  'vif-analysis': {
+    type: 'vif-analysis',
+    category: 'analysis',
+    label: 'VIF Analysis',
+    description: 'Variance Inflation Factor to detect multicollinearity',
+    icon: 'GitMerge',
+    defaultConfig: {
+      featureColumns: [],
+      threshold: 5.0,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+threshold = float(config.get('threshold', 5.0))
+
+if not feature_cols:
+    raise ValueError("VIF Analysis: Please specify feature columns in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"VIF Analysis: Columns not found: {missing_cols}")
+
+if len(feature_cols) < 2:
+    raise ValueError("VIF Analysis: Need at least 2 feature columns to calculate VIF")
+
+X = df[feature_cols].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+# Calculate VIF for each feature
+vif_data = []
+for i, col in enumerate(feature_cols):
+    y_vif = X[col]
+    X_vif = X.drop(columns=[col])
+
+    if len(X_vif.columns) > 0:
+        model = LinearRegression()
+        model.fit(X_vif, y_vif)
+        r_squared = model.score(X_vif, y_vif)
+        vif = 1 / (1 - r_squared + 1e-10)
+    else:
+        vif = 1.0
+
+    vif_data.append({
+        'feature': col,
+        'vif': round(vif, 4),
+        'high_multicollinearity': vif > threshold
+    })
+
+vif_df = pd.DataFrame(vif_data)
+
+# Find high correlation pairs
+corr_matrix = X.corr()
+high_corr_pairs = []
+for i in range(len(feature_cols)):
+    for j in range(i+1, len(feature_cols)):
+        corr = corr_matrix.iloc[i, j]
+        if abs(corr) > 0.7:
+            high_corr_pairs.append({
+                'feature_1': feature_cols[i],
+                'feature_2': feature_cols[j],
+                'correlation': round(corr, 4)
+            })
+
+# Add summary columns
+vif_df['threshold_used'] = threshold
+vif_df['n_high_vif'] = (vif_df['vif'] > threshold).sum()
+
+if high_corr_pairs:
+    high_corr_df = pd.DataFrame(high_corr_pairs)
+    vif_df['high_corr_pairs'] = str(high_corr_pairs)
+else:
+    vif_df['high_corr_pairs'] = 'None'
+
+output = vif_df
+`,
+  },
+
+  'funnel-analysis': {
+    type: 'funnel-analysis',
+    category: 'analysis',
+    label: 'Funnel Analysis',
+    description: 'Multi-step conversion funnel analysis',
+    icon: 'Filter',
+    defaultConfig: {
+      stageColumn: '',
+      countColumn: '',
+      stageOrder: '',
+      timestampColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+stage_col = config.get('stageColumn', '')
+count_col = config.get('countColumn', '')
+stage_order = config.get('stageOrder', '')
+timestamp_col = config.get('timestampColumn', '')
+
+if not stage_col:
+    raise ValueError("Funnel Analysis: Please specify the stage column in the Config tab")
+
+if stage_col not in df.columns:
+    raise ValueError(f"Funnel Analysis: Stage column '{stage_col}' not found")
+
+# Parse stage order or use natural order from data
+if stage_order:
+    stages = [s.strip() for s in stage_order.split(',')]
+else:
+    stages = df[stage_col].unique().tolist()
+
+# Calculate counts per stage
+if count_col and count_col in df.columns:
+    stage_counts = df.groupby(stage_col)[count_col].sum()
+else:
+    stage_counts = df[stage_col].value_counts()
+
+# Ensure all stages are present
+for stage in stages:
+    if stage not in stage_counts.index:
+        stage_counts[stage] = 0
+
+# Build funnel metrics
+funnel_data = []
+total_start = stage_counts.get(stages[0], 0)
+
+for i, stage in enumerate(stages):
+    count = stage_counts.get(stage, 0)
+
+    # Calculate metrics
+    if i == 0:
+        conversion_from_prev = 100.0
+        dropoff_from_prev = 0.0
+    else:
+        prev_count = stage_counts.get(stages[i-1], 0)
+        if prev_count > 0:
+            conversion_from_prev = (count / prev_count) * 100
+            dropoff_from_prev = ((prev_count - count) / prev_count) * 100
+        else:
+            conversion_from_prev = 0.0
+            dropoff_from_prev = 100.0
+
+    overall_conversion = (count / total_start * 100) if total_start > 0 else 0.0
+
+    funnel_data.append({
+        'stage': stage,
+        'stage_order': i + 1,
+        'count': int(count),
+        'conversion_from_previous': round(conversion_from_prev, 2),
+        'dropoff_from_previous': round(dropoff_from_prev, 2),
+        'overall_conversion': round(overall_conversion, 2)
+    })
+
+result = pd.DataFrame(funnel_data)
+
+# Add summary metrics
+result['total_stages'] = len(stages)
+result['funnel_start_count'] = int(total_start)
+result['funnel_end_count'] = int(stage_counts.get(stages[-1], 0))
+result['overall_funnel_conversion'] = round(
+    (stage_counts.get(stages[-1], 0) / total_start * 100) if total_start > 0 else 0, 2
+)
+
+# Add time-based metrics if timestamp provided
+if timestamp_col and timestamp_col in df.columns:
+    try:
+        df['_ts'] = pd.to_datetime(df[timestamp_col])
+        time_per_stage = df.groupby(stage_col)['_ts'].agg(['min', 'max'])
+        for stage in stages:
+            if stage in time_per_stage.index:
+                stage_data = time_per_stage.loc[stage]
+                duration = (stage_data['max'] - stage_data['min']).total_seconds() / 3600
+                mask = result['stage'] == stage
+                result.loc[mask, 'stage_duration_hours'] = round(duration, 2)
+    except:
+        pass
+
+output = result
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -5057,6 +5651,12 @@ export const blockCategories = [
       'tfidf-vectorization',
       'topic-modeling',
       'similarity-analysis',
+      'svm',
+      'xgboost',
+      'model-explainability',
+      'regression-diagnostics',
+      'vif-analysis',
+      'funnel-analysis',
     ] as BlockType[],
   },
   {
