@@ -87,6 +87,20 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'association-rules': 'blocks.associationRules',
   'sentiment-analysis': 'blocks.sentimentAnalysis',
   'moving-average': 'blocks.movingAverage',
+  'train-test-split': 'blocks.trainTestSplit',
+  'model-evaluation': 'blocks.modelEvaluation',
+  'knn': 'blocks.knn',
+  'naive-bayes': 'blocks.naiveBayes',
+  'gradient-boosting': 'blocks.gradientBoosting',
+  'pareto-analysis': 'blocks.paretoAnalysis',
+  'trend-analysis': 'blocks.trendAnalysis',
+  'forecasting': 'blocks.forecasting',
+  'percentile-analysis': 'blocks.percentileAnalysis',
+  'distribution-fit': 'blocks.distributionFit',
+  'text-preprocessing': 'blocks.textPreprocessing',
+  'tfidf-vectorization': 'blocks.tfidfVectorization',
+  'topic-modeling': 'blocks.topicModeling',
+  'similarity-analysis': 'blocks.similarityAnalysis',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
@@ -162,6 +176,20 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'association-rules': 'blockDescriptions.associationRules',
   'sentiment-analysis': 'blockDescriptions.sentimentAnalysis',
   'moving-average': 'blockDescriptions.movingAverage',
+  'train-test-split': 'blockDescriptions.trainTestSplit',
+  'model-evaluation': 'blockDescriptions.modelEvaluation',
+  'knn': 'blockDescriptions.knn',
+  'naive-bayes': 'blockDescriptions.naiveBayes',
+  'gradient-boosting': 'blockDescriptions.gradientBoosting',
+  'pareto-analysis': 'blockDescriptions.paretoAnalysis',
+  'trend-analysis': 'blockDescriptions.trendAnalysis',
+  'forecasting': 'blockDescriptions.forecasting',
+  'percentile-analysis': 'blockDescriptions.percentileAnalysis',
+  'distribution-fit': 'blockDescriptions.distributionFit',
+  'text-preprocessing': 'blockDescriptions.textPreprocessing',
+  'tfidf-vectorization': 'blockDescriptions.tfidfVectorization',
+  'topic-modeling': 'blockDescriptions.topicModeling',
+  'similarity-analysis': 'blockDescriptions.similarityAnalysis',
   'chart': 'blockDescriptions.chart',
   'table': 'blockDescriptions.table',
   'correlation-matrix': 'blockDescriptions.correlationMatrix',
@@ -3352,6 +3380,1003 @@ function renderConfigFields(
             onChange={(e) => onChange('outputColumn', e.target.value)}
             placeholder="Auto-generated if empty"
           />
+        </div>
+      );
+    }
+
+    case 'train-test-split': {
+      return (
+        <div className="space-y-4">
+          <Input
+            label="Test Size (0-1)"
+            type="number"
+            step="0.05"
+            min="0.1"
+            max="0.9"
+            value={(config.testSize as number) || 0.2}
+            onChange={(e) => onChange('testSize', parseFloat(e.target.value) || 0.2)}
+          />
+
+          <Input
+            label="Random State (seed)"
+            type="number"
+            value={(config.randomState as number) || 42}
+            onChange={(e) => onChange('randomState', parseInt(e.target.value) || 42)}
+          />
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.stratifyColumn as string) || ''}
+              onValueChange={(v) => onChange('stratifyColumn', v)}
+            >
+              <SelectTrigger label="Stratify By (optional)">
+                <SelectValue placeholder="No stratification" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No stratification</SelectItem>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Stratify Column (optional)"
+              value={(config.stratifyColumn as string) || ''}
+              onChange={(e) => onChange('stratifyColumn', e.target.value)}
+              placeholder="For balanced class distribution"
+            />
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.shuffle as boolean) !== false}
+              onChange={(e) => onChange('shuffle', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <span className="text-small text-text-primary">Shuffle before splitting</span>
+          </label>
+
+          <p className="text-small text-text-muted">
+            Adds a &apos;_split&apos; column to identify train/test rows.
+          </p>
+        </div>
+      );
+    }
+
+    case 'model-evaluation': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.actualColumn as string) || ''}
+                onValueChange={(v) => onChange('actualColumn', v)}
+              >
+                <SelectTrigger label="Actual (True) Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>
+                      {col}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.predictedColumn as string) || ''}
+                onValueChange={(v) => onChange('predictedColumn', v)}
+              >
+                <SelectTrigger label="Predicted Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>
+                      {col}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Actual Column"
+                value={(config.actualColumn as string) || ''}
+                onChange={(e) => onChange('actualColumn', e.target.value)}
+                placeholder="Column with true values"
+              />
+              <Input
+                label="Predicted Column"
+                value={(config.predictedColumn as string) || ''}
+                onChange={(e) => onChange('predictedColumn', e.target.value)}
+                placeholder="Column with predictions"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.taskType as string) || 'classification'}
+            onValueChange={(v) => onChange('taskType', v)}
+          >
+            <SelectTrigger label="Task Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <p className="text-small text-text-muted">
+            Classification: Accuracy, Precision, Recall, F1. Regression: MAE, MSE, RMSE, R².
+          </p>
+        </div>
+      );
+    }
+
+    case 'knn': {
+      const knnFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <Input
+            label="K (Number of Neighbors)"
+            type="number"
+            min={1}
+            max={50}
+            value={(config.k as number) || 5}
+            onChange={(e) => onChange('k', parseInt(e.target.value) || 5)}
+          />
+
+          <Select
+            value={(config.taskType as string) || 'classification'}
+            onValueChange={(v) => onChange('taskType', v)}
+          >
+            <SelectTrigger label="Task Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.weights as string) || 'uniform'}
+            onValueChange={(v) => onChange('weights', v)}
+          >
+            <SelectTrigger label="Weights">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="uniform">Uniform (equal weight)</SelectItem>
+              <SelectItem value="distance">Distance (closer = more weight)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Feature Columns
+            </label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={knnFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked
+                          ? [...knnFeatures, col]
+                          : knnFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Output Column"
+            value={(config.outputColumn as string) || 'knn_prediction'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+          />
+        </div>
+      );
+    }
+
+    case 'naive-bayes': {
+      const nbFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.variant as string) || 'gaussian'}
+            onValueChange={(v) => onChange('variant', v)}
+          >
+            <SelectTrigger label="Variant">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gaussian">Gaussian (continuous features)</SelectItem>
+              <SelectItem value="multinomial">Multinomial (count features)</SelectItem>
+              <SelectItem value="bernoulli">Bernoulli (binary features)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={nbFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...nbFeatures, col] : nbFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+            />
+          )}
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.outputProbability as boolean) || false}
+              onChange={(e) => onChange('outputProbability', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <span className="text-small text-text-primary">Output class probabilities</span>
+          </label>
+
+          <Input
+            label="Output Column"
+            value={(config.outputColumn as string) || 'nb_prediction'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+          />
+        </div>
+      );
+    }
+
+    case 'gradient-boosting': {
+      const gbFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.taskType as string) || 'classification'}
+            onValueChange={(v) => onChange('taskType', v)}
+          >
+            <SelectTrigger label="Task Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Number of Estimators"
+            type="number"
+            min={10}
+            max={500}
+            value={(config.nEstimators as number) || 100}
+            onChange={(e) => onChange('nEstimators', parseInt(e.target.value) || 100)}
+          />
+
+          <Input
+            label="Learning Rate"
+            type="number"
+            step="0.01"
+            min={0.01}
+            max={1}
+            value={(config.learningRate as number) || 0.1}
+            onChange={(e) => onChange('learningRate', parseFloat(e.target.value) || 0.1)}
+          />
+
+          <Input
+            label="Max Depth"
+            type="number"
+            min={1}
+            max={20}
+            value={(config.maxDepth as number) || 3}
+            onChange={(e) => onChange('maxDepth', parseInt(e.target.value) || 3)}
+          />
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={gbFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...gbFeatures, col] : gbFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Output Column"
+            value={(config.outputColumn as string) || 'gb_prediction'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+          />
+        </div>
+      );
+    }
+
+    case 'pareto-analysis': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.categoryColumn as string) || ''}
+                onValueChange={(v) => onChange('categoryColumn', v)}
+              >
+                <SelectTrigger label="Category Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Category Column"
+                value={(config.categoryColumn as string) || ''}
+                onChange={(e) => onChange('categoryColumn', e.target.value)}
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <Input
+            label="Threshold (%)"
+            type="number"
+            min={50}
+            max={95}
+            value={(config.threshold as number) || 80}
+            onChange={(e) => onChange('threshold', parseInt(e.target.value) || 80)}
+          />
+
+          <p className="text-small text-text-muted">
+            Identifies &quot;Vital Few&quot; items contributing to the threshold % of total value.
+          </p>
+        </div>
+      );
+    }
+
+    case 'trend-analysis': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date/Time Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <p className="text-small text-text-muted">
+            Detects trend direction (up/down), strength, and calculates trend line values.
+          </p>
+        </div>
+      );
+    }
+
+    case 'forecasting': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date/Time Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <Input
+            label="Forecast Periods"
+            type="number"
+            min={1}
+            max={100}
+            value={(config.periods as number) || 10}
+            onChange={(e) => onChange('periods', parseInt(e.target.value) || 10)}
+          />
+
+          <Select
+            value={(config.method as string) || 'exponential'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="linear">Linear Extrapolation</SelectItem>
+              <SelectItem value="exponential">Exponential Smoothing</SelectItem>
+              <SelectItem value="moving_average">Moving Average</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(config.method === 'exponential') && (
+            <Input
+              label="Alpha (smoothing factor)"
+              type="number"
+              step="0.05"
+              min={0.05}
+              max={0.95}
+              value={(config.alpha as number) || 0.3}
+              onChange={(e) => onChange('alpha', parseFloat(e.target.value) || 0.3)}
+            />
+          )}
+        </div>
+      );
+    }
+
+    case 'percentile-analysis': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Percentiles (comma-separated)"
+            value={(config.percentiles as string) || '10,25,50,75,90,95,99'}
+            onChange={(e) => onChange('percentiles', e.target.value)}
+            placeholder="e.g., 10,25,50,75,90"
+          />
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.addRank as boolean) !== false}
+              onChange={(e) => onChange('addRank', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <span className="text-small text-text-primary">Add percentile rank column</span>
+          </label>
+
+          <p className="text-small text-text-muted">
+            Adds percentile rank and quartile classification to data.
+          </p>
+        </div>
+      );
+    }
+
+    case 'distribution-fit': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Distributions to test (comma-separated)"
+            value={(config.distributions as string) || 'normal,exponential,uniform'}
+            onChange={(e) => onChange('distributions', e.target.value)}
+            placeholder="normal,exponential,uniform"
+          />
+
+          <p className="text-small text-text-muted">
+            Tests: normal, exponential, uniform. Returns fit parameters and KS test results.
+          </p>
+        </div>
+      );
+    }
+
+    case 'text-preprocessing': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Text Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Text Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(config.lowercase as boolean) !== false}
+                onChange={(e) => onChange('lowercase', e.target.checked)}
+                className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+              />
+              <span className="text-small text-text-primary">Convert to lowercase</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(config.removePunctuation as boolean) !== false}
+                onChange={(e) => onChange('removePunctuation', e.target.checked)}
+                className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+              />
+              <span className="text-small text-text-primary">Remove punctuation</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(config.removeNumbers as boolean) || false}
+                onChange={(e) => onChange('removeNumbers', e.target.checked)}
+                className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+              />
+              <span className="text-small text-text-primary">Remove numbers</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(config.removeStopwords as boolean) !== false}
+                onChange={(e) => onChange('removeStopwords', e.target.checked)}
+                className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+              />
+              <span className="text-small text-text-primary">Remove stopwords</span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={(config.trimWhitespace as boolean) !== false}
+                onChange={(e) => onChange('trimWhitespace', e.target.checked)}
+                className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+              />
+              <span className="text-small text-text-primary">Trim whitespace</span>
+            </label>
+          </div>
+
+          <Input
+            label="Output Column (optional)"
+            value={(config.outputColumn as string) || ''}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+            placeholder="Auto-generated if empty"
+          />
+        </div>
+      );
+    }
+
+    case 'tfidf-vectorization': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Text Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Text Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Max Features"
+            type="number"
+            min={10}
+            max={5000}
+            value={(config.maxFeatures as number) || 100}
+            onChange={(e) => onChange('maxFeatures', parseInt(e.target.value) || 100)}
+          />
+
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              label="N-gram Min"
+              type="number"
+              min={1}
+              max={3}
+              value={(config.ngramMin as number) || 1}
+              onChange={(e) => onChange('ngramMin', parseInt(e.target.value) || 1)}
+            />
+            <Input
+              label="N-gram Max"
+              type="number"
+              min={1}
+              max={3}
+              value={(config.ngramMax as number) || 1}
+              onChange={(e) => onChange('ngramMax', parseInt(e.target.value) || 1)}
+            />
+          </div>
+
+          <Select
+            value={(config.outputFormat as string) || 'top_terms'}
+            onValueChange={(v) => onChange('outputFormat', v)}
+          >
+            <SelectTrigger label="Output Format">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="top_terms">Top terms per document</SelectItem>
+              <SelectItem value="matrix">Full TF-IDF matrix</SelectItem>
+              <SelectItem value="summary">Term importance summary</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    case 'topic-modeling': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Text Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Text Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+            />
+          )}
+
+          <Input
+            label="Number of Topics"
+            type="number"
+            min={2}
+            max={20}
+            value={(config.numTopics as number) || 5}
+            onChange={(e) => onChange('numTopics', parseInt(e.target.value) || 5)}
+          />
+
+          <Input
+            label="Words per Topic"
+            type="number"
+            min={3}
+            max={20}
+            value={(config.numWords as number) || 10}
+            onChange={(e) => onChange('numWords', parseInt(e.target.value) || 10)}
+          />
+
+          <Input
+            label="Max Vocabulary Size"
+            type="number"
+            min={100}
+            max={5000}
+            value={(config.maxFeatures as number) || 1000}
+            onChange={(e) => onChange('maxFeatures', parseInt(e.target.value) || 1000)}
+          />
+
+          <p className="text-small text-text-muted">
+            Uses LDA to discover hidden topics. Adds dominant topic and confidence to each row.
+          </p>
+        </div>
+      );
+    }
+
+    case 'similarity-analysis': {
+      const simColumns = (config.columns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={simColumns.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...simColumns, col] : simColumns.filter((c) => c !== col);
+                        onChange('columns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          <Select
+            value={(config.method as string) || 'cosine'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Similarity Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cosine">Cosine Similarity</SelectItem>
+              <SelectItem value="euclidean">Euclidean Distance</SelectItem>
+              <SelectItem value="manhattan">Manhattan Distance</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.outputType as string) || 'add_to_data'}
+            onValueChange={(v) => onChange('outputType', v)}
+          >
+            <SelectTrigger label="Output Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="add_to_data">Add similarity scores to data</SelectItem>
+              <SelectItem value="top_similar">Top N similar items</SelectItem>
+              <SelectItem value="matrix">Full similarity matrix</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(config.outputType === 'top_similar') && (
+            <Input
+              label="Top N"
+              type="number"
+              min={1}
+              max={20}
+              value={(config.topN as number) || 5}
+              onChange={(e) => onChange('topN', parseInt(e.target.value) || 5)}
+            />
+          )}
         </div>
       );
     }
