@@ -1170,6 +1170,344 @@ output = df
 `,
   },
 
+  'fill-forward-backward': {
+    type: 'fill-forward-backward',
+    category: 'transform',
+    label: 'Fill Forward/Backward',
+    description: 'Fill missing values with previous or next values',
+    icon: 'ArrowLeftRight',
+    defaultConfig: {
+      column: '',
+      method: 'forward',
+      limit: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'forward')
+limit_str = config.get('limit', '')
+
+if not column:
+    raise ValueError("Fill Forward/Backward: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Fill Forward/Backward: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+limit = int(limit_str) if limit_str else None
+
+if method == 'forward':
+    df[column] = df[column].ffill(limit=limit)
+elif method == 'backward':
+    df[column] = df[column].bfill(limit=limit)
+elif method == 'both':
+    df[column] = df[column].ffill(limit=limit).bfill(limit=limit)
+
+output = df
+`,
+  },
+
+  'lag-lead': {
+    type: 'lag-lead',
+    category: 'transform',
+    label: 'Lag/Lead Column',
+    description: 'Create columns with shifted values (lag or lead)',
+    icon: 'MoveHorizontal',
+    defaultConfig: {
+      column: '',
+      operation: 'lag',
+      periods: 1,
+      groupBy: [],
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+operation = config.get('operation', 'lag')
+periods = int(config.get('periods', 1))
+group_by = config.get('groupBy', [])
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Lag/Lead: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Lag/Lead: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"{column}_{operation}_{periods}"
+
+shift_periods = periods if operation == 'lag' else -periods
+
+if group_by:
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Lag/Lead: Group column(s) not found: {', '.join(missing)}")
+    df[output_col] = df.groupby(group_by)[column].shift(shift_periods)
+else:
+    df[output_col] = df[column].shift(shift_periods)
+
+output = df
+`,
+  },
+
+  'row-number': {
+    type: 'row-number',
+    category: 'transform',
+    label: 'Row Number',
+    description: 'Add a unique row number column',
+    icon: 'Hash',
+    defaultConfig: {
+      outputColumn: 'row_num',
+      startFrom: 1,
+      groupBy: [],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+output_col = config.get('outputColumn', 'row_num')
+start_from = int(config.get('startFrom', 1))
+group_by = config.get('groupBy', [])
+
+if group_by:
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Row Number: Group column(s) not found: {', '.join(missing)}")
+    df[output_col] = df.groupby(group_by).cumcount() + start_from
+else:
+    df[output_col] = range(start_from, len(df) + start_from)
+
+output = df
+`,
+  },
+
+  'date-difference': {
+    type: 'date-difference',
+    category: 'transform',
+    label: 'Date Difference',
+    description: 'Calculate difference between two date columns',
+    icon: 'CalendarRange',
+    defaultConfig: {
+      startColumn: '',
+      endColumn: '',
+      unit: 'days',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+start_col = config.get('startColumn', '')
+end_col = config.get('endColumn', '')
+unit = config.get('unit', 'days')
+output_col = config.get('outputColumn', '')
+
+if not start_col or not end_col:
+    raise ValueError("Date Difference: Please specify both start and end date columns in the Config tab")
+
+if start_col not in df.columns:
+    raise ValueError(f"Date Difference: Start column '{start_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if end_col not in df.columns:
+    raise ValueError(f"Date Difference: End column '{end_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"diff_{unit}"
+
+df[start_col] = pd.to_datetime(df[start_col], errors='coerce')
+df[end_col] = pd.to_datetime(df[end_col], errors='coerce')
+
+diff = df[end_col] - df[start_col]
+
+if unit == 'days':
+    df[output_col] = diff.dt.days
+elif unit == 'hours':
+    df[output_col] = diff.dt.total_seconds() / 3600
+elif unit == 'minutes':
+    df[output_col] = diff.dt.total_seconds() / 60
+elif unit == 'seconds':
+    df[output_col] = diff.dt.total_seconds()
+elif unit == 'weeks':
+    df[output_col] = diff.dt.days / 7
+elif unit == 'months':
+    df[output_col] = diff.dt.days / 30.44
+elif unit == 'years':
+    df[output_col] = diff.dt.days / 365.25
+
+output = df
+`,
+  },
+
+  'transpose': {
+    type: 'transpose',
+    category: 'transform',
+    label: 'Transpose',
+    description: 'Flip rows and columns',
+    icon: 'FlipHorizontal',
+    defaultConfig: {
+      useFirstColumnAsHeader: true,
+      useFirstRowAsIndex: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+use_first_col_header = config.get('useFirstColumnAsHeader', True)
+use_first_row_index = config.get('useFirstRowAsIndex', False)
+
+if use_first_row_index:
+    df = df.set_index(df.columns[0])
+
+df_transposed = df.T
+
+if use_first_col_header:
+    df_transposed = df_transposed.reset_index()
+    df_transposed.columns = ['column'] + [f'row_{i}' for i in range(len(df_transposed.columns) - 1)]
+else:
+    df_transposed = df_transposed.reset_index(drop=True)
+
+output = df_transposed
+`,
+  },
+
+  'string-pad': {
+    type: 'string-pad',
+    category: 'transform',
+    label: 'String Pad',
+    description: 'Pad strings to a fixed length with specified character',
+    icon: 'AlignJustify',
+    defaultConfig: {
+      column: '',
+      width: 10,
+      side: 'left',
+      fillChar: '0',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+width = int(config.get('width', 10))
+side = config.get('side', 'left')
+fill_char = config.get('fillChar', '0')
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("String Pad: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"String Pad: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+fill_char = str(fill_char)[0] if fill_char else ' '
+str_col = df[column].astype(str)
+
+if side == 'left':
+    df[output_col] = str_col.str.zfill(width) if fill_char == '0' else str_col.str.pad(width, side='left', fillchar=fill_char)
+elif side == 'right':
+    df[output_col] = str_col.str.pad(width, side='right', fillchar=fill_char)
+elif side == 'both':
+    df[output_col] = str_col.str.center(width, fillchar=fill_char)
+
+output = df
+`,
+  },
+
+  'cumulative-operations': {
+    type: 'cumulative-operations',
+    category: 'transform',
+    label: 'Cumulative Operations',
+    description: 'Calculate running totals, cumulative counts, and percentages',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      operation: 'sum',
+      groupBy: [],
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+operation = config.get('operation', 'sum')
+group_by = config.get('groupBy', [])
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Cumulative Operations: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Cumulative Operations: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"cum_{operation}_{column}"
+
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if group_by:
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Cumulative Operations: Group column(s) not found: {', '.join(missing)}")
+
+    if operation == 'sum':
+        df[output_col] = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').cumsum())
+    elif operation == 'count':
+        df[output_col] = df.groupby(group_by).cumcount() + 1
+    elif operation == 'mean':
+        df[output_col] = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').expanding().mean())
+    elif operation == 'max':
+        df[output_col] = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').cummax())
+    elif operation == 'min':
+        df[output_col] = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').cummin())
+    elif operation == 'product':
+        df[output_col] = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').cumprod())
+    elif operation == 'percent':
+        total = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').sum())
+        cum_sum = df.groupby(group_by)[column].transform(lambda x: pd.to_numeric(x, errors='coerce').cumsum())
+        df[output_col] = (cum_sum / total * 100).round(2)
+else:
+    if operation == 'sum':
+        df[output_col] = numeric_col.cumsum()
+    elif operation == 'count':
+        df[output_col] = range(1, len(df) + 1)
+    elif operation == 'mean':
+        df[output_col] = numeric_col.expanding().mean()
+    elif operation == 'max':
+        df[output_col] = numeric_col.cummax()
+    elif operation == 'min':
+        df[output_col] = numeric_col.cummin()
+    elif operation == 'product':
+        df[output_col] = numeric_col.cumprod()
+    elif operation == 'percent':
+        total = numeric_col.sum()
+        df[output_col] = (numeric_col.cumsum() / total * 100).round(2)
+
+output = df
+`,
+  },
+
   // Analysis Blocks
   'statistics': {
     type: 'statistics',
@@ -2598,6 +2936,513 @@ output = rfm
 `,
   },
 
+  'anova': {
+    type: 'anova',
+    category: 'analysis',
+    label: 'ANOVA',
+    description: 'Analysis of variance to compare group means',
+    icon: 'BarChart3',
+    defaultConfig: {
+      valueColumn: '',
+      groupColumn: '',
+      alpha: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+group_col = config.get('groupColumn', '')
+alpha = float(config.get('alpha', 0.05))
+
+if not value_col:
+    raise ValueError("ANOVA: Please specify a value column in the Config tab")
+
+if not group_col:
+    raise ValueError("ANOVA: Please specify a group column in the Config tab")
+
+if value_col not in df.columns:
+    raise ValueError(f"ANOVA: Value column '{value_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if group_col not in df.columns:
+    raise ValueError(f"ANOVA: Group column '{group_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert value column to numeric
+df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
+df = df.dropna(subset=[value_col, group_col])
+
+# Get groups
+groups = [group[value_col].values for name, group in df.groupby(group_col)]
+
+if len(groups) < 2:
+    raise ValueError("ANOVA: Need at least 2 groups to perform ANOVA")
+
+# Perform one-way ANOVA
+f_stat, p_value = stats.f_oneway(*groups)
+
+# Calculate group statistics
+group_stats = df.groupby(group_col)[value_col].agg(['count', 'mean', 'std', 'min', 'max']).reset_index()
+group_stats.columns = ['group', 'count', 'mean', 'std', 'min', 'max']
+
+# Create summary row
+summary = pd.DataFrame({
+    'group': ['ANOVA Result'],
+    'count': [len(df)],
+    'mean': [df[value_col].mean()],
+    'std': [df[value_col].std()],
+    'min': [f_stat],
+    'max': [p_value]
+})
+summary.columns = ['group', 'count', 'mean', 'std', 'F_statistic', 'p_value']
+
+# Add significance
+significant = 'Yes' if p_value < alpha else 'No'
+
+result = pd.DataFrame({
+    'metric': ['F-statistic', 'p-value', 'Alpha', 'Significant', 'Number of groups', 'Total observations'],
+    'value': [round(f_stat, 4), round(p_value, 6), alpha, significant, len(groups), len(df)]
+})
+
+output = result
+`,
+  },
+
+  'chi-square-test': {
+    type: 'chi-square-test',
+    category: 'analysis',
+    label: 'Chi-Square Test',
+    description: 'Test independence between categorical variables',
+    icon: 'Grid3X3',
+    defaultConfig: {
+      column1: '',
+      column2: '',
+      alpha: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+col1 = config.get('column1', '')
+col2 = config.get('column2', '')
+alpha = float(config.get('alpha', 0.05))
+
+if not col1 or not col2:
+    raise ValueError("Chi-Square Test: Please specify both columns in the Config tab")
+
+if col1 not in df.columns:
+    raise ValueError(f"Chi-Square Test: Column '{col1}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if col2 not in df.columns:
+    raise ValueError(f"Chi-Square Test: Column '{col2}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Create contingency table
+contingency = pd.crosstab(df[col1], df[col2])
+
+# Perform chi-square test
+chi2, p_value, dof, expected = stats.chi2_contingency(contingency)
+
+# Calculate Cramer's V for effect size
+n = contingency.sum().sum()
+min_dim = min(contingency.shape[0] - 1, contingency.shape[1] - 1)
+cramers_v = np.sqrt(chi2 / (n * min_dim)) if min_dim > 0 else 0
+
+significant = 'Yes' if p_value < alpha else 'No'
+
+result = pd.DataFrame({
+    'metric': ['Chi-square statistic', 'p-value', 'Degrees of freedom', 'Alpha', 'Significant', "Cramer's V (effect size)", 'Observations'],
+    'value': [round(chi2, 4), round(p_value, 6), dof, alpha, significant, round(cramers_v, 4), n]
+})
+
+output = result
+`,
+  },
+
+  'correlation-analysis': {
+    type: 'correlation-analysis',
+    category: 'analysis',
+    label: 'Correlation Analysis',
+    description: 'Calculate correlation coefficients with p-values',
+    icon: 'Link',
+    defaultConfig: {
+      columns: [],
+      method: 'pearson',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+columns = config.get('columns', [])
+method = config.get('method', 'pearson')
+
+# Convert columns to numeric
+for col in df.columns:
+    try:
+        df[col] = pd.to_numeric(df[col], errors='coerce')
+    except:
+        pass
+
+# Use numeric columns if none specified
+if not columns:
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if len(columns) < 2:
+    raise ValueError("Correlation Analysis: Need at least 2 numeric columns")
+
+# Filter to selected columns
+df = df[columns].dropna()
+
+results = []
+
+for i, col1 in enumerate(columns):
+    for col2 in columns[i+1:]:
+        x = df[col1].values
+        y = df[col2].values
+
+        if method == 'pearson':
+            corr, p_value = stats.pearsonr(x, y)
+        elif method == 'spearman':
+            corr, p_value = stats.spearmanr(x, y)
+        elif method == 'kendall':
+            corr, p_value = stats.kendalltau(x, y)
+        else:
+            corr, p_value = stats.pearsonr(x, y)
+
+        strength = 'Strong' if abs(corr) >= 0.7 else ('Moderate' if abs(corr) >= 0.4 else 'Weak')
+        direction = 'Positive' if corr > 0 else 'Negative'
+
+        results.append({
+            'column_1': col1,
+            'column_2': col2,
+            'correlation': round(corr, 4),
+            'p_value': round(p_value, 6),
+            'significant': 'Yes' if p_value < 0.05 else 'No',
+            'strength': strength,
+            'direction': direction
+        })
+
+output = pd.DataFrame(results)
+`,
+  },
+
+  'survival-analysis': {
+    type: 'survival-analysis',
+    category: 'analysis',
+    label: 'Survival Analysis',
+    description: 'Kaplan-Meier survival analysis for time-to-event data',
+    icon: 'Activity',
+    defaultConfig: {
+      timeColumn: '',
+      eventColumn: '',
+      groupColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+time_col = config.get('timeColumn', '')
+event_col = config.get('eventColumn', '')
+group_col = config.get('groupColumn', '')
+
+if not time_col:
+    raise ValueError("Survival Analysis: Please specify a time column in the Config tab")
+
+if not event_col:
+    raise ValueError("Survival Analysis: Please specify an event column in the Config tab")
+
+if time_col not in df.columns:
+    raise ValueError(f"Survival Analysis: Time column '{time_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if event_col not in df.columns:
+    raise ValueError(f"Survival Analysis: Event column '{event_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert to numeric
+df[time_col] = pd.to_numeric(df[time_col], errors='coerce')
+df[event_col] = pd.to_numeric(df[event_col], errors='coerce')
+df = df.dropna(subset=[time_col, event_col])
+
+def kaplan_meier(times, events):
+    # Sort by time
+    order = np.argsort(times)
+    times = np.array(times)[order]
+    events = np.array(events)[order]
+
+    unique_times = np.unique(times)
+    survival_prob = []
+    at_risk = []
+    events_at_time = []
+
+    n = len(times)
+    S = 1.0
+
+    for t in unique_times:
+        mask = times == t
+        d = events[mask].sum()  # Events at time t
+        n_t = (times >= t).sum()  # At risk at time t
+
+        if n_t > 0:
+            S = S * (1 - d / n_t)
+
+        survival_prob.append(S)
+        at_risk.append(n_t)
+        events_at_time.append(d)
+
+    return unique_times, survival_prob, at_risk, events_at_time
+
+if group_col and group_col in df.columns:
+    results = []
+    for group in df[group_col].unique():
+        group_df = df[df[group_col] == group]
+        times, surv, risk, events = kaplan_meier(group_df[time_col].values, group_df[event_col].values)
+
+        for i in range(len(times)):
+            results.append({
+                'group': group,
+                'time': times[i],
+                'survival_probability': round(surv[i], 4),
+                'at_risk': risk[i],
+                'events': events[i]
+            })
+
+    output = pd.DataFrame(results)
+else:
+    times, surv, risk, events = kaplan_meier(df[time_col].values, df[event_col].values)
+    output = pd.DataFrame({
+        'time': times,
+        'survival_probability': [round(s, 4) for s in surv],
+        'at_risk': risk,
+        'events': events
+    })
+`,
+  },
+
+  'association-rules': {
+    type: 'association-rules',
+    category: 'analysis',
+    label: 'Association Rules',
+    description: 'Find item associations using Apriori algorithm',
+    icon: 'Network',
+    defaultConfig: {
+      transactionColumn: '',
+      itemColumn: '',
+      minSupport: 0.01,
+      minConfidence: 0.5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from collections import defaultdict
+from itertools import combinations
+
+df = input_data.copy()
+trans_col = config.get('transactionColumn', '')
+item_col = config.get('itemColumn', '')
+min_support = float(config.get('minSupport', 0.01))
+min_confidence = float(config.get('minConfidence', 0.5))
+
+if not trans_col or not item_col:
+    raise ValueError("Association Rules: Please specify transaction and item columns in the Config tab")
+
+if trans_col not in df.columns:
+    raise ValueError(f"Association Rules: Transaction column '{trans_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if item_col not in df.columns:
+    raise ValueError(f"Association Rules: Item column '{item_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Group items by transaction
+transactions = df.groupby(trans_col)[item_col].apply(set).tolist()
+n_transactions = len(transactions)
+
+if n_transactions == 0:
+    raise ValueError("Association Rules: No transactions found")
+
+# Count item frequencies
+item_counts = defaultdict(int)
+for trans in transactions:
+    for item in trans:
+        item_counts[item] += 1
+
+# Filter by support
+frequent_items = {item for item, count in item_counts.items()
+                  if count / n_transactions >= min_support}
+
+# Count pairs
+pair_counts = defaultdict(int)
+for trans in transactions:
+    items = trans & frequent_items
+    for pair in combinations(sorted(items), 2):
+        pair_counts[pair] += 1
+
+# Generate rules
+rules = []
+for (item1, item2), count in pair_counts.items():
+    support = count / n_transactions
+    if support >= min_support:
+        # Rule: item1 -> item2
+        conf_1_2 = count / item_counts[item1]
+        if conf_1_2 >= min_confidence:
+            lift_1_2 = conf_1_2 / (item_counts[item2] / n_transactions)
+            rules.append({
+                'antecedent': item1,
+                'consequent': item2,
+                'support': round(support, 4),
+                'confidence': round(conf_1_2, 4),
+                'lift': round(lift_1_2, 4)
+            })
+
+        # Rule: item2 -> item1
+        conf_2_1 = count / item_counts[item2]
+        if conf_2_1 >= min_confidence:
+            lift_2_1 = conf_2_1 / (item_counts[item1] / n_transactions)
+            rules.append({
+                'antecedent': item2,
+                'consequent': item1,
+                'support': round(support, 4),
+                'confidence': round(conf_2_1, 4),
+                'lift': round(lift_2_1, 4)
+            })
+
+if not rules:
+    output = pd.DataFrame({'message': ['No rules found. Try lowering min_support or min_confidence.']})
+else:
+    output = pd.DataFrame(rules).sort_values('lift', ascending=False)
+`,
+  },
+
+  'sentiment-analysis': {
+    type: 'sentiment-analysis',
+    category: 'analysis',
+    label: 'Sentiment Analysis',
+    description: 'Analyze text sentiment (positive, negative, neutral)',
+    icon: 'MessageSquare',
+    defaultConfig: {
+      textColumn: '',
+      outputColumn: 'sentiment',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+
+df = input_data.copy()
+text_col = config.get('textColumn', '')
+output_col = config.get('outputColumn', 'sentiment')
+
+if not text_col:
+    raise ValueError("Sentiment Analysis: Please specify a text column in the Config tab")
+
+if text_col not in df.columns:
+    raise ValueError(f"Sentiment Analysis: Column '{text_col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Simple lexicon-based sentiment analysis
+positive_words = set(['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'awesome',
+                      'love', 'like', 'best', 'happy', 'beautiful', 'perfect', 'positive', 'brilliant',
+                      'outstanding', 'superb', 'delightful', 'pleasant', 'enjoy', 'recommended',
+                      'impressive', 'thank', 'thanks', 'helpful', 'satisfied', 'nice', 'easy'])
+
+negative_words = set(['bad', 'terrible', 'awful', 'horrible', 'poor', 'worst', 'hate', 'dislike',
+                      'disappointing', 'disappointed', 'negative', 'wrong', 'fail', 'failed', 'useless',
+                      'waste', 'problem', 'issue', 'difficult', 'hard', 'annoying', 'frustrating',
+                      'angry', 'sad', 'unfortunately', 'broken', 'error', 'bug', 'slow'])
+
+def analyze_sentiment(text):
+    if pd.isna(text):
+        return 'neutral', 0
+
+    text = str(text).lower()
+    words = re.findall(r'\\b\\w+\\b', text)
+
+    pos_count = sum(1 for w in words if w in positive_words)
+    neg_count = sum(1 for w in words if w in negative_words)
+
+    score = (pos_count - neg_count) / max(len(words), 1)
+
+    if score > 0.05:
+        return 'positive', round(score, 3)
+    elif score < -0.05:
+        return 'negative', round(score, 3)
+    else:
+        return 'neutral', round(score, 3)
+
+results = df[text_col].apply(analyze_sentiment)
+df[output_col] = results.apply(lambda x: x[0])
+df[f'{output_col}_score'] = results.apply(lambda x: x[1])
+
+# Add summary statistics
+summary = df[output_col].value_counts()
+
+output = df
+`,
+  },
+
+  'moving-average': {
+    type: 'moving-average',
+    category: 'analysis',
+    label: 'Moving Average',
+    description: 'Calculate simple and exponential moving averages',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      window: 3,
+      type: 'simple',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+window = int(config.get('window', 3))
+ma_type = config.get('type', 'simple')
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Moving Average: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Moving Average: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"{column}_ma{window}"
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if ma_type == 'simple':
+    df[output_col] = numeric_col.rolling(window=window, min_periods=1).mean()
+elif ma_type == 'exponential':
+    df[output_col] = numeric_col.ewm(span=window, adjust=False).mean()
+elif ma_type == 'weighted':
+    weights = list(range(1, window + 1))
+    df[output_col] = numeric_col.rolling(window=window, min_periods=1).apply(
+        lambda x: sum(w * v for w, v in zip(weights[-len(x):], x)) / sum(weights[-len(x):])
+    )
+
+df[output_col] = df[output_col].round(4)
+
+output = df
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -3149,6 +3994,13 @@ export const blockCategories = [
       'bin-bucket',
       'rank',
       'type-conversion',
+      'fill-forward-backward',
+      'lag-lead',
+      'row-number',
+      'date-difference',
+      'transpose',
+      'string-pad',
+      'cumulative-operations',
     ] as BlockType[],
   },
   {
@@ -3174,6 +4026,13 @@ export const blockCategories = [
       'ab-test',
       'cohort-analysis',
       'rfm-analysis',
+      'anova',
+      'chi-square-test',
+      'correlation-analysis',
+      'survival-analysis',
+      'association-rules',
+      'sentiment-analysis',
+      'moving-average',
     ] as BlockType[],
   },
   {
