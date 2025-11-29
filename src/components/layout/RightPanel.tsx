@@ -107,6 +107,12 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'regression-diagnostics': 'blocks.regressionDiagnostics',
   'vif-analysis': 'blocks.vifAnalysis',
   'funnel-analysis': 'blocks.funnelAnalysis',
+  'customer-ltv': 'blocks.customerLtv',
+  'churn-analysis': 'blocks.churnAnalysis',
+  'growth-metrics': 'blocks.growthMetrics',
+  'attribution-modeling': 'blocks.attributionModeling',
+  'breakeven-analysis': 'blocks.breakevenAnalysis',
+  'confidence-intervals': 'blocks.confidenceIntervals',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
@@ -202,6 +208,12 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'regression-diagnostics': 'blockDescriptions.regressionDiagnostics',
   'vif-analysis': 'blockDescriptions.vifAnalysis',
   'funnel-analysis': 'blockDescriptions.funnelAnalysis',
+  'customer-ltv': 'blockDescriptions.customerLtv',
+  'churn-analysis': 'blockDescriptions.churnAnalysis',
+  'growth-metrics': 'blockDescriptions.growthMetrics',
+  'attribution-modeling': 'blockDescriptions.attributionModeling',
+  'breakeven-analysis': 'blockDescriptions.breakevenAnalysis',
+  'confidence-intervals': 'blockDescriptions.confidenceIntervals',
   'chart': 'blockDescriptions.chart',
   'table': 'blockDescriptions.table',
   'correlation-matrix': 'blockDescriptions.correlationMatrix',
@@ -6703,6 +6715,516 @@ function renderConfigFields(
           <p className="text-small text-text-muted">
             ROC curve shows the trade-off between true positive rate and false positive rate. AUC closer to 1 is better.
           </p>
+        </div>
+      );
+
+    case 'customer-ltv':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.customerIdColumn as string) || ''}
+                onValueChange={(v) => onChange('customerIdColumn', v)}
+              >
+                <SelectTrigger label="Customer ID Column">
+                  <SelectValue placeholder="Select customer ID column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.transactionDateColumn as string) || ''}
+                onValueChange={(v) => onChange('transactionDateColumn', v)}
+              >
+                <SelectTrigger label="Transaction Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.monetaryColumn as string) || ''}
+                onValueChange={(v) => onChange('monetaryColumn', v)}
+              >
+                <SelectTrigger label="Monetary/Revenue Column">
+                  <SelectValue placeholder="Select monetary column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Customer ID Column"
+                value={(config.customerIdColumn as string) || ''}
+                onChange={(e) => onChange('customerIdColumn', e.target.value)}
+                placeholder="Enter customer ID column name"
+              />
+              <Input
+                label="Transaction Date Column"
+                value={(config.transactionDateColumn as string) || ''}
+                onChange={(e) => onChange('transactionDateColumn', e.target.value)}
+                placeholder="Enter date column name"
+              />
+              <Input
+                label="Monetary/Revenue Column"
+                value={(config.monetaryColumn as string) || ''}
+                onChange={(e) => onChange('monetaryColumn', e.target.value)}
+                placeholder="Enter monetary column name"
+              />
+            </>
+          )}
+
+          <Input
+            label="Projection Periods (months)"
+            type="number"
+            min={1}
+            max={60}
+            value={(config.projectionPeriods as number) || 12}
+            onChange={(e) => onChange('projectionPeriods', parseInt(e.target.value) || 12)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> CLV per customer, predicted purchases, customer segments (Low/Medium/High/Premium), and churn risk assessment.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'churn-analysis': {
+      const churnFeatures = (config.features as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={churnFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...churnFeatures, col] : churnFeatures.filter((c) => c !== col);
+                        onChange('features', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column (Churn)">
+                <SelectValue placeholder="Select churn indicator column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column (Churn)"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+              placeholder="Enter target column name"
+            />
+          )}
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="handleImbalance"
+              checked={(config.handleImbalance as boolean) !== false}
+              onChange={(e) => onChange('handleImbalance', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <label htmlFor="handleImbalance" className="text-small text-text-primary">
+              Handle class imbalance
+            </label>
+          </div>
+
+          <Input
+            label="Classification Threshold"
+            type="number"
+            step="0.1"
+            min={0}
+            max={1}
+            value={(config.threshold as number) || 0.5}
+            onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 0.5)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Churn probability, prediction, risk segments, and top 5 churn drivers with importance scores.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    case 'growth-metrics':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+                placeholder="Enter date column name"
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+                placeholder="Enter value column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.granularity as string) || 'month'}
+            onValueChange={(v) => onChange('granularity', v)}
+          >
+            <SelectTrigger label="Time Granularity">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Daily</SelectItem>
+              <SelectItem value="week">Weekly</SelectItem>
+              <SelectItem value="month">Monthly</SelectItem>
+              <SelectItem value="quarter">Quarterly</SelectItem>
+              <SelectItem value="year">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Rolling Window (periods)"
+            type="number"
+            min={2}
+            max={24}
+            value={(config.rollingWindow as number) || 3}
+            onChange={(e) => onChange('rollingWindow', parseInt(e.target.value) || 3)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Period-over-period growth, YoY growth, rolling average, CAGR, growth acceleration, and trend classification.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'attribution-modeling':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.userIdColumn as string) || ''}
+                onValueChange={(v) => onChange('userIdColumn', v)}
+              >
+                <SelectTrigger label="User ID Column">
+                  <SelectValue placeholder="Select user ID column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.channelColumn as string) || ''}
+                onValueChange={(v) => onChange('channelColumn', v)}
+              >
+                <SelectTrigger label="Channel Column">
+                  <SelectValue placeholder="Select channel/source column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.conversionColumn as string) || ''}
+                onValueChange={(v) => onChange('conversionColumn', v)}
+              >
+                <SelectTrigger label="Conversion Column">
+                  <SelectValue placeholder="Select conversion value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.timestampColumn as string) || ''}
+                onValueChange={(v) => onChange('timestampColumn', v)}
+              >
+                <SelectTrigger label="Timestamp Column (optional)">
+                  <SelectValue placeholder="Select timestamp column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="User ID Column"
+                value={(config.userIdColumn as string) || ''}
+                onChange={(e) => onChange('userIdColumn', e.target.value)}
+                placeholder="Enter user ID column name"
+              />
+              <Input
+                label="Channel Column"
+                value={(config.channelColumn as string) || ''}
+                onChange={(e) => onChange('channelColumn', e.target.value)}
+                placeholder="Enter channel column name"
+              />
+              <Input
+                label="Conversion Column"
+                value={(config.conversionColumn as string) || ''}
+                onChange={(e) => onChange('conversionColumn', e.target.value)}
+                placeholder="Enter conversion column name"
+              />
+              <Input
+                label="Timestamp Column (optional)"
+                value={(config.timestampColumn as string) || ''}
+                onChange={(e) => onChange('timestampColumn', e.target.value)}
+                placeholder="Enter timestamp column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.model as string) || 'linear'}
+            onValueChange={(v) => onChange('model', v)}
+          >
+            <SelectTrigger label="Attribution Model">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="first-touch">First Touch</SelectItem>
+              <SelectItem value="last-touch">Last Touch</SelectItem>
+              <SelectItem value="linear">Linear</SelectItem>
+              <SelectItem value="time-decay">Time Decay</SelectItem>
+              <SelectItem value="position-based">Position Based (40/20/40)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Attribution credit per channel, efficiency scores, and channel rankings.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'breakeven-analysis':
+      return (
+        <div className="space-y-4">
+          <Input
+            label="Fixed Costs ($)"
+            type="number"
+            min={0}
+            value={(config.fixedCosts as number) || 10000}
+            onChange={(e) => onChange('fixedCosts', parseFloat(e.target.value) || 0)}
+          />
+
+          <Input
+            label="Variable Cost per Unit ($)"
+            type="number"
+            min={0}
+            step="0.01"
+            value={(config.variableCostPerUnit as number) || 5}
+            onChange={(e) => onChange('variableCostPerUnit', parseFloat(e.target.value) || 0)}
+          />
+
+          <Input
+            label="Price per Unit ($)"
+            type="number"
+            min={0}
+            step="0.01"
+            value={(config.pricePerUnit as number) || 15}
+            onChange={(e) => onChange('pricePerUnit', parseFloat(e.target.value) || 0)}
+          />
+
+          <Input
+            label="Current Sales (units)"
+            type="number"
+            min={0}
+            value={(config.currentSalesUnits as number) || 0}
+            onChange={(e) => onChange('currentSalesUnits', parseInt(e.target.value) || 0)}
+          />
+
+          <Input
+            label="Scenario Range (+/- units)"
+            type="number"
+            min={10}
+            max={1000}
+            value={(config.scenarioRange as number) || 50}
+            onChange={(e) => onChange('scenarioRange', parseInt(e.target.value) || 50)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Break-even units/revenue, contribution margin, margin of safety, and scenario analysis.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'confidence-intervals':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column as string) || ''}
+                onValueChange={(v) => onChange('column', v)}
+              >
+                <SelectTrigger label="Primary Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.column2 as string) || ''}
+                onValueChange={(v) => onChange('column2', v)}
+              >
+                <SelectTrigger label="Second Column (for two-sample/paired)">
+                  <SelectValue placeholder="Select second column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Primary Column"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Enter column name"
+              />
+              <Input
+                label="Second Column (for two-sample/paired)"
+                value={(config.column2 as string) || ''}
+                onChange={(e) => onChange('column2', e.target.value)}
+                placeholder="Enter second column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.analysisType as string) || 'one-sample-mean'}
+            onValueChange={(v) => onChange('analysisType', v)}
+          >
+            <SelectTrigger label="Analysis Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="one-sample-mean">One-Sample Mean</SelectItem>
+              <SelectItem value="one-sample-proportion">One-Sample Proportion</SelectItem>
+              <SelectItem value="two-sample-mean">Two-Sample Mean Difference</SelectItem>
+              <SelectItem value="paired">Paired Samples</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={String((config.confidenceLevel as number) || 0.95)}
+            onValueChange={(v) => onChange('confidenceLevel', parseFloat(v))}
+          >
+            <SelectTrigger label="Confidence Level">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.90">90%</SelectItem>
+              <SelectItem value="0.95">95%</SelectItem>
+              <SelectItem value="0.99">99%</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Point estimate, CI bounds, margin of error, and interpretation.
+            </p>
+          </div>
         </div>
       );
 
