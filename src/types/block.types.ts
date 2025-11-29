@@ -95,6 +95,12 @@ export type BlockType =
   | 'regression-diagnostics'
   | 'vif-analysis'
   | 'funnel-analysis'
+  | 'customer-ltv'
+  | 'churn-analysis'
+  | 'growth-metrics'
+  | 'attribution-modeling'
+  | 'breakeven-analysis'
+  | 'confidence-intervals'
   // Visualization
   | 'chart'
   | 'table'
