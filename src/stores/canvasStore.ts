@@ -16,11 +16,13 @@ interface CanvasState {
 
   // Actions
   addBlock: (type: BlockType, position: { x: number; y: number }) => string;
+  addBlockDirect: (block: PipelineBlock) => void;
   updateBlock: (id: string, data: Partial<BlockData>) => void;
   removeBlock: (id: string) => void;
   setBlockState: (id: string, state: BlockState) => void;
 
   addEdge: (source: string, target: string, sourceHandle?: string, targetHandle?: string) => void;
+  addEdgeDirect: (edge: PipelineEdge) => void;
   removeEdge: (id: string) => void;
 
   setBlocks: (blocks: PipelineBlock[]) => void;
@@ -233,6 +235,18 @@ export const useCanvasStore = create<CanvasState>()(
         return id;
       },
 
+      addBlockDirect: (block) => {
+        set((state) => {
+          // Check if block already exists
+          if (state.blocks.some((b) => b.id === block.id)) {
+            return state;
+          }
+          return {
+            blocks: [...state.blocks, block],
+          };
+        });
+      },
+
       updateBlock: (id, data) => {
         set((state) => ({
           blocks: state.blocks.map((block) =>
@@ -272,6 +286,18 @@ export const useCanvasStore = create<CanvasState>()(
               ...state.edges,
               { id, source, target, sourceHandle, targetHandle, type: 'animated' },
             ],
+          };
+        });
+      },
+
+      addEdgeDirect: (edge) => {
+        set((state) => {
+          // Check if edge already exists
+          if (state.edges.some((e) => e.id === edge.id)) {
+            return state;
+          }
+          return {
+            edges: [...state.edges, edge],
           };
         });
       },
