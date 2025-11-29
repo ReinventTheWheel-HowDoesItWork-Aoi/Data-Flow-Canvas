@@ -66,6 +66,12 @@ import {
   Box,
   ChevronRight,
   Sparkles,
+  Calendar,
+  Type,
+  Waypoints,
+  BarChart,
+  Medal,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -82,7 +88,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (17 blocks)
+  // Transform (23 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -100,8 +106,14 @@ const blocks: BlockInfo[] = [
   { icon: Scissors, name: 'Split Column', description: 'Split a column by delimiter into multiple columns', category: 'Transform' },
   { icon: Combine, name: 'Merge Columns', description: 'Combine multiple columns into one', category: 'Transform' },
   { icon: GitBranch, name: 'Conditional Column', description: 'Create column based on if/else logic', category: 'Transform' },
+  { icon: Calendar, name: 'Date/Time Extract', description: 'Extract year, month, day, weekday, hour from date columns', category: 'Transform' },
+  { icon: Type, name: 'String Operations', description: 'Clean text with case conversion, trim, find/replace, regex', category: 'Transform' },
+  { icon: Waypoints, name: 'Window Functions', description: 'Rolling averages, cumulative sums, lag/lead values', category: 'Transform' },
+  { icon: BarChart, name: 'Bin/Bucket', description: 'Group numbers into ranges (equal width, frequency, custom)', category: 'Transform' },
+  { icon: Medal, name: 'Rank', description: 'Assign rank positions with optional grouping', category: 'Transform' },
+  { icon: RefreshCw, name: 'Type Conversion', description: 'Convert column types (string, int, float, datetime)', category: 'Transform' },
 
-  // Analysis (16 blocks)
+  // Analysis (19 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -215,6 +227,12 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Split Column': { name: 'blocks.splitColumn', description: 'blockDescriptions.splitColumn' },
   'Merge Columns': { name: 'blocks.mergeColumns', description: 'blockDescriptions.mergeColumns' },
   'Conditional Column': { name: 'blocks.conditionalColumn', description: 'blockDescriptions.conditionalColumn' },
+  'Date/Time Extract': { name: 'blocks.datetimeExtract', description: 'blockDescriptions.datetimeExtract' },
+  'String Operations': { name: 'blocks.stringOperations', description: 'blockDescriptions.stringOperations' },
+  'Window Functions': { name: 'blocks.windowFunctions', description: 'blockDescriptions.windowFunctions' },
+  'Bin/Bucket': { name: 'blocks.binBucket', description: 'blockDescriptions.binBucket' },
+  'Rank': { name: 'blocks.rank', description: 'blockDescriptions.rank' },
+  'Type Conversion': { name: 'blocks.typeConversion', description: 'blockDescriptions.typeConversion' },
   'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
   'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
   'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
@@ -352,7 +370,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">50+</p>
+                <p className="text-h2 font-bold text-text-primary">57</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
