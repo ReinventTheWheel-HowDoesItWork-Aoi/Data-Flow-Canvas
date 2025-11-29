@@ -101,6 +101,12 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'tfidf-vectorization': 'blocks.tfidfVectorization',
   'topic-modeling': 'blocks.topicModeling',
   'similarity-analysis': 'blocks.similarityAnalysis',
+  'svm': 'blocks.svm',
+  'xgboost': 'blocks.xgboost',
+  'model-explainability': 'blocks.modelExplainability',
+  'regression-diagnostics': 'blocks.regressionDiagnostics',
+  'vif-analysis': 'blocks.vifAnalysis',
+  'funnel-analysis': 'blocks.funnelAnalysis',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
@@ -190,6 +196,12 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'tfidf-vectorization': 'blockDescriptions.tfidfVectorization',
   'topic-modeling': 'blockDescriptions.topicModeling',
   'similarity-analysis': 'blockDescriptions.similarityAnalysis',
+  'svm': 'blockDescriptions.svm',
+  'xgboost': 'blockDescriptions.xgboost',
+  'model-explainability': 'blockDescriptions.modelExplainability',
+  'regression-diagnostics': 'blockDescriptions.regressionDiagnostics',
+  'vif-analysis': 'blockDescriptions.vifAnalysis',
+  'funnel-analysis': 'blockDescriptions.funnelAnalysis',
   'chart': 'blockDescriptions.chart',
   'table': 'blockDescriptions.table',
   'correlation-matrix': 'blockDescriptions.correlationMatrix',
@@ -4377,6 +4389,525 @@ function renderConfigFields(
               onChange={(e) => onChange('topN', parseInt(e.target.value) || 5)}
             />
           )}
+        </div>
+      );
+    }
+
+    case 'svm': {
+      const svmFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.mode as string) || 'classification'}
+            onValueChange={(v) => onChange('mode', v)}
+          >
+            <SelectTrigger label="Mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.kernel as string) || 'rbf'}
+            onValueChange={(v) => onChange('kernel', v)}
+          >
+            <SelectTrigger label="Kernel">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="linear">Linear</SelectItem>
+              <SelectItem value="rbf">RBF (Radial Basis Function)</SelectItem>
+              <SelectItem value="poly">Polynomial</SelectItem>
+              <SelectItem value="sigmoid">Sigmoid</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="C (Regularization)"
+            type="number"
+            step="0.1"
+            min={0.01}
+            max={100}
+            value={(config.c as number) || 1.0}
+            onChange={(e) => onChange('c', parseFloat(e.target.value) || 1.0)}
+          />
+
+          <Select
+            value={(config.gamma as string) || 'scale'}
+            onValueChange={(v) => onChange('gamma', v)}
+          >
+            <SelectTrigger label="Gamma">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="scale">Scale (1 / n_features × variance)</SelectItem>
+              <SelectItem value="auto">Auto (1 / n_features)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(config.kernel === 'poly') && (
+            <Input
+              label="Degree (for polynomial kernel)"
+              type="number"
+              min={1}
+              max={10}
+              value={(config.degree as number) || 3}
+              onChange={(e) => onChange('degree', parseInt(e.target.value) || 3)}
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={svmFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...svmFeatures, col] : svmFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+              placeholder="Enter target column name"
+            />
+          )}
+
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'svm_prediction'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+            placeholder="svm_prediction"
+          />
+        </div>
+      );
+    }
+
+    case 'xgboost': {
+      const xgbFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.mode as string) || 'classification'}
+            onValueChange={(v) => onChange('mode', v)}
+          >
+            <SelectTrigger label="Mode">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Number of Estimators"
+            type="number"
+            min={10}
+            max={1000}
+            value={(config.nEstimators as number) || 100}
+            onChange={(e) => onChange('nEstimators', parseInt(e.target.value) || 100)}
+          />
+
+          <Input
+            label="Max Depth"
+            type="number"
+            min={1}
+            max={20}
+            value={(config.maxDepth as number) || 6}
+            onChange={(e) => onChange('maxDepth', parseInt(e.target.value) || 6)}
+          />
+
+          <Input
+            label="Learning Rate"
+            type="number"
+            step="0.01"
+            min={0.01}
+            max={1}
+            value={(config.learningRate as number) || 0.3}
+            onChange={(e) => onChange('learningRate', parseFloat(e.target.value) || 0.3)}
+          />
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={xgbFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...xgbFeatures, col] : xgbFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+              placeholder="Enter target column name"
+            />
+          )}
+
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'xgb_prediction'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+            placeholder="xgb_prediction"
+          />
+        </div>
+      );
+    }
+
+    case 'model-explainability': {
+      const shapFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={shapFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...shapFeatures, col] : shapFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+              placeholder="Enter target column name"
+            />
+          )}
+
+          <Input
+            label="Number of Samples"
+            type="number"
+            min={10}
+            max={1000}
+            value={(config.nSamples as number) || 100}
+            onChange={(e) => onChange('nSamples', parseInt(e.target.value) || 100)}
+          />
+
+          <Select
+            value={(config.plotType as string) || 'summary'}
+            onValueChange={(v) => onChange('plotType', v)}
+          >
+            <SelectTrigger label="Output Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="summary">Summary (global importance)</SelectItem>
+              <SelectItem value="per_sample">Per-sample contributions</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
+
+    case 'regression-diagnostics': {
+      const regDiagFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={regDiagFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...regDiagFeatures, col] : regDiagFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.targetColumn as string) || ''}
+              onValueChange={(v) => onChange('targetColumn', v)}
+            >
+              <SelectTrigger label="Target Column">
+                <SelectValue placeholder="Select target column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Target Column"
+              value={(config.targetColumn as string) || ''}
+              onChange={(e) => onChange('targetColumn', e.target.value)}
+              placeholder="Enter target column name"
+            />
+          )}
+
+          <Input
+            label="Significance Level (α)"
+            type="number"
+            step="0.01"
+            min={0.01}
+            max={0.2}
+            value={(config.significanceLevel as number) || 0.05}
+            onChange={(e) => onChange('significanceLevel', parseFloat(e.target.value) || 0.05)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Tests performed:</strong><br/>
+              • Shapiro-Wilk (normality)<br/>
+              • Durbin-Watson (autocorrelation)<br/>
+              • Breusch-Pagan (heteroscedasticity)<br/>
+              • Cook's distance (influential points)
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    case 'vif-analysis': {
+      const vifFeatures = (config.featureColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">Feature Columns</label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={vifFeatures.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked ? [...vifFeatures, col] : vifFeatures.filter((c) => c !== col);
+                        onChange('featureColumns', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">Run pipeline to see columns</p>
+            )}
+          </div>
+
+          <Input
+            label="VIF Threshold"
+            type="number"
+            step="0.5"
+            min={1}
+            max={20}
+            value={(config.threshold as number) || 5.0}
+            onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 5.0)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>VIF interpretation:</strong><br/>
+              • VIF = 1: No correlation<br/>
+              • VIF 1-5: Moderate correlation<br/>
+              • VIF &gt; 5: High multicollinearity<br/>
+              • VIF &gt; 10: Severe multicollinearity
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    case 'funnel-analysis': {
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.stageColumn as string) || ''}
+              onValueChange={(v) => onChange('stageColumn', v)}
+            >
+              <SelectTrigger label="Stage Column">
+                <SelectValue placeholder="Select stage column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Stage Column"
+              value={(config.stageColumn as string) || ''}
+              onChange={(e) => onChange('stageColumn', e.target.value)}
+              placeholder="Enter stage column name"
+            />
+          )}
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.countColumn as string) || ''}
+              onValueChange={(v) => onChange('countColumn', v)}
+            >
+              <SelectTrigger label="Count Column (optional)">
+                <SelectValue placeholder="Select count column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None (count rows)</SelectItem>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Count Column (optional)"
+              value={(config.countColumn as string) || ''}
+              onChange={(e) => onChange('countColumn', e.target.value)}
+              placeholder="Leave empty to count rows"
+            />
+          )}
+
+          <Input
+            label="Stage Order (comma-separated)"
+            value={(config.stageOrder as string) || ''}
+            onChange={(e) => onChange('stageOrder', e.target.value)}
+            placeholder="e.g., Visit, Signup, Purchase"
+          />
+
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.timestampColumn as string) || ''}
+              onValueChange={(v) => onChange('timestampColumn', v)}
+            >
+              <SelectTrigger label="Timestamp Column (optional)">
+                <SelectValue placeholder="Select timestamp column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Timestamp Column (optional)"
+              value={(config.timestampColumn as string) || ''}
+              onChange={(e) => onChange('timestampColumn', e.target.value)}
+              placeholder="For time-based analysis"
+            />
+          )}
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Output includes:</strong><br/>
+              • Conversion rate per stage<br/>
+              • Drop-off rate per stage<br/>
+              • Overall funnel conversion
+            </p>
+          </div>
         </div>
       );
     }
