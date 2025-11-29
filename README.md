@@ -21,7 +21,7 @@
 
 ### 🎨 Visual Pipeline Builder
 - **Drag-and-drop interface** — Build pipelines visually with React Flow
-- **57 block types** — Data input, transformation, analysis, visualization, and export
+- **71 block types** — Data input, transformation, analysis, visualization, and export
 - **Real-time preview** — See data changes as you build
 
 ### 🐍 Python Powered
@@ -41,8 +41,8 @@
 | Category | Blocks |
 |----------|--------|
 | **Data Input** | Load Data, Sample Data, Create Dataset |
-| **Transform** | Filter Rows, Select Columns, Sort, Group & Aggregate, Join, Derive Column, Handle Missing, Rename Columns, Deduplicate, Sample Rows, Limit Rows, Pivot, Unpivot, Union, Split Column, Merge Columns, Conditional Column, Date/Time Extract, String Operations, Window Functions, Bin/Bucket, Rank, Type Conversion |
-| **Analysis** | Statistics, Regression, Clustering, PCA, Outlier Detection, Classification, Normality Test, Hypothesis Testing, Time Series, Feature Importance, Cross Validation, Data Profiling, Value Counts, Cross Tabulation, Scaling, Encoding, A/B Test, Cohort Analysis, RFM Analysis |
+| **Transform** | Filter Rows, Select Columns, Sort, Group & Aggregate, Join, Derive Column, Handle Missing, Rename Columns, Deduplicate, Sample Rows, Limit Rows, Pivot, Unpivot, Union, Split Column, Merge Columns, Conditional Column, Date/Time Extract, String Operations, Window Functions, Bin/Bucket, Rank, Type Conversion, Fill Forward/Backward, Lag/Lead, Row Number, Date Difference, Transpose, String Pad, Cumulative Operations |
+| **Analysis** | Statistics, Regression, Clustering, PCA, Outlier Detection, Classification, Normality Test, Hypothesis Testing, Time Series, Feature Importance, Cross Validation, Data Profiling, Value Counts, Cross Tabulation, Scaling, Encoding, A/B Test, Cohort Analysis, RFM Analysis, ANOVA, Chi-Square Test, Correlation Analysis, Survival Analysis, Association Rules, Sentiment Analysis, Moving Average |
 | **Visualization** | Chart, Table, Correlation Matrix, Violin Plot, Pair Plot, Area Chart, Stacked Chart, Bubble Chart, Q-Q Plot, Confusion Matrix, ROC Curve |
 | **Output** | Export |
 
