@@ -3443,6 +3443,1016 @@ output = df
 `,
   },
 
+  'train-test-split': {
+    type: 'train-test-split',
+    category: 'analysis',
+    label: 'Train/Test Split',
+    description: 'Split data into training and testing sets for machine learning',
+    icon: 'Split',
+    defaultConfig: {
+      testSize: 0.2,
+      randomState: 42,
+      stratifyColumn: '',
+      shuffle: true,
+    },
+    inputs: 1,
+    outputs: 2,
+    pythonTemplate: `
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+df = input_data.copy()
+test_size = float(config.get('testSize', 0.2))
+random_state = int(config.get('randomState', 42))
+stratify_col = config.get('stratifyColumn', '')
+shuffle = config.get('shuffle', True)
+
+if test_size <= 0 or test_size >= 1:
+    raise ValueError("Train/Test Split: Test size must be between 0 and 1 (e.g., 0.2 for 20%)")
+
+stratify = None
+if stratify_col and stratify_col in df.columns:
+    stratify = df[stratify_col]
+
+train_df, test_df = train_test_split(
+    df,
+    test_size=test_size,
+    random_state=random_state,
+    shuffle=shuffle,
+    stratify=stratify
+)
+
+train_df = train_df.reset_index(drop=True)
+test_df = test_df.reset_index(drop=True)
+
+# Add split indicator
+train_df['_split'] = 'train'
+test_df['_split'] = 'test'
+
+# Combine and return
+output = pd.concat([train_df, test_df], ignore_index=True)
+`,
+  },
+
+  'model-evaluation': {
+    type: 'model-evaluation',
+    category: 'analysis',
+    label: 'Model Evaluation',
+    description: 'Calculate model performance metrics (accuracy, precision, recall, F1, MAE, RMSE)',
+    icon: 'ClipboardCheck',
+    defaultConfig: {
+      actualColumn: '',
+      predictedColumn: '',
+      taskType: 'classification',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    mean_absolute_error, mean_squared_error, r2_score
+)
+
+df = input_data.copy()
+actual_col = config.get('actualColumn', '')
+predicted_col = config.get('predictedColumn', '')
+task_type = config.get('taskType', 'classification')
+
+if not actual_col or not predicted_col:
+    raise ValueError("Model Evaluation: Please specify both actual and predicted columns in the Config tab")
+
+if actual_col not in df.columns:
+    raise ValueError(f"Model Evaluation: Actual column '{actual_col}' not found")
+if predicted_col not in df.columns:
+    raise ValueError(f"Model Evaluation: Predicted column '{predicted_col}' not found")
+
+y_true = df[actual_col]
+y_pred = df[predicted_col]
+
+# Remove any NaN values
+mask = ~(pd.isna(y_true) | pd.isna(y_pred))
+y_true = y_true[mask]
+y_pred = y_pred[mask]
+
+if task_type == 'classification':
+    metrics = {
+        'Metric': ['Accuracy', 'Precision (weighted)', 'Recall (weighted)', 'F1 Score (weighted)'],
+        'Value': [
+            round(accuracy_score(y_true, y_pred), 4),
+            round(precision_score(y_true, y_pred, average='weighted', zero_division=0), 4),
+            round(recall_score(y_true, y_pred, average='weighted', zero_division=0), 4),
+            round(f1_score(y_true, y_pred, average='weighted', zero_division=0), 4)
+        ]
+    }
+else:  # regression
+    y_true_num = pd.to_numeric(y_true, errors='coerce')
+    y_pred_num = pd.to_numeric(y_pred, errors='coerce')
+    mask = ~(pd.isna(y_true_num) | pd.isna(y_pred_num))
+    y_true_num = y_true_num[mask]
+    y_pred_num = y_pred_num[mask]
+
+    mse = mean_squared_error(y_true_num, y_pred_num)
+    metrics = {
+        'Metric': ['MAE', 'MSE', 'RMSE', 'R² Score'],
+        'Value': [
+            round(mean_absolute_error(y_true_num, y_pred_num), 4),
+            round(mse, 4),
+            round(np.sqrt(mse), 4),
+            round(r2_score(y_true_num, y_pred_num), 4)
+        ]
+    }
+
+output = pd.DataFrame(metrics)
+`,
+  },
+
+  'knn': {
+    type: 'knn',
+    category: 'analysis',
+    label: 'K-Nearest Neighbors',
+    description: 'KNN classifier or regressor for prediction',
+    icon: 'Users',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      k: 5,
+      taskType: 'classification',
+      weights: 'uniform',
+      outputColumn: 'knn_prediction',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+k = int(config.get('k', 5))
+task_type = config.get('taskType', 'classification')
+weights = config.get('weights', 'uniform')
+output_col = config.get('outputColumn', 'knn_prediction')
+
+if not feature_cols or not target_col:
+    raise ValueError("KNN: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"KNN: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"KNN: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Handle missing values
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+mask = ~pd.isna(y)
+X_train = X[mask]
+y_train = y[mask]
+
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+X_train_scaled = scaler.transform(X_train)
+
+if task_type == 'classification':
+    model = KNeighborsClassifier(n_neighbors=k, weights=weights)
+else:
+    model = KNeighborsRegressor(n_neighbors=k, weights=weights)
+
+model.fit(X_train_scaled, y_train)
+predictions = model.predict(X_scaled)
+
+df[output_col] = predictions
+
+output = df
+`,
+  },
+
+  'naive-bayes': {
+    type: 'naive-bayes',
+    category: 'analysis',
+    label: 'Naive Bayes',
+    description: 'Naive Bayes classifier for categorical/text classification',
+    icon: 'Brain',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      variant: 'gaussian',
+      outputColumn: 'nb_prediction',
+      outputProbability: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
+from sklearn.preprocessing import LabelEncoder
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+variant = config.get('variant', 'gaussian')
+output_col = config.get('outputColumn', 'nb_prediction')
+output_prob = config.get('outputProbability', False)
+
+if not feature_cols or not target_col:
+    raise ValueError("Naive Bayes: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Naive Bayes: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"Naive Bayes: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(0)
+
+# Encode target if needed
+le = LabelEncoder()
+y_encoded = le.fit_transform(y.astype(str))
+
+# Select model variant
+if variant == 'gaussian':
+    model = GaussianNB()
+elif variant == 'multinomial':
+    X = X.clip(lower=0)  # Ensure non-negative
+    model = MultinomialNB()
+else:  # bernoulli
+    model = BernoulliNB()
+
+model.fit(X, y_encoded)
+predictions = model.predict(X)
+df[output_col] = le.inverse_transform(predictions)
+
+if output_prob:
+    proba = model.predict_proba(X)
+    for i, class_name in enumerate(le.classes_):
+        df[f'{output_col}_prob_{class_name}'] = proba[:, i].round(4)
+
+output = df
+`,
+  },
+
+  'gradient-boosting': {
+    type: 'gradient-boosting',
+    category: 'analysis',
+    label: 'Gradient Boosting',
+    description: 'High-performance gradient boosting classifier or regressor',
+    icon: 'Rocket',
+    defaultConfig: {
+      featureColumns: [],
+      targetColumn: '',
+      taskType: 'classification',
+      nEstimators: 100,
+      learningRate: 0.1,
+      maxDepth: 3,
+      outputColumn: 'gb_prediction',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.preprocessing import LabelEncoder
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+target_col = config.get('targetColumn', '')
+task_type = config.get('taskType', 'classification')
+n_estimators = int(config.get('nEstimators', 100))
+learning_rate = float(config.get('learningRate', 0.1))
+max_depth = int(config.get('maxDepth', 3))
+output_col = config.get('outputColumn', 'gb_prediction')
+
+if not feature_cols or not target_col:
+    raise ValueError("Gradient Boosting: Please specify feature columns and target column in the Config tab")
+
+missing_cols = [c for c in feature_cols if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Gradient Boosting: Feature columns not found: {missing_cols}")
+if target_col not in df.columns:
+    raise ValueError(f"Gradient Boosting: Target column '{target_col}' not found")
+
+X = df[feature_cols].copy()
+y = df[target_col].copy()
+
+# Convert to numeric
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+if task_type == 'classification':
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y.astype(str))
+    model = GradientBoostingClassifier(
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        random_state=42
+    )
+    model.fit(X, y_encoded)
+    predictions = model.predict(X)
+    df[output_col] = le.inverse_transform(predictions)
+else:
+    y_numeric = pd.to_numeric(y, errors='coerce')
+    mask = ~pd.isna(y_numeric)
+    model = GradientBoostingRegressor(
+        n_estimators=n_estimators,
+        learning_rate=learning_rate,
+        max_depth=max_depth,
+        random_state=42
+    )
+    model.fit(X[mask], y_numeric[mask])
+    df[output_col] = model.predict(X)
+
+output = df
+`,
+  },
+
+  'pareto-analysis': {
+    type: 'pareto-analysis',
+    category: 'analysis',
+    label: 'Pareto Analysis',
+    description: 'Identify vital few vs trivial many using 80/20 rule',
+    icon: 'BarChart3',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      threshold: 80,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+val_col = config.get('valueColumn', '')
+threshold = float(config.get('threshold', 80))
+
+if not cat_col or not val_col:
+    raise ValueError("Pareto Analysis: Please specify category and value columns in the Config tab")
+
+if cat_col not in df.columns:
+    raise ValueError(f"Pareto Analysis: Category column '{cat_col}' not found")
+if val_col not in df.columns:
+    raise ValueError(f"Pareto Analysis: Value column '{val_col}' not found")
+
+# Aggregate by category
+agg_df = df.groupby(cat_col)[val_col].sum().reset_index()
+agg_df.columns = ['Category', 'Value']
+
+# Sort descending
+agg_df = agg_df.sort_values('Value', ascending=False).reset_index(drop=True)
+
+# Calculate percentages
+total = agg_df['Value'].sum()
+agg_df['Percentage'] = (agg_df['Value'] / total * 100).round(2)
+agg_df['Cumulative_Percentage'] = agg_df['Percentage'].cumsum().round(2)
+
+# Classify as vital few or trivial many
+agg_df['Classification'] = np.where(
+    agg_df['Cumulative_Percentage'] <= threshold,
+    'Vital Few',
+    'Trivial Many'
+)
+
+# Calculate rank
+agg_df['Rank'] = range(1, len(agg_df) + 1)
+
+output = agg_df
+`,
+  },
+
+  'trend-analysis': {
+    type: 'trend-analysis',
+    category: 'analysis',
+    label: 'Trend Analysis',
+    description: 'Detect and quantify trends in time series data',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      trendType: 'linear',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+val_col = config.get('valueColumn', '')
+trend_type = config.get('trendType', 'linear')
+
+if not date_col or not val_col:
+    raise ValueError("Trend Analysis: Please specify date and value columns in the Config tab")
+
+if date_col not in df.columns:
+    raise ValueError(f"Trend Analysis: Date column '{date_col}' not found")
+if val_col not in df.columns:
+    raise ValueError(f"Trend Analysis: Value column '{val_col}' not found")
+
+# Sort by date
+df = df.sort_values(date_col).reset_index(drop=True)
+
+# Convert value to numeric
+y = pd.to_numeric(df[val_col], errors='coerce')
+x = np.arange(len(y))
+
+# Remove NaN
+mask = ~pd.isna(y)
+x_clean = x[mask]
+y_clean = y[mask].values
+
+if len(x_clean) < 2:
+    raise ValueError("Trend Analysis: Need at least 2 data points")
+
+# Linear regression
+slope, intercept, r_value, p_value, std_err = stats.linregress(x_clean, y_clean)
+
+# Calculate trend values
+df['Trend_Value'] = intercept + slope * x
+df['Residual'] = y - df['Trend_Value']
+
+# Determine trend direction
+if slope > 0 and p_value < 0.05:
+    direction = 'Upward'
+elif slope < 0 and p_value < 0.05:
+    direction = 'Downward'
+else:
+    direction = 'No significant trend'
+
+# Calculate trend strength
+trend_strength = abs(r_value)
+if trend_strength >= 0.7:
+    strength_label = 'Strong'
+elif trend_strength >= 0.4:
+    strength_label = 'Moderate'
+else:
+    strength_label = 'Weak'
+
+# Add trend info to data
+df['Trend_Direction'] = direction
+df['Trend_Strength'] = strength_label
+
+output = df
+`,
+  },
+
+  'forecasting': {
+    type: 'forecasting',
+    category: 'analysis',
+    label: 'Forecasting',
+    description: 'Predict future values using time series methods',
+    icon: 'CalendarClock',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      periods: 10,
+      method: 'exponential',
+      alpha: 0.3,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+val_col = config.get('valueColumn', '')
+periods = int(config.get('periods', 10))
+method = config.get('method', 'exponential')
+alpha = float(config.get('alpha', 0.3))
+
+if not date_col or not val_col:
+    raise ValueError("Forecasting: Please specify date and value columns in the Config tab")
+
+if date_col not in df.columns:
+    raise ValueError(f"Forecasting: Date column '{date_col}' not found")
+if val_col not in df.columns:
+    raise ValueError(f"Forecasting: Value column '{val_col}' not found")
+
+# Sort by date
+df = df.sort_values(date_col).reset_index(drop=True)
+
+# Convert to numeric
+values = pd.to_numeric(df[val_col], errors='coerce').fillna(method='ffill').fillna(0)
+
+if method == 'linear':
+    # Linear extrapolation
+    x = np.arange(len(values))
+    slope, intercept = np.polyfit(x, values, 1)
+    future_x = np.arange(len(values), len(values) + periods)
+    forecast = intercept + slope * future_x
+
+elif method == 'exponential':
+    # Simple exponential smoothing
+    forecast = []
+    level = values.iloc[0]
+    for val in values:
+        level = alpha * val + (1 - alpha) * level
+    for _ in range(periods):
+        forecast.append(level)
+    forecast = np.array(forecast)
+
+else:  # moving_average
+    window = min(5, len(values))
+    ma = values.rolling(window=window).mean().iloc[-1]
+    forecast = np.full(periods, ma)
+
+# Try to generate future dates
+try:
+    last_date = pd.to_datetime(df[date_col].iloc[-1])
+    date_diff = pd.to_datetime(df[date_col]).diff().median()
+    if pd.isna(date_diff):
+        date_diff = pd.Timedelta(days=1)
+    future_dates = [last_date + date_diff * (i + 1) for i in range(periods)]
+except:
+    future_dates = [f"Period_{i+1}" for i in range(periods)]
+
+# Create forecast dataframe
+forecast_df = pd.DataFrame({
+    date_col: future_dates,
+    val_col: np.round(forecast, 2),
+    'Type': 'Forecast'
+})
+
+# Mark original data
+df['Type'] = 'Actual'
+
+# Combine
+result = pd.concat([df, forecast_df], ignore_index=True)
+
+output = result
+`,
+  },
+
+  'percentile-analysis': {
+    type: 'percentile-analysis',
+    category: 'analysis',
+    label: 'Percentile Analysis',
+    description: 'Calculate percentiles and quantile ranks',
+    icon: 'Percent',
+    defaultConfig: {
+      column: '',
+      percentiles: '10,25,50,75,90,95,99',
+      addRank: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+percentiles_str = config.get('percentiles', '10,25,50,75,90,95,99')
+add_rank = config.get('addRank', True)
+
+if not column:
+    raise ValueError("Percentile Analysis: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Percentile Analysis: Column '{column}' not found")
+
+# Parse percentiles
+percentiles = [float(p.strip()) for p in percentiles_str.split(',')]
+
+# Convert to numeric
+values = pd.to_numeric(df[column], errors='coerce')
+
+# Add percentile rank to original data if requested
+if add_rank:
+    df[f'{column}_percentile_rank'] = values.rank(pct=True).round(4) * 100
+
+# Add quartile classification
+try:
+    df[f'{column}_quartile'] = pd.qcut(values, q=4, labels=['Q1', 'Q2', 'Q3', 'Q4'], duplicates='drop')
+except:
+    df[f'{column}_quartile'] = 'N/A'
+
+output = df
+`,
+  },
+
+  'distribution-fit': {
+    type: 'distribution-fit',
+    category: 'analysis',
+    label: 'Distribution Fit',
+    description: 'Fit data to statistical distributions',
+    icon: 'Activity',
+    defaultConfig: {
+      column: '',
+      distributions: 'normal,exponential,uniform',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+column = config.get('column', '')
+dist_str = config.get('distributions', 'normal,exponential,uniform')
+
+if not column:
+    raise ValueError("Distribution Fit: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Distribution Fit: Column '{column}' not found")
+
+# Get numeric values
+values = pd.to_numeric(df[column], errors='coerce').dropna()
+
+if len(values) < 10:
+    raise ValueError("Distribution Fit: Need at least 10 data points")
+
+# Parse distributions
+dist_names = [d.strip().lower() for d in dist_str.split(',')]
+
+results = []
+for dist_name in dist_names:
+    try:
+        if dist_name == 'normal':
+            params = stats.norm.fit(values)
+            ks_stat, p_value = stats.kstest(values, 'norm', params)
+            results.append({
+                'Distribution': 'Normal',
+                'Parameters': f'mean={params[0]:.4f}, std={params[1]:.4f}',
+                'KS_Statistic': round(ks_stat, 4),
+                'P_Value': round(p_value, 4),
+                'Good_Fit': 'Yes' if p_value > 0.05 else 'No'
+            })
+        elif dist_name == 'exponential':
+            params = stats.expon.fit(values)
+            ks_stat, p_value = stats.kstest(values, 'expon', params)
+            results.append({
+                'Distribution': 'Exponential',
+                'Parameters': f'loc={params[0]:.4f}, scale={params[1]:.4f}',
+                'KS_Statistic': round(ks_stat, 4),
+                'P_Value': round(p_value, 4),
+                'Good_Fit': 'Yes' if p_value > 0.05 else 'No'
+            })
+        elif dist_name == 'uniform':
+            params = stats.uniform.fit(values)
+            ks_stat, p_value = stats.kstest(values, 'uniform', params)
+            results.append({
+                'Distribution': 'Uniform',
+                'Parameters': f'loc={params[0]:.4f}, scale={params[1]:.4f}',
+                'KS_Statistic': round(ks_stat, 4),
+                'P_Value': round(p_value, 4),
+                'Good_Fit': 'Yes' if p_value > 0.05 else 'No'
+            })
+    except Exception as e:
+        results.append({
+            'Distribution': dist_name.title(),
+            'Parameters': f'Error: {str(e)}',
+            'KS_Statistic': None,
+            'P_Value': None,
+            'Good_Fit': 'Error'
+        })
+
+output = pd.DataFrame(results)
+`,
+  },
+
+  'text-preprocessing': {
+    type: 'text-preprocessing',
+    category: 'analysis',
+    label: 'Text Preprocessing',
+    description: 'Clean and prepare text data for analysis',
+    icon: 'FileText',
+    defaultConfig: {
+      column: '',
+      lowercase: true,
+      removePunctuation: true,
+      removeNumbers: false,
+      removeStopwords: true,
+      trimWhitespace: true,
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+import string
+
+df = input_data.copy()
+column = config.get('column', '')
+lowercase = config.get('lowercase', True)
+remove_punct = config.get('removePunctuation', True)
+remove_nums = config.get('removeNumbers', False)
+remove_stop = config.get('removeStopwords', True)
+trim_ws = config.get('trimWhitespace', True)
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Text Preprocessing: Please specify a text column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Text Preprocessing: Column '{column}' not found")
+
+if not output_col:
+    output_col = f'{column}_cleaned'
+
+# Common English stopwords
+stopwords = {'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+             'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
+             'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+             'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
+             'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she',
+             'we', 'they', 'what', 'which', 'who', 'when', 'where', 'why', 'how',
+             'all', 'each', 'every', 'both', 'few', 'more', 'most', 'other', 'some',
+             'such', 'no', 'not', 'only', 'same', 'so', 'than', 'too', 'very', 'just'}
+
+def preprocess_text(text):
+    if pd.isna(text):
+        return ''
+
+    text = str(text)
+
+    if lowercase:
+        text = text.lower()
+
+    if remove_punct:
+        text = text.translate(str.maketrans('', '', string.punctuation))
+
+    if remove_nums:
+        text = re.sub(r'\\d+', '', text)
+
+    if trim_ws:
+        text = ' '.join(text.split())
+
+    if remove_stop:
+        words = text.split()
+        words = [w for w in words if w.lower() not in stopwords]
+        text = ' '.join(words)
+
+    return text
+
+df[output_col] = df[column].apply(preprocess_text)
+
+# Add word count
+df[f'{output_col}_word_count'] = df[output_col].apply(lambda x: len(str(x).split()) if x else 0)
+
+output = df
+`,
+  },
+
+  'tfidf-vectorization': {
+    type: 'tfidf-vectorization',
+    category: 'analysis',
+    label: 'TF-IDF Vectorization',
+    description: 'Convert text to TF-IDF numerical features',
+    icon: 'Hash',
+    defaultConfig: {
+      column: '',
+      maxFeatures: 100,
+      ngramMin: 1,
+      ngramMax: 1,
+      outputFormat: 'top_terms',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+df = input_data.copy()
+column = config.get('column', '')
+max_features = int(config.get('maxFeatures', 100))
+ngram_min = int(config.get('ngramMin', 1))
+ngram_max = int(config.get('ngramMax', 1))
+output_format = config.get('outputFormat', 'top_terms')
+
+if not column:
+    raise ValueError("TF-IDF: Please specify a text column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"TF-IDF: Column '{column}' not found")
+
+# Get text data
+texts = df[column].fillna('').astype(str)
+
+# Create TF-IDF vectorizer
+vectorizer = TfidfVectorizer(
+    max_features=max_features,
+    ngram_range=(ngram_min, ngram_max),
+    stop_words='english'
+)
+
+# Fit and transform
+tfidf_matrix = vectorizer.fit_transform(texts)
+feature_names = vectorizer.get_feature_names_out()
+
+if output_format == 'matrix':
+    # Return full TF-IDF matrix as dataframe
+    tfidf_df = pd.DataFrame(
+        tfidf_matrix.toarray(),
+        columns=[f'tfidf_{name}' for name in feature_names]
+    )
+    result = pd.concat([df.reset_index(drop=True), tfidf_df], axis=1)
+elif output_format == 'top_terms':
+    # Return top terms per document
+    def get_top_terms(row_idx, n=5):
+        row = tfidf_matrix[row_idx].toarray().flatten()
+        top_indices = row.argsort()[-n:][::-1]
+        return ', '.join([feature_names[i] for i in top_indices if row[i] > 0])
+
+    df['top_tfidf_terms'] = [get_top_terms(i) for i in range(len(df))]
+    result = df
+else:  # summary
+    # Return term importance summary
+    mean_tfidf = np.array(tfidf_matrix.mean(axis=0)).flatten()
+    term_importance = pd.DataFrame({
+        'Term': feature_names,
+        'Mean_TFIDF': np.round(mean_tfidf, 4),
+        'Doc_Frequency': np.array((tfidf_matrix > 0).sum(axis=0)).flatten()
+    }).sort_values('Mean_TFIDF', ascending=False)
+    result = term_importance
+
+output = result
+`,
+  },
+
+  'topic-modeling': {
+    type: 'topic-modeling',
+    category: 'analysis',
+    label: 'Topic Modeling',
+    description: 'Discover hidden topics in text using LDA',
+    icon: 'Layers',
+    defaultConfig: {
+      column: '',
+      numTopics: 5,
+      numWords: 10,
+      maxFeatures: 1000,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.decomposition import LatentDirichletAllocation
+
+df = input_data.copy()
+column = config.get('column', '')
+num_topics = int(config.get('numTopics', 5))
+num_words = int(config.get('numWords', 10))
+max_features = int(config.get('maxFeatures', 1000))
+
+if not column:
+    raise ValueError("Topic Modeling: Please specify a text column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Topic Modeling: Column '{column}' not found")
+
+# Get text data
+texts = df[column].fillna('').astype(str)
+
+# Create count vectorizer
+vectorizer = CountVectorizer(
+    max_features=max_features,
+    stop_words='english',
+    max_df=0.95,
+    min_df=2
+)
+
+# Fit and transform
+doc_term_matrix = vectorizer.fit_transform(texts)
+feature_names = vectorizer.get_feature_names_out()
+
+# Fit LDA model
+lda = LatentDirichletAllocation(
+    n_components=num_topics,
+    random_state=42,
+    max_iter=20
+)
+doc_topics = lda.fit_transform(doc_term_matrix)
+
+# Add dominant topic to original data
+df['Dominant_Topic'] = [f'Topic_{i+1}' for i in doc_topics.argmax(axis=1)]
+df['Topic_Confidence'] = doc_topics.max(axis=1).round(4)
+
+# Add topic distribution columns
+for i in range(num_topics):
+    df[f'Topic_{i+1}_Score'] = doc_topics[:, i].round(4)
+
+output = df
+`,
+  },
+
+  'similarity-analysis': {
+    type: 'similarity-analysis',
+    category: 'analysis',
+    label: 'Similarity Analysis',
+    description: 'Calculate similarity between rows or find similar items',
+    icon: 'GitCompare',
+    defaultConfig: {
+      columns: [],
+      method: 'cosine',
+      topN: 5,
+      outputType: 'add_to_data',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+columns = config.get('columns', [])
+method = config.get('method', 'cosine')
+top_n = int(config.get('topN', 5))
+output_type = config.get('outputType', 'add_to_data')
+
+if not columns:
+    raise ValueError("Similarity Analysis: Please specify columns to use for similarity in the Config tab")
+
+missing_cols = [c for c in columns if c not in df.columns]
+if missing_cols:
+    raise ValueError(f"Similarity Analysis: Columns not found: {missing_cols}")
+
+# Prepare feature matrix
+X = df[columns].copy()
+for col in X.columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+# Scale features
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Calculate similarity matrix
+if method == 'cosine':
+    sim_matrix = cosine_similarity(X_scaled)
+elif method == 'euclidean':
+    dist_matrix = euclidean_distances(X_scaled)
+    sim_matrix = 1 / (1 + dist_matrix)  # Convert distance to similarity
+else:  # manhattan
+    from sklearn.metrics.pairwise import manhattan_distances
+    dist_matrix = manhattan_distances(X_scaled)
+    sim_matrix = 1 / (1 + dist_matrix)
+
+if output_type == 'matrix':
+    # Return full similarity matrix
+    sim_df = pd.DataFrame(
+        sim_matrix.round(4),
+        columns=[f'sim_row_{i}' for i in range(len(df))],
+        index=range(len(df))
+    )
+    result = sim_df
+elif output_type == 'top_similar':
+    # Find top N similar items for each row
+    top_similar = []
+    for i in range(len(df)):
+        sims = sim_matrix[i].copy()
+        sims[i] = -1  # Exclude self
+        top_indices = sims.argsort()[-top_n:][::-1]
+        top_similar.append({
+            'Row_Index': i,
+            'Top_Similar_Indices': ', '.join(map(str, top_indices)),
+            'Similarity_Scores': ', '.join([f'{sims[j]:.4f}' for j in top_indices])
+        })
+    result = pd.DataFrame(top_similar)
+else:  # add_to_data
+    # Add average similarity score to original data
+    np.fill_diagonal(sim_matrix, 0)
+    df['Avg_Similarity'] = sim_matrix.mean(axis=1).round(4)
+    df['Max_Similarity'] = sim_matrix.max(axis=1).round(4)
+    result = df
+
+output = result
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -4033,6 +5043,20 @@ export const blockCategories = [
       'association-rules',
       'sentiment-analysis',
       'moving-average',
+      'train-test-split',
+      'model-evaluation',
+      'knn',
+      'naive-bayes',
+      'gradient-boosting',
+      'pareto-analysis',
+      'trend-analysis',
+      'forecasting',
+      'percentile-analysis',
+      'distribution-fit',
+      'text-preprocessing',
+      'tfidf-vectorization',
+      'topic-modeling',
+      'similarity-analysis',
     ] as BlockType[],
   },
   {
