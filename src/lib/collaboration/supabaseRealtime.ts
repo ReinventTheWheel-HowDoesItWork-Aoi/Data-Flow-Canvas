@@ -5,11 +5,12 @@
 
 import { supabase } from '@/lib/supabase/client';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import type { Collaborator, ConnectionStatus } from '@/types';
+import type { Collaborator, ConnectionStatus, PipelineBlock, PipelineEdge } from '@/types';
 
 const MAX_GLOBAL_CONNECTIONS = 30;
 const MAX_PER_SESSION = 3;
 const HEARTBEAT_INTERVAL = 30000; // 30 seconds
+const CURSOR_THROTTLE = 50; // ms between cursor updates
 
 interface JoinSessionResult {
   success: boolean;
@@ -27,6 +28,19 @@ interface UserPresence {
   joinedAt: string;
 }
 
+interface CanvasState {
+  blocks: PipelineBlock[];
+  edges: PipelineEdge[];
+}
+
+interface CursorPayload {
+  userId: string;
+  userName: string;
+  color: string;
+  x: number;
+  y: number;
+}
+
 export class SupabaseCollaborationManager {
   private channel: RealtimeChannel | null = null;
   private roomId: string | null = null;
@@ -34,13 +48,31 @@ export class SupabaseCollaborationManager {
   private userId: string | null = null;
   private userName: string = 'Anonymous';
   private userColor: string = '#6366f1';
+  private lastCursorUpdate: number = 0;
+  private isInitialSync: boolean = true;
 
+  // Callbacks
   public onStatusChange: ((status: ConnectionStatus) => void) | null = null;
   public onPeersChange: ((peers: Collaborator[]) => void) | null = null;
   public onError: ((error: string) => void) | null = null;
+  public onCursorUpdate: ((cursor: CursorPayload) => void) | null = null;
+  public onCanvasSync: ((state: CanvasState) => void) | null = null;
+  public onBlockAdd: ((block: PipelineBlock) => void) | null = null;
+  public onBlockUpdate: ((blockId: string, changes: Partial<PipelineBlock>) => void) | null = null;
+  public onBlockDelete: ((blockId: string) => void) | null = null;
+  public onEdgeAdd: ((edge: PipelineEdge) => void) | null = null;
+  public onEdgeDelete: ((edgeId: string) => void) | null = null;
 
   constructor() {
     this.userColor = this.generateColor();
+  }
+
+  getUserId(): string | null {
+    return this.userId;
+  }
+
+  getUserColor(): string {
+    return this.userColor;
   }
 
   async startSession(userName: string): Promise<{ success: boolean; roomId?: string; error?: string }> {
@@ -66,6 +98,7 @@ export class SupabaseCollaborationManager {
 
     this.userId = user.id;
     this.userName = userName;
+    this.isInitialSync = true;
 
     // Check limits via database function
     const { data, error } = await supabase.rpc('try_join_session', {
@@ -105,6 +138,9 @@ export class SupabaseCollaborationManager {
         presence: {
           key: this.userId,
         },
+        broadcast: {
+          self: false, // Don't receive own broadcasts
+        },
       },
     });
 
@@ -119,12 +155,37 @@ export class SupabaseCollaborationManager {
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
         console.log('User left:', key, leftPresences);
       })
+      // Canvas sync events
       .on('broadcast', { event: 'cursor' }, ({ payload }) => {
-        this.handleCursorUpdate(payload);
+        this.handleCursorUpdate(payload as CursorPayload);
+      })
+      .on('broadcast', { event: 'canvas_sync' }, ({ payload }) => {
+        this.handleCanvasSync(payload as CanvasState);
+      })
+      .on('broadcast', { event: 'block_add' }, ({ payload }) => {
+        this.onBlockAdd?.(payload as PipelineBlock);
+      })
+      .on('broadcast', { event: 'block_update' }, ({ payload }) => {
+        const { blockId, changes } = payload as { blockId: string; changes: Partial<PipelineBlock> };
+        this.onBlockUpdate?.(blockId, changes);
+      })
+      .on('broadcast', { event: 'block_delete' }, ({ payload }) => {
+        this.onBlockDelete?.(payload.blockId as string);
+      })
+      .on('broadcast', { event: 'edge_add' }, ({ payload }) => {
+        this.onEdgeAdd?.(payload as PipelineEdge);
+      })
+      .on('broadcast', { event: 'edge_delete' }, ({ payload }) => {
+        this.onEdgeDelete?.(payload.edgeId as string);
+      })
+      .on('broadcast', { event: 'request_sync' }, ({ payload }) => {
+        // Another user is requesting current canvas state
+        // Only the first user (session creator) should respond
+        this.handleSyncRequest(payload as { requesterId: string });
       });
 
     // Subscribe to channel
-    const status = await this.channel.subscribe(async (status) => {
+    await this.channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         // Track our presence
         await this.channel?.track({
@@ -137,6 +198,11 @@ export class SupabaseCollaborationManager {
 
         this.onStatusChange?.('connected');
         this.startHeartbeat();
+
+        // Request canvas sync from other users after a short delay
+        setTimeout(() => {
+          this.requestCanvasSync();
+        }, 500);
       } else if (status === 'CHANNEL_ERROR') {
         this.onStatusChange?.('disconnected');
         this.onError?.('Failed to connect to collaboration session');
@@ -169,12 +235,18 @@ export class SupabaseCollaborationManager {
     }
 
     this.roomId = null;
+    this.isInitialSync = true;
     this.onStatusChange?.('disconnected');
     this.onPeersChange?.([]);
   }
 
+  // Cursor updates with throttling
   updateCursor(x: number, y: number): void {
     if (!this.channel || !this.userId) return;
+
+    const now = Date.now();
+    if (now - this.lastCursorUpdate < CURSOR_THROTTLE) return;
+    this.lastCursorUpdate = now;
 
     // Broadcast cursor position to others
     this.channel.send({
@@ -182,19 +254,94 @@ export class SupabaseCollaborationManager {
       event: 'cursor',
       payload: {
         userId: this.userId,
+        userName: this.userName,
+        color: this.userColor,
         x,
         y,
       },
     });
+  }
 
-    // Update our presence with cursor position
-    this.channel.track({
-      id: this.userId,
-      name: this.userName,
-      color: this.userColor,
-      cursor: { x, y },
-      joinedAt: new Date().toISOString(),
-    } as UserPresence);
+  // Canvas sync methods
+  broadcastCanvasState(blocks: PipelineBlock[], edges: PipelineEdge[]): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'canvas_sync',
+      payload: { blocks, edges },
+    });
+  }
+
+  broadcastBlockAdd(block: PipelineBlock): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'block_add',
+      payload: block,
+    });
+  }
+
+  broadcastBlockUpdate(blockId: string, changes: Partial<PipelineBlock>): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'block_update',
+      payload: { blockId, changes },
+    });
+  }
+
+  broadcastBlockDelete(blockId: string): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'block_delete',
+      payload: { blockId },
+    });
+  }
+
+  broadcastEdgeAdd(edge: PipelineEdge): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'edge_add',
+      payload: edge,
+    });
+  }
+
+  broadcastEdgeDelete(edgeId: string): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'edge_delete',
+      payload: { edgeId },
+    });
+  }
+
+  requestCanvasSync(): void {
+    if (!this.channel || !this.userId) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'request_sync',
+      payload: { requesterId: this.userId },
+    });
+  }
+
+  // Send current canvas state to a specific requester
+  respondToSyncRequest(blocks: PipelineBlock[], edges: PipelineEdge[]): void {
+    if (!this.channel) return;
+
+    this.channel.send({
+      type: 'broadcast',
+      event: 'canvas_sync',
+      payload: { blocks, edges },
+    });
   }
 
   getRoomId(): string | null {
@@ -228,8 +375,23 @@ export class SupabaseCollaborationManager {
     this.onPeersChange?.(peers);
   }
 
-  private handleCursorUpdate(payload: { userId: string; x: number; y: number }): void {
-    // This is handled by presence sync, but we could use this for more frequent updates
+  private handleCursorUpdate(payload: CursorPayload): void {
+    // Skip our own cursor updates
+    if (payload.userId === this.userId) return;
+    this.onCursorUpdate?.(payload);
+  }
+
+  private handleCanvasSync(state: CanvasState): void {
+    // Only apply sync if we just joined (initial sync)
+    if (this.isInitialSync) {
+      this.isInitialSync = false;
+      this.onCanvasSync?.(state);
+    }
+  }
+
+  private handleSyncRequest(payload: { requesterId: string }): void {
+    // This will be handled by the hook which has access to canvas state
+    // The hook should call respondToSyncRequest with current state
   }
 
   private startHeartbeat(): void {
