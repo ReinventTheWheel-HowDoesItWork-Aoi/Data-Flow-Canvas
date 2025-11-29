@@ -154,6 +154,20 @@ const blocks: BlockInfo[] = [
   { icon: LinkIcon, name: 'Association Rules', description: 'Find item associations using Apriori algorithm', category: 'Analysis' },
   { icon: MessageSquare, name: 'Sentiment Analysis', description: 'Analyze text sentiment (positive, negative, neutral)', category: 'Analysis' },
   { icon: TrendingUp, name: 'Moving Average', description: 'Calculate simple, exponential, or weighted moving averages', category: 'Analysis' },
+  { icon: Scissors, name: 'Train/Test Split', description: 'Split data into training and testing sets for ML', category: 'Analysis' },
+  { icon: Award, name: 'Model Evaluation', description: 'Calculate model performance metrics (accuracy, F1, RMSE)', category: 'Analysis' },
+  { icon: Users, name: 'K-Nearest Neighbors', description: 'KNN classifier or regressor for prediction', category: 'Analysis' },
+  { icon: Network, name: 'Naive Bayes', description: 'Naive Bayes classifier for text and categorical data', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Gradient Boosting', description: 'High-performance gradient boosting ML model', category: 'Analysis' },
+  { icon: BarChart3, name: 'Pareto Analysis', description: 'Identify vital few vs trivial many using 80/20 rule', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Trend Analysis', description: 'Detect and quantify trends in time series data', category: 'Analysis' },
+  { icon: Calendar, name: 'Forecasting', description: 'Predict future values using time series methods', category: 'Analysis' },
+  { icon: Hash, name: 'Percentile Analysis', description: 'Calculate percentiles and quantile ranks', category: 'Analysis' },
+  { icon: Activity, name: 'Distribution Fit', description: 'Fit data to statistical distributions', category: 'Analysis' },
+  { icon: FileSearch, name: 'Text Preprocessing', description: 'Clean and prepare text data for analysis', category: 'Analysis' },
+  { icon: Hash, name: 'TF-IDF Vectorization', description: 'Convert text to TF-IDF numerical features', category: 'Analysis' },
+  { icon: Layers, name: 'Topic Modeling', description: 'Discover hidden topics in text using LDA', category: 'Analysis' },
+  { icon: GitMerge, name: 'Similarity Analysis', description: 'Calculate similarity between rows or find similar items', category: 'Analysis' },
 
   // Visualization (11 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -287,6 +301,20 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Association Rules': { name: 'blocks.associationRules', description: 'blockDescriptions.associationRules' },
   'Sentiment Analysis': { name: 'blocks.sentimentAnalysis', description: 'blockDescriptions.sentimentAnalysis' },
   'Moving Average': { name: 'blocks.movingAverage', description: 'blockDescriptions.movingAverage' },
+  'Train/Test Split': { name: 'blocks.trainTestSplit', description: 'blockDescriptions.trainTestSplit' },
+  'Model Evaluation': { name: 'blocks.modelEvaluation', description: 'blockDescriptions.modelEvaluation' },
+  'K-Nearest Neighbors': { name: 'blocks.knn', description: 'blockDescriptions.knn' },
+  'Naive Bayes': { name: 'blocks.naiveBayes', description: 'blockDescriptions.naiveBayes' },
+  'Gradient Boosting': { name: 'blocks.gradientBoosting', description: 'blockDescriptions.gradientBoosting' },
+  'Pareto Analysis': { name: 'blocks.paretoAnalysis', description: 'blockDescriptions.paretoAnalysis' },
+  'Trend Analysis': { name: 'blocks.trendAnalysis', description: 'blockDescriptions.trendAnalysis' },
+  'Forecasting': { name: 'blocks.forecasting', description: 'blockDescriptions.forecasting' },
+  'Percentile Analysis': { name: 'blocks.percentileAnalysis', description: 'blockDescriptions.percentileAnalysis' },
+  'Distribution Fit': { name: 'blocks.distributionFit', description: 'blockDescriptions.distributionFit' },
+  'Text Preprocessing': { name: 'blocks.textPreprocessing', description: 'blockDescriptions.textPreprocessing' },
+  'TF-IDF Vectorization': { name: 'blocks.tfidfVectorization', description: 'blockDescriptions.tfidfVectorization' },
+  'Topic Modeling': { name: 'blocks.topicModeling', description: 'blockDescriptions.topicModeling' },
+  'Similarity Analysis': { name: 'blocks.similarityAnalysis', description: 'blockDescriptions.similarityAnalysis' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -405,7 +433,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">71</p>
+                <p className="text-h2 font-bold text-text-primary">85</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
