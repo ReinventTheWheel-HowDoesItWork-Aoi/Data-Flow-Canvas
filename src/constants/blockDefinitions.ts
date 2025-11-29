@@ -761,6 +761,415 @@ output = df
 `,
   },
 
+  'datetime-extract': {
+    type: 'datetime-extract',
+    category: 'transform',
+    label: 'Date/Time Extract',
+    description: 'Extract parts from date columns (year, month, day, weekday, hour, etc.)',
+    icon: 'Calendar',
+    defaultConfig: {
+      column: '',
+      extractions: ['year', 'month', 'day'],
+      prefix: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+extractions = config.get('extractions', ['year', 'month', 'day'])
+prefix = config.get('prefix', '')
+
+if not column:
+    raise ValueError("Date/Time Extract: Please specify a date column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Date/Time Extract: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert to datetime
+try:
+    df[column] = pd.to_datetime(df[column], errors='coerce')
+except Exception as e:
+    raise ValueError(f"Date/Time Extract: Could not parse column '{column}' as datetime: {str(e)}")
+
+# Use column name as prefix if not specified
+col_prefix = prefix if prefix else column
+
+for extraction in extractions:
+    new_col = f"{col_prefix}_{extraction}"
+    if extraction == 'year':
+        df[new_col] = df[column].dt.year
+    elif extraction == 'month':
+        df[new_col] = df[column].dt.month
+    elif extraction == 'day':
+        df[new_col] = df[column].dt.day
+    elif extraction == 'weekday':
+        df[new_col] = df[column].dt.day_name()
+    elif extraction == 'weekday_num':
+        df[new_col] = df[column].dt.dayofweek
+    elif extraction == 'hour':
+        df[new_col] = df[column].dt.hour
+    elif extraction == 'minute':
+        df[new_col] = df[column].dt.minute
+    elif extraction == 'second':
+        df[new_col] = df[column].dt.second
+    elif extraction == 'quarter':
+        df[new_col] = df[column].dt.quarter
+    elif extraction == 'week':
+        df[new_col] = df[column].dt.isocalendar().week
+    elif extraction == 'dayofyear':
+        df[new_col] = df[column].dt.dayofyear
+    elif extraction == 'is_weekend':
+        df[new_col] = df[column].dt.dayofweek >= 5
+    elif extraction == 'date':
+        df[new_col] = df[column].dt.date
+
+output = df
+`,
+  },
+
+  'string-operations': {
+    type: 'string-operations',
+    category: 'transform',
+    label: 'String Operations',
+    description: 'Clean and manipulate text columns',
+    icon: 'Type',
+    defaultConfig: {
+      column: '',
+      operation: 'lowercase',
+      findText: '',
+      replaceText: '',
+      regexPattern: '',
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+
+df = input_data.copy()
+column = config.get('column', '')
+operation = config.get('operation', 'lowercase')
+find_text = config.get('findText', '')
+replace_text = config.get('replaceText', '')
+regex_pattern = config.get('regexPattern', '')
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("String Operations: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"String Operations: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Determine output column name
+output_col = new_column if new_column else column
+
+# Convert to string first
+str_col = df[column].astype(str)
+
+if operation == 'lowercase':
+    df[output_col] = str_col.str.lower()
+elif operation == 'uppercase':
+    df[output_col] = str_col.str.upper()
+elif operation == 'titlecase':
+    df[output_col] = str_col.str.title()
+elif operation == 'trim':
+    df[output_col] = str_col.str.strip()
+elif operation == 'trim_left':
+    df[output_col] = str_col.str.lstrip()
+elif operation == 'trim_right':
+    df[output_col] = str_col.str.rstrip()
+elif operation == 'find_replace':
+    if not find_text:
+        raise ValueError("String Operations: Please specify text to find")
+    df[output_col] = str_col.str.replace(find_text, replace_text, regex=False)
+elif operation == 'regex_replace':
+    if not regex_pattern:
+        raise ValueError("String Operations: Please specify a regex pattern")
+    df[output_col] = str_col.str.replace(regex_pattern, replace_text, regex=True)
+elif operation == 'regex_extract':
+    if not regex_pattern:
+        raise ValueError("String Operations: Please specify a regex pattern")
+    df[output_col] = str_col.str.extract(f'({regex_pattern})', expand=False)
+elif operation == 'length':
+    df[output_col] = str_col.str.len()
+elif operation == 'remove_digits':
+    df[output_col] = str_col.str.replace(r'\\d+', '', regex=True)
+elif operation == 'remove_punctuation':
+    df[output_col] = str_col.str.replace(r'[^\\w\\s]', '', regex=True)
+elif operation == 'remove_whitespace':
+    df[output_col] = str_col.str.replace(r'\\s+', ' ', regex=True).str.strip()
+
+output = df
+`,
+  },
+
+  'window-functions': {
+    type: 'window-functions',
+    category: 'transform',
+    label: 'Window Functions',
+    description: 'Calculate rolling, cumulative, and lag/lead values',
+    icon: 'Waypoints',
+    defaultConfig: {
+      column: '',
+      operation: 'rolling_mean',
+      windowSize: 3,
+      groupBy: [],
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+operation = config.get('operation', 'rolling_mean')
+window_size = int(config.get('windowSize', 3))
+group_by = config.get('groupBy', [])
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Window Functions: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Window Functions: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Determine output column name
+output_col = new_column if new_column else f"{column}_{operation}"
+
+# Convert column to numeric if needed
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+def apply_window(group_df):
+    col_data = pd.to_numeric(group_df[column], errors='coerce')
+
+    if operation == 'rolling_mean':
+        return col_data.rolling(window=window_size, min_periods=1).mean()
+    elif operation == 'rolling_sum':
+        return col_data.rolling(window=window_size, min_periods=1).sum()
+    elif operation == 'rolling_min':
+        return col_data.rolling(window=window_size, min_periods=1).min()
+    elif operation == 'rolling_max':
+        return col_data.rolling(window=window_size, min_periods=1).max()
+    elif operation == 'rolling_std':
+        return col_data.rolling(window=window_size, min_periods=1).std()
+    elif operation == 'cumsum':
+        return col_data.cumsum()
+    elif operation == 'cumprod':
+        return col_data.cumprod()
+    elif operation == 'cummin':
+        return col_data.cummin()
+    elif operation == 'cummax':
+        return col_data.cummax()
+    elif operation == 'lag':
+        return col_data.shift(window_size)
+    elif operation == 'lead':
+        return col_data.shift(-window_size)
+    elif operation == 'pct_change':
+        return col_data.pct_change(periods=window_size)
+    elif operation == 'diff':
+        return col_data.diff(periods=window_size)
+    elif operation == 'rank':
+        return col_data.rank()
+
+    return col_data
+
+if group_by and len(group_by) > 0:
+    # Validate group columns exist
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Window Functions: Group column(s) not found: {', '.join(missing)}")
+    df[output_col] = df.groupby(group_by, group_keys=False).apply(
+        lambda x: apply_window(x)
+    ).reset_index(drop=True)
+else:
+    df[output_col] = apply_window(df)
+
+output = df
+`,
+  },
+
+  'bin-bucket': {
+    type: 'bin-bucket',
+    category: 'transform',
+    label: 'Bin/Bucket',
+    description: 'Group continuous numbers into discrete bins or ranges',
+    icon: 'BarChart',
+    defaultConfig: {
+      column: '',
+      method: 'equal_width',
+      numBins: 5,
+      customEdges: '',
+      customLabels: '',
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'equal_width')
+num_bins = int(config.get('numBins', 5))
+custom_edges = config.get('customEdges', '')
+custom_labels = config.get('customLabels', '')
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Bin/Bucket: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Bin/Bucket: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Determine output column name
+output_col = new_column if new_column else f"{column}_binned"
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+# Parse custom labels if provided
+labels = None
+if custom_labels:
+    labels = [l.strip() for l in custom_labels.split(',')]
+
+if method == 'equal_width':
+    df[output_col] = pd.cut(numeric_col, bins=num_bins, labels=labels)
+elif method == 'equal_frequency':
+    df[output_col] = pd.qcut(numeric_col, q=num_bins, labels=labels, duplicates='drop')
+elif method == 'custom':
+    if not custom_edges:
+        raise ValueError("Bin/Bucket: Please specify custom bin edges (comma-separated numbers)")
+    edges = [float(e.strip()) for e in custom_edges.split(',')]
+    if labels and len(labels) != len(edges) - 1:
+        raise ValueError(f"Bin/Bucket: Number of labels ({len(labels)}) must be one less than number of edges ({len(edges)})")
+    df[output_col] = pd.cut(numeric_col, bins=edges, labels=labels, include_lowest=True)
+
+output = df
+`,
+  },
+
+  'rank': {
+    type: 'rank',
+    category: 'transform',
+    label: 'Rank',
+    description: 'Assign rank positions (1st, 2nd, 3rd...) to values',
+    icon: 'Medal',
+    defaultConfig: {
+      column: '',
+      method: 'average',
+      ascending: true,
+      groupBy: [],
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'average')
+ascending = config.get('ascending', True)
+group_by = config.get('groupBy', [])
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Rank: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Rank: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Determine output column name
+output_col = new_column if new_column else f"{column}_rank"
+
+# Convert to numeric for ranking
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if group_by and len(group_by) > 0:
+    # Validate group columns exist
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Rank: Group column(s) not found: {', '.join(missing)}")
+    df[output_col] = df.groupby(group_by)[column].rank(method=method, ascending=ascending)
+else:
+    df[output_col] = numeric_col.rank(method=method, ascending=ascending)
+
+output = df
+`,
+  },
+
+  'type-conversion': {
+    type: 'type-conversion',
+    category: 'transform',
+    label: 'Type Conversion',
+    description: 'Change column data types (string, integer, float, boolean, datetime, category)',
+    icon: 'RefreshCw',
+    defaultConfig: {
+      column: '',
+      targetType: 'string',
+      datetimeFormat: '',
+      errorHandling: 'coerce',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+target_type = config.get('targetType', 'string')
+datetime_format = config.get('datetimeFormat', '')
+error_handling = config.get('errorHandling', 'coerce')
+
+if not column:
+    raise ValueError("Type Conversion: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Type Conversion: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+try:
+    if target_type == 'string':
+        df[column] = df[column].astype(str)
+    elif target_type == 'integer':
+        if error_handling == 'coerce':
+            df[column] = pd.to_numeric(df[column], errors='coerce').astype('Int64')
+        else:
+            df[column] = df[column].astype(int)
+    elif target_type == 'float':
+        if error_handling == 'coerce':
+            df[column] = pd.to_numeric(df[column], errors='coerce')
+        else:
+            df[column] = df[column].astype(float)
+    elif target_type == 'boolean':
+        # Handle various boolean representations
+        true_vals = ['true', 'yes', '1', 't', 'y']
+        false_vals = ['false', 'no', '0', 'f', 'n']
+        str_col = df[column].astype(str).str.lower().str.strip()
+        df[column] = str_col.apply(lambda x: True if x in true_vals else (False if x in false_vals else None))
+    elif target_type == 'datetime':
+        if datetime_format:
+            df[column] = pd.to_datetime(df[column], format=datetime_format, errors=error_handling)
+        else:
+            df[column] = pd.to_datetime(df[column], errors=error_handling)
+    elif target_type == 'category':
+        df[column] = df[column].astype('category')
+except Exception as e:
+    if error_handling == 'raise':
+        raise ValueError(f"Type Conversion: Failed to convert column '{column}' to {target_type}: {str(e)}")
+    # If coerce, errors are already handled above
+
+output = df
+`,
+  },
+
   // Analysis Blocks
   'statistics': {
     type: 'statistics',
@@ -2734,6 +3143,12 @@ export const blockCategories = [
       'split-column',
       'merge-columns',
       'conditional-column',
+      'datetime-extract',
+      'string-operations',
+      'window-functions',
+      'bin-bucket',
+      'rank',
+      'type-conversion',
     ] as BlockType[],
   },
   {
