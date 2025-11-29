@@ -55,6 +55,12 @@ import {
   ScatterChart,
   Users,
   Target,
+  Calendar,
+  Type,
+  Waypoints,
+  BarChart,
+  Medal,
+  RefreshCw,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BlockType, BlockState } from '@/types';
@@ -114,6 +120,12 @@ const icons: Record<string, LucideIcon> = {
   ScatterChart,
   Users,
   Target,
+  Calendar,
+  Type,
+  Waypoints,
+  BarChart,
+  Medal,
+  RefreshCw,
 };
 
 const iconMap: Record<BlockType, string> = {
@@ -137,6 +149,12 @@ const iconMap: Record<BlockType, string> = {
   'split-column': 'Scissors',
   'merge-columns': 'Combine',
   'conditional-column': 'GitBranch',
+  'datetime-extract': 'Calendar',
+  'string-operations': 'Type',
+  'window-functions': 'Waypoints',
+  'bin-bucket': 'BarChart',
+  'rank': 'Medal',
+  'type-conversion': 'RefreshCw',
   'statistics': 'BarChart3',
   'regression': 'TrendingUp',
   'clustering': 'Network',
@@ -192,6 +210,12 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'split-column': 'blocks.splitColumn',
   'merge-columns': 'blocks.mergeColumns',
   'conditional-column': 'blocks.conditionalColumn',
+  'datetime-extract': 'blocks.datetimeExtract',
+  'string-operations': 'blocks.stringOperations',
+  'window-functions': 'blocks.windowFunctions',
+  'bin-bucket': 'blocks.binBucket',
+  'rank': 'blocks.rank',
+  'type-conversion': 'blocks.typeConversion',
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
   'clustering': 'blocks.clustering',
