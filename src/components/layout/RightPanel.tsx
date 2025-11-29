@@ -113,6 +113,12 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'attribution-modeling': 'blocks.attributionModeling',
   'breakeven-analysis': 'blocks.breakevenAnalysis',
   'confidence-intervals': 'blocks.confidenceIntervals',
+  'bootstrap-analysis': 'blocks.bootstrapAnalysis',
+  'posthoc-tests': 'blocks.posthocTests',
+  'power-analysis': 'blocks.powerAnalysis',
+  'bayesian-inference': 'blocks.bayesianInference',
+  'data-quality-score': 'blocks.dataQualityScore',
+  'changepoint-detection': 'blocks.changepointDetection',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
@@ -214,6 +220,12 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'attribution-modeling': 'blockDescriptions.attributionModeling',
   'breakeven-analysis': 'blockDescriptions.breakevenAnalysis',
   'confidence-intervals': 'blockDescriptions.confidenceIntervals',
+  'bootstrap-analysis': 'blockDescriptions.bootstrapAnalysis',
+  'posthoc-tests': 'blockDescriptions.posthocTests',
+  'power-analysis': 'blockDescriptions.powerAnalysis',
+  'bayesian-inference': 'blockDescriptions.bayesianInference',
+  'data-quality-score': 'blockDescriptions.dataQualityScore',
+  'changepoint-detection': 'blockDescriptions.changepointDetection',
   'chart': 'blockDescriptions.chart',
   'table': 'blockDescriptions.table',
   'correlation-matrix': 'blockDescriptions.correlationMatrix',
@@ -7223,6 +7235,576 @@ function renderConfigFields(
           <div className="p-3 bg-bg-tertiary rounded-lg">
             <p className="text-small text-text-muted">
               <strong>Outputs:</strong> Point estimate, CI bounds, margin of error, and interpretation.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'bootstrap-analysis':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column as string) || ''}
+                onValueChange={(v) => onChange('column', v)}
+              >
+                <SelectTrigger label="Column">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.column2 as string) || ''}
+                onValueChange={(v) => onChange('column2', v)}
+              >
+                <SelectTrigger label="Second Column (for correlation)">
+                  <SelectValue placeholder="Select second column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Column"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Enter column name"
+              />
+              <Input
+                label="Second Column (for correlation)"
+                value={(config.column2 as string) || ''}
+                onChange={(e) => onChange('column2', e.target.value)}
+                placeholder="Enter second column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.statistic as string) || 'mean'}
+            onValueChange={(v) => onChange('statistic', v)}
+          >
+            <SelectTrigger label="Statistic">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mean">Mean</SelectItem>
+              <SelectItem value="median">Median</SelectItem>
+              <SelectItem value="std">Standard Deviation</SelectItem>
+              <SelectItem value="correlation">Correlation</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Number of Iterations"
+            type="number"
+            min={100}
+            max={10000}
+            value={(config.nIterations as number) || 1000}
+            onChange={(e) => onChange('nIterations', parseInt(e.target.value) || 1000)}
+          />
+
+          <Select
+            value={String((config.confidenceLevel as number) || 0.95)}
+            onValueChange={(v) => onChange('confidenceLevel', parseFloat(v))}
+          >
+            <SelectTrigger label="Confidence Level">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.90">90%</SelectItem>
+              <SelectItem value="0.95">95%</SelectItem>
+              <SelectItem value="0.99">99%</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.method as string) || 'percentile'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="CI Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percentile">Percentile</SelectItem>
+              <SelectItem value="bca">BCa (Bias-Corrected)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Bootstrap CI, standard error, bias estimate, and bias-corrected estimate.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'posthoc-tests':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.groupColumn as string) || ''}
+                onValueChange={(v) => onChange('groupColumn', v)}
+              >
+                <SelectTrigger label="Group Column">
+                  <SelectValue placeholder="Select group column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+                placeholder="Enter value column name"
+              />
+              <Input
+                label="Group Column"
+                value={(config.groupColumn as string) || ''}
+                onChange={(e) => onChange('groupColumn', e.target.value)}
+                placeholder="Enter group column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.method as string) || 'tukey'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Correction Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tukey">Tukey HSD</SelectItem>
+              <SelectItem value="bonferroni">Bonferroni</SelectItem>
+              <SelectItem value="holm">Holm</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={String((config.alpha as number) || 0.05)}
+            onValueChange={(v) => onChange('alpha', parseFloat(v))}
+          >
+            <SelectTrigger label="Significance Level (α)">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.01">0.01</SelectItem>
+              <SelectItem value="0.05">0.05</SelectItem>
+              <SelectItem value="0.10">0.10</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Pairwise comparisons, adjusted p-values, significance flags, and Cohen's d effect sizes.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'power-analysis':
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.testType as string) || 't-test'}
+            onValueChange={(v) => onChange('testType', v)}
+          >
+            <SelectTrigger label="Test Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="t-test">T-Test</SelectItem>
+              <SelectItem value="anova">ANOVA</SelectItem>
+              <SelectItem value="chi-square">Chi-Square</SelectItem>
+              <SelectItem value="correlation">Correlation</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.calculateFor as string) || 'sample_size'}
+            onValueChange={(v) => onChange('calculateFor', v)}
+          >
+            <SelectTrigger label="Calculate For">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sample_size">Required Sample Size</SelectItem>
+              <SelectItem value="power">Achieved Power</SelectItem>
+              <SelectItem value="effect_size">Detectable Effect Size</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Effect Size (Cohen's d/f/w/r)"
+            type="number"
+            min={0.01}
+            max={3}
+            step="0.1"
+            value={(config.effectSize as number) || 0.5}
+            onChange={(e) => onChange('effectSize', parseFloat(e.target.value) || 0.5)}
+          />
+
+          <Select
+            value={String((config.alpha as number) || 0.05)}
+            onValueChange={(v) => onChange('alpha', parseFloat(v))}
+          >
+            <SelectTrigger label="Alpha (α)">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.01">0.01</SelectItem>
+              <SelectItem value="0.05">0.05</SelectItem>
+              <SelectItem value="0.10">0.10</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Target Power"
+            type="number"
+            min={0.5}
+            max={0.99}
+            step="0.05"
+            value={(config.power as number) || 0.8}
+            onChange={(e) => onChange('power', parseFloat(e.target.value) || 0.8)}
+          />
+
+          <Input
+            label="Sample Size (if calculating power/effect)"
+            type="number"
+            min={5}
+            max={10000}
+            value={(config.sampleSize as number) || 30}
+            onChange={(e) => onChange('sampleSize', parseInt(e.target.value) || 30)}
+          />
+
+          <Input
+            label="Number of Groups (for ANOVA)"
+            type="number"
+            min={2}
+            max={10}
+            value={(config.groups as number) || 2}
+            onChange={(e) => onChange('groups', parseInt(e.target.value) || 2)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Required sample size or achieved power, plus power curve data.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'bayesian-inference':
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.analysisType as string) || 'proportion'}
+            onValueChange={(v) => onChange('analysisType', v)}
+          >
+            <SelectTrigger label="Analysis Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="proportion">Proportion (Beta-Binomial)</SelectItem>
+              <SelectItem value="mean">Mean (Normal)</SelectItem>
+              <SelectItem value="ab-test">A/B Test</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column as string) || ''}
+                onValueChange={(v) => onChange('column', v)}
+              >
+                <SelectTrigger label="Column (or Group A)">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.column2 as string) || ''}
+                onValueChange={(v) => onChange('column2', v)}
+              >
+                <SelectTrigger label="Column 2 / Group B (for A/B test)">
+                  <SelectValue placeholder="Select second column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Column (or Group A)"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Enter column name"
+              />
+              <Input
+                label="Column 2 / Group B (for A/B test)"
+                value={(config.column2 as string) || ''}
+                onChange={(e) => onChange('column2', e.target.value)}
+                placeholder="Enter second column name"
+              />
+            </>
+          )}
+
+          <Input
+            label="Prior Alpha"
+            type="number"
+            min={0.01}
+            step="0.1"
+            value={(config.priorAlpha as number) || 1}
+            onChange={(e) => onChange('priorAlpha', parseFloat(e.target.value) || 1)}
+          />
+
+          <Input
+            label="Prior Beta"
+            type="number"
+            min={0.01}
+            step="0.1"
+            value={(config.priorBeta as number) || 1}
+            onChange={(e) => onChange('priorBeta', parseFloat(e.target.value) || 1)}
+          />
+
+          <Select
+            value={String((config.credibleLevel as number) || 0.95)}
+            onValueChange={(v) => onChange('credibleLevel', parseFloat(v))}
+          >
+            <SelectTrigger label="Credible Level">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0.90">90%</SelectItem>
+              <SelectItem value="0.95">95%</SelectItem>
+              <SelectItem value="0.99">99%</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Posterior distributions, credible intervals, P(B&gt;A) for A/B tests.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'data-quality-score':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <div className="space-y-2">
+              <label className="text-small font-medium text-text-primary">
+                Columns to Analyze (leave empty for all)
+              </label>
+              <div className="max-h-32 overflow-y-auto border border-border-primary rounded-lg p-2">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 py-1">
+                    <input
+                      type="checkbox"
+                      checked={((config.columns as string[]) || []).includes(col)}
+                      onChange={(e) => {
+                        const current = (config.columns as string[]) || [];
+                        if (e.target.checked) {
+                          onChange('columns', [...current, col]);
+                        } else {
+                          onChange('columns', current.filter((c) => c !== col));
+                        }
+                      }}
+                      className="rounded border-border-primary"
+                    />
+                    <span className="text-small">{col}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Input
+              label="Columns (comma-separated, empty for all)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
+              placeholder="col1, col2, col3"
+            />
+          )}
+
+          <Input
+            label="Completeness Weight"
+            type="number"
+            min={0}
+            max={1}
+            step="0.1"
+            value={(config.completenessWeight as number) || 0.3}
+            onChange={(e) => onChange('completenessWeight', parseFloat(e.target.value) || 0.3)}
+          />
+
+          <Input
+            label="Validity Weight"
+            type="number"
+            min={0}
+            max={1}
+            step="0.1"
+            value={(config.validityWeight as number) || 0.3}
+            onChange={(e) => onChange('validityWeight', parseFloat(e.target.value) || 0.3)}
+          />
+
+          <Input
+            label="Uniqueness Weight"
+            type="number"
+            min={0}
+            max={1}
+            step="0.1"
+            value={(config.uniquenessWeight as number) || 0.2}
+            onChange={(e) => onChange('uniquenessWeight', parseFloat(e.target.value) || 0.2)}
+          />
+
+          <Input
+            label="Consistency Weight"
+            type="number"
+            min={0}
+            max={1}
+            step="0.1"
+            value={(config.consistencyWeight as number) || 0.2}
+            onChange={(e) => onChange('consistencyWeight', parseFloat(e.target.value) || 0.2)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Overall quality score (0-100), dimension scores, specific issues with row/column references.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'changepoint-detection':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column (optional)">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+                placeholder="Enter value column name"
+              />
+              <Input
+                label="Date Column (optional)"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+                placeholder="Enter date column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.method as string) || 'cusum'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Detection Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cusum">CUSUM</SelectItem>
+              <SelectItem value="pelt">PELT</SelectItem>
+              <SelectItem value="binary">Binary Segmentation</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Minimum Segment Size"
+            type="number"
+            min={5}
+            max={100}
+            value={(config.minSegmentSize as number) || 10}
+            onChange={(e) => onChange('minSegmentSize', parseInt(e.target.value) || 10)}
+          />
+
+          <Input
+            label="Maximum Change Points"
+            type="number"
+            min={1}
+            max={20}
+            value={(config.maxChangePoints as number) || 5}
+            onChange={(e) => onChange('maxChangePoints', parseInt(e.target.value) || 5)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Change point locations, segment statistics before/after, confidence scores.
             </p>
           </div>
         </div>
