@@ -5796,6 +5796,1040 @@ output = pd.DataFrame(results)
 `,
   },
 
+  'bootstrap-analysis': {
+    type: 'bootstrap-analysis',
+    category: 'analysis',
+    label: 'Bootstrap Analysis',
+    description: 'Non-parametric bootstrap resampling for confidence intervals',
+    icon: 'RefreshCw',
+    defaultConfig: {
+      column: '',
+      statistic: 'mean',
+      column2: '',
+      nIterations: 1000,
+      confidenceLevel: 0.95,
+      method: 'percentile',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+column = config.get('column', '')
+statistic = config.get('statistic', 'mean')
+column2 = config.get('column2', '')
+n_iterations = int(config.get('nIterations', 1000))
+confidence_level = config.get('confidenceLevel', 0.95)
+method = config.get('method', 'percentile')
+
+if not column:
+    raise ValueError("Bootstrap Analysis: Please specify a column")
+
+if column not in df.columns:
+    raise ValueError(f"Bootstrap Analysis: Column '{column}' not found")
+
+# Get data
+data1 = pd.to_numeric(df[column], errors='coerce').dropna().values
+
+if len(data1) < 10:
+    raise ValueError("Bootstrap Analysis: Need at least 10 data points")
+
+# For correlation, need second column
+data2 = None
+if statistic == 'correlation':
+    if not column2 or column2 not in df.columns:
+        raise ValueError("Bootstrap Analysis: Second column required for correlation")
+    data2 = pd.to_numeric(df[column2], errors='coerce').dropna().values
+    # Align arrays
+    min_len = min(len(data1), len(data2))
+    data1 = data1[:min_len]
+    data2 = data2[:min_len]
+
+n = len(data1)
+
+# Define statistic functions
+def calc_statistic(sample1, sample2=None):
+    if statistic == 'mean':
+        return np.mean(sample1)
+    elif statistic == 'median':
+        return np.median(sample1)
+    elif statistic == 'std':
+        return np.std(sample1, ddof=1)
+    elif statistic == 'correlation':
+        if sample2 is None:
+            return np.nan
+        return np.corrcoef(sample1, sample2)[0, 1]
+    return np.mean(sample1)
+
+# Calculate observed statistic
+observed = calc_statistic(data1, data2)
+
+# Bootstrap resampling
+bootstrap_stats = []
+np.random.seed(42)
+for _ in range(n_iterations):
+    indices = np.random.randint(0, n, size=n)
+    sample1 = data1[indices]
+    sample2 = data2[indices] if data2 is not None else None
+    bootstrap_stats.append(calc_statistic(sample1, sample2))
+
+bootstrap_stats = np.array(bootstrap_stats)
+
+# Calculate confidence interval
+alpha = 1 - confidence_level
+
+if method == 'percentile':
+    ci_lower = np.percentile(bootstrap_stats, alpha/2 * 100)
+    ci_upper = np.percentile(bootstrap_stats, (1 - alpha/2) * 100)
+elif method == 'bca':
+    # BCa (Bias-Corrected and Accelerated) method
+    # Bias correction
+    z0 = stats.norm.ppf(np.mean(bootstrap_stats < observed))
+
+    # Acceleration (jackknife)
+    jackknife_stats = []
+    for i in range(n):
+        jack_sample1 = np.delete(data1, i)
+        jack_sample2 = np.delete(data2, i) if data2 is not None else None
+        jackknife_stats.append(calc_statistic(jack_sample1, jack_sample2))
+    jackknife_stats = np.array(jackknife_stats)
+    jack_mean = np.mean(jackknife_stats)
+    a = np.sum((jack_mean - jackknife_stats)**3) / (6 * np.sum((jack_mean - jackknife_stats)**2)**1.5 + 1e-10)
+
+    # Adjusted percentiles
+    z_alpha_lower = stats.norm.ppf(alpha/2)
+    z_alpha_upper = stats.norm.ppf(1 - alpha/2)
+
+    adj_lower = stats.norm.cdf(z0 + (z0 + z_alpha_lower) / (1 - a * (z0 + z_alpha_lower) + 1e-10))
+    adj_upper = stats.norm.cdf(z0 + (z0 + z_alpha_upper) / (1 - a * (z0 + z_alpha_upper) + 1e-10))
+
+    ci_lower = np.percentile(bootstrap_stats, adj_lower * 100)
+    ci_upper = np.percentile(bootstrap_stats, adj_upper * 100)
+else:
+    ci_lower = np.percentile(bootstrap_stats, alpha/2 * 100)
+    ci_upper = np.percentile(bootstrap_stats, (1 - alpha/2) * 100)
+
+# Calculate standard error and bias
+se = np.std(bootstrap_stats, ddof=1)
+bias = np.mean(bootstrap_stats) - observed
+
+results = [{
+    'statistic': statistic,
+    'column': column,
+    'column2': column2 if statistic == 'correlation' else '',
+    'observed_value': round(observed, 6),
+    'bootstrap_mean': round(np.mean(bootstrap_stats), 6),
+    'bootstrap_se': round(se, 6),
+    'bias': round(bias, 6),
+    'bias_corrected_estimate': round(observed - bias, 6),
+    'confidence_level': confidence_level,
+    'method': method,
+    'ci_lower': round(ci_lower, 6),
+    'ci_upper': round(ci_upper, 6),
+    'n_iterations': n_iterations,
+    'sample_size': n
+}]
+
+output = pd.DataFrame(results)
+`,
+  },
+
+  'posthoc-tests': {
+    type: 'posthoc-tests',
+    category: 'analysis',
+    label: 'Post-hoc Tests',
+    description: 'Multiple comparison tests after ANOVA',
+    icon: 'GitCompare',
+    defaultConfig: {
+      valueColumn: '',
+      groupColumn: '',
+      method: 'tukey',
+      alpha: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+from itertools import combinations
+
+df = input_data.copy()
+value_column = config.get('valueColumn', '')
+group_column = config.get('groupColumn', '')
+method = config.get('method', 'tukey')
+alpha = config.get('alpha', 0.05)
+
+if not value_column or not group_column:
+    raise ValueError("Post-hoc Tests: Please specify both value and group columns")
+
+if value_column not in df.columns:
+    raise ValueError(f"Post-hoc Tests: Value column '{value_column}' not found")
+
+if group_column not in df.columns:
+    raise ValueError(f"Post-hoc Tests: Group column '{group_column}' not found")
+
+# Convert value column to numeric
+df[value_column] = pd.to_numeric(df[value_column], errors='coerce')
+df = df.dropna(subset=[value_column, group_column])
+
+groups = df[group_column].unique()
+n_groups = len(groups)
+
+if n_groups < 2:
+    raise ValueError("Post-hoc Tests: Need at least 2 groups for comparison")
+
+# Get group data
+group_data = {g: df[df[group_column] == g][value_column].values for g in groups}
+
+# Calculate pooled standard deviation
+all_values = df[value_column].values
+n_total = len(all_values)
+grand_mean = np.mean(all_values)
+
+# Within-group sum of squares
+ss_within = sum(np.sum((group_data[g] - np.mean(group_data[g]))**2) for g in groups)
+df_within = n_total - n_groups
+ms_within = ss_within / df_within
+pooled_std = np.sqrt(ms_within)
+
+results = []
+
+# All pairwise comparisons
+pairs = list(combinations(groups, 2))
+n_comparisons = len(pairs)
+
+for g1, g2 in pairs:
+    data1 = group_data[g1]
+    data2 = group_data[g2]
+    n1, n2 = len(data1), len(data2)
+    mean1, mean2 = np.mean(data1), np.mean(data2)
+    mean_diff = mean1 - mean2
+
+    # Standard error of difference
+    se = pooled_std * np.sqrt(1/n1 + 1/n2)
+
+    # T-statistic
+    t_stat = mean_diff / se
+
+    # Calculate p-value based on method
+    if method == 'tukey':
+        # Tukey HSD uses studentized range distribution
+        # Approximate with t-distribution
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df_within))
+        # Adjust for multiple comparisons
+        p_adjusted = min(1.0, p_value * n_comparisons / 2)
+    elif method == 'bonferroni':
+        # Bonferroni: multiply p-value by number of comparisons
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df_within))
+        p_adjusted = min(1.0, p_value * n_comparisons)
+    elif method == 'holm':
+        # Holm: sequential rejection procedure (will be applied after)
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df_within))
+        p_adjusted = p_value  # Will be adjusted later
+    else:
+        p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df_within))
+        p_adjusted = p_value
+
+    # Cohen's d effect size
+    cohens_d = mean_diff / pooled_std
+
+    results.append({
+        'group1': str(g1),
+        'group2': str(g2),
+        'mean1': round(mean1, 4),
+        'mean2': round(mean2, 4),
+        'mean_difference': round(mean_diff, 4),
+        'std_error': round(se, 4),
+        't_statistic': round(t_stat, 4),
+        'p_value_raw': round(p_value, 6),
+        'p_value_adjusted': round(p_adjusted, 6),
+        'cohens_d': round(cohens_d, 4),
+        'effect_size': 'small' if abs(cohens_d) < 0.5 else ('medium' if abs(cohens_d) < 0.8 else 'large'),
+        'significant': p_adjusted < alpha,
+        'method': method,
+        'alpha': alpha
+    })
+
+# Apply Holm correction if selected
+if method == 'holm':
+    results.sort(key=lambda x: x['p_value_raw'])
+    for i, r in enumerate(results):
+        holm_adjusted = min(1.0, r['p_value_raw'] * (n_comparisons - i))
+        r['p_value_adjusted'] = round(holm_adjusted, 6)
+        r['significant'] = holm_adjusted < alpha
+
+output = pd.DataFrame(results)
+`,
+  },
+
+  'power-analysis': {
+    type: 'power-analysis',
+    category: 'analysis',
+    label: 'Power Analysis',
+    description: 'Sample size and power calculations',
+    icon: 'Gauge',
+    defaultConfig: {
+      testType: 't-test',
+      effectSize: 0.5,
+      alpha: 0.05,
+      power: 0.8,
+      calculateFor: 'sample_size',
+      sampleSize: 30,
+      groups: 2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+test_type = config.get('testType', 't-test')
+effect_size = config.get('effectSize', 0.5)
+alpha = config.get('alpha', 0.05)
+power = config.get('power', 0.8)
+calculate_for = config.get('calculateFor', 'sample_size')
+sample_size = config.get('sampleSize', 30)
+groups = config.get('groups', 2)
+
+# Validate inputs
+if effect_size <= 0:
+    raise ValueError("Power Analysis: Effect size must be positive")
+if not 0 < alpha < 1:
+    raise ValueError("Power Analysis: Alpha must be between 0 and 1")
+if not 0 < power < 1:
+    raise ValueError("Power Analysis: Power must be between 0 and 1")
+
+results = []
+
+def calc_power_ttest(n, d, alpha):
+    """Calculate power for independent t-test"""
+    df = 2 * n - 2
+    t_crit = stats.t.ppf(1 - alpha/2, df)
+    ncp = d * np.sqrt(n/2)  # Non-centrality parameter
+    power = 1 - stats.nct.cdf(t_crit, df, ncp) + stats.nct.cdf(-t_crit, df, ncp)
+    return power
+
+def calc_power_anova(n, f, alpha, k):
+    """Calculate power for one-way ANOVA"""
+    df1 = k - 1
+    df2 = k * (n - 1)
+    f_crit = stats.f.ppf(1 - alpha, df1, df2)
+    ncp = f**2 * k * n
+    power = 1 - stats.ncf.cdf(f_crit, df1, df2, ncp)
+    return power
+
+def calc_power_chisq(n, w, alpha, df=1):
+    """Calculate power for chi-square test"""
+    chi2_crit = stats.chi2.ppf(1 - alpha, df)
+    ncp = n * w**2
+    power = 1 - stats.ncx2.cdf(chi2_crit, df, ncp)
+    return power
+
+def calc_power_correlation(n, r, alpha):
+    """Calculate power for correlation test"""
+    # Fisher z transformation
+    z_r = 0.5 * np.log((1 + r) / (1 - r))
+    se = 1 / np.sqrt(n - 3)
+    z_crit = stats.norm.ppf(1 - alpha/2)
+    power = 1 - stats.norm.cdf(z_crit - z_r/se) + stats.norm.cdf(-z_crit - z_r/se)
+    return max(0, min(1, power))
+
+if calculate_for == 'sample_size':
+    # Find required sample size
+    for n in range(5, 10001):
+        if test_type == 't-test':
+            achieved_power = calc_power_ttest(n, effect_size, alpha)
+        elif test_type == 'anova':
+            achieved_power = calc_power_anova(n, effect_size, alpha, groups)
+        elif test_type == 'chi-square':
+            achieved_power = calc_power_chisq(n, effect_size, alpha)
+        elif test_type == 'correlation':
+            achieved_power = calc_power_correlation(n, effect_size, alpha)
+        else:
+            achieved_power = calc_power_ttest(n, effect_size, alpha)
+
+        if achieved_power >= power:
+            break
+
+    results.append({
+        'test_type': test_type,
+        'effect_size': effect_size,
+        'alpha': alpha,
+        'target_power': power,
+        'calculated_for': 'sample_size',
+        'required_sample_size': n,
+        'achieved_power': round(achieved_power, 4),
+        'groups': groups if test_type == 'anova' else 2,
+        'total_n': n * groups if test_type == 'anova' else n * 2 if test_type == 't-test' else n
+    })
+
+elif calculate_for == 'power':
+    # Calculate achieved power
+    if test_type == 't-test':
+        achieved_power = calc_power_ttest(sample_size, effect_size, alpha)
+    elif test_type == 'anova':
+        achieved_power = calc_power_anova(sample_size, effect_size, alpha, groups)
+    elif test_type == 'chi-square':
+        achieved_power = calc_power_chisq(sample_size, effect_size, alpha)
+    elif test_type == 'correlation':
+        achieved_power = calc_power_correlation(sample_size, effect_size, alpha)
+    else:
+        achieved_power = calc_power_ttest(sample_size, effect_size, alpha)
+
+    results.append({
+        'test_type': test_type,
+        'effect_size': effect_size,
+        'alpha': alpha,
+        'sample_size': sample_size,
+        'calculated_for': 'power',
+        'achieved_power': round(achieved_power, 4),
+        'groups': groups if test_type == 'anova' else 2
+    })
+
+elif calculate_for == 'effect_size':
+    # Find detectable effect size
+    for d_test in np.arange(0.01, 3.0, 0.01):
+        if test_type == 't-test':
+            achieved_power = calc_power_ttest(sample_size, d_test, alpha)
+        elif test_type == 'anova':
+            achieved_power = calc_power_anova(sample_size, d_test, alpha, groups)
+        elif test_type == 'chi-square':
+            achieved_power = calc_power_chisq(sample_size, d_test, alpha)
+        elif test_type == 'correlation':
+            achieved_power = calc_power_correlation(sample_size, d_test, alpha)
+        else:
+            achieved_power = calc_power_ttest(sample_size, d_test, alpha)
+
+        if achieved_power >= power:
+            break
+
+    results.append({
+        'test_type': test_type,
+        'sample_size': sample_size,
+        'alpha': alpha,
+        'target_power': power,
+        'calculated_for': 'effect_size',
+        'detectable_effect_size': round(d_test, 4),
+        'achieved_power': round(achieved_power, 4),
+        'groups': groups if test_type == 'anova' else 2
+    })
+
+# Generate power curve data
+power_curve = []
+for n in [10, 20, 30, 50, 75, 100, 150, 200, 300, 500]:
+    if test_type == 't-test':
+        p = calc_power_ttest(n, effect_size, alpha)
+    elif test_type == 'anova':
+        p = calc_power_anova(n, effect_size, alpha, groups)
+    elif test_type == 'chi-square':
+        p = calc_power_chisq(n, effect_size, alpha)
+    elif test_type == 'correlation':
+        p = calc_power_correlation(n, effect_size, alpha)
+    else:
+        p = calc_power_ttest(n, effect_size, alpha)
+
+    power_curve.append({
+        'sample_size_per_group': n,
+        'power': round(p, 4)
+    })
+
+# Combine results
+main_result = results[0]
+for i, pc in enumerate(power_curve):
+    main_result[f'power_at_n{pc["sample_size_per_group"]}'] = pc['power']
+
+output = pd.DataFrame([main_result])
+`,
+  },
+
+  'bayesian-inference': {
+    type: 'bayesian-inference',
+    category: 'analysis',
+    label: 'Bayesian Inference',
+    description: 'Bayesian estimation for common scenarios',
+    icon: 'BarChart2',
+    defaultConfig: {
+      analysisType: 'proportion',
+      column: '',
+      column2: '',
+      priorAlpha: 1,
+      priorBeta: 1,
+      credibleLevel: 0.95,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+analysis_type = config.get('analysisType', 'proportion')
+column = config.get('column', '')
+column2 = config.get('column2', '')
+prior_alpha = config.get('priorAlpha', 1)
+prior_beta = config.get('priorBeta', 1)
+credible_level = config.get('credibleLevel', 0.95)
+
+if not column:
+    raise ValueError("Bayesian Inference: Please specify a column")
+
+if column not in df.columns:
+    raise ValueError(f"Bayesian Inference: Column '{column}' not found")
+
+alpha_level = (1 - credible_level) / 2
+results = []
+
+if analysis_type == 'proportion':
+    # Beta-Binomial model for proportion
+    data = pd.to_numeric(df[column], errors='coerce').dropna()
+
+    # Count successes (values > 0 or == 1)
+    successes = int((data > 0).sum())
+    n = len(data)
+    failures = n - successes
+
+    # Posterior parameters (Beta distribution)
+    post_alpha = prior_alpha + successes
+    post_beta = prior_beta + failures
+
+    # Posterior statistics
+    posterior_mean = post_alpha / (post_alpha + post_beta)
+    posterior_mode = (post_alpha - 1) / (post_alpha + post_beta - 2) if post_alpha > 1 and post_beta > 1 else posterior_mean
+    posterior_var = (post_alpha * post_beta) / ((post_alpha + post_beta)**2 * (post_alpha + post_beta + 1))
+    posterior_std = np.sqrt(posterior_var)
+
+    # Credible interval
+    ci_lower = stats.beta.ppf(alpha_level, post_alpha, post_beta)
+    ci_upper = stats.beta.ppf(1 - alpha_level, post_alpha, post_beta)
+
+    results.append({
+        'analysis_type': 'Proportion (Beta-Binomial)',
+        'column': column,
+        'n': n,
+        'successes': successes,
+        'prior_alpha': prior_alpha,
+        'prior_beta': prior_beta,
+        'posterior_alpha': post_alpha,
+        'posterior_beta': post_beta,
+        'posterior_mean': round(posterior_mean, 6),
+        'posterior_mode': round(posterior_mode, 6),
+        'posterior_std': round(posterior_std, 6),
+        'credible_level': credible_level,
+        'hdi_lower': round(ci_lower, 6),
+        'hdi_upper': round(ci_upper, 6)
+    })
+
+elif analysis_type == 'mean':
+    # Normal model with unknown mean (known variance approximation)
+    data = pd.to_numeric(df[column], errors='coerce').dropna().values
+    n = len(data)
+
+    if n < 2:
+        raise ValueError("Bayesian Inference: Need at least 2 data points")
+
+    sample_mean = np.mean(data)
+    sample_var = np.var(data, ddof=1)
+    sample_std = np.sqrt(sample_var)
+
+    # Using conjugate prior approach
+    # Prior: N(prior_alpha, prior_beta) where prior_alpha=mean, prior_beta=variance
+    prior_mean = prior_alpha
+    prior_var = prior_beta**2 if prior_beta > 0 else sample_var * 10
+
+    # Posterior (normal conjugate)
+    posterior_precision = 1/prior_var + n/sample_var
+    posterior_var = 1/posterior_precision
+    posterior_mean = posterior_var * (prior_mean/prior_var + n*sample_mean/sample_var)
+    posterior_std = np.sqrt(posterior_var)
+
+    # Credible interval
+    ci_lower = stats.norm.ppf(alpha_level, posterior_mean, posterior_std)
+    ci_upper = stats.norm.ppf(1 - alpha_level, posterior_mean, posterior_std)
+
+    results.append({
+        'analysis_type': 'Mean (Normal)',
+        'column': column,
+        'n': n,
+        'sample_mean': round(sample_mean, 6),
+        'sample_std': round(sample_std, 6),
+        'prior_mean': prior_mean,
+        'prior_std': prior_beta,
+        'posterior_mean': round(posterior_mean, 6),
+        'posterior_std': round(posterior_std, 6),
+        'credible_level': credible_level,
+        'hdi_lower': round(ci_lower, 6),
+        'hdi_upper': round(ci_upper, 6)
+    })
+
+elif analysis_type == 'ab-test':
+    # Bayesian A/B test for proportions
+    if not column2 or column2 not in df.columns:
+        raise ValueError("Bayesian Inference: Second column required for A/B test")
+
+    data_a = pd.to_numeric(df[column], errors='coerce').dropna()
+    data_b = pd.to_numeric(df[column2], errors='coerce').dropna()
+
+    # Count successes
+    successes_a = int((data_a > 0).sum())
+    n_a = len(data_a)
+    successes_b = int((data_b > 0).sum())
+    n_b = len(data_b)
+
+    # Posterior parameters
+    alpha_a = prior_alpha + successes_a
+    beta_a = prior_beta + (n_a - successes_a)
+    alpha_b = prior_alpha + successes_b
+    beta_b = prior_beta + (n_b - successes_b)
+
+    # Monte Carlo simulation for P(B > A)
+    np.random.seed(42)
+    n_samples = 10000
+    samples_a = stats.beta.rvs(alpha_a, beta_a, size=n_samples)
+    samples_b = stats.beta.rvs(alpha_b, beta_b, size=n_samples)
+
+    prob_b_greater = np.mean(samples_b > samples_a)
+
+    # Credible interval for difference
+    diff_samples = samples_b - samples_a
+    diff_ci_lower = np.percentile(diff_samples, alpha_level * 100)
+    diff_ci_upper = np.percentile(diff_samples, (1 - alpha_level) * 100)
+
+    # Relative uplift
+    relative_uplift = (np.mean(samples_b) - np.mean(samples_a)) / (np.mean(samples_a) + 1e-10)
+
+    results.append({
+        'analysis_type': 'A/B Test (Beta-Binomial)',
+        'column_a': column,
+        'column_b': column2,
+        'n_a': n_a,
+        'n_b': n_b,
+        'successes_a': successes_a,
+        'successes_b': successes_b,
+        'conversion_rate_a': round(successes_a / n_a, 6),
+        'conversion_rate_b': round(successes_b / n_b, 6),
+        'posterior_mean_a': round(alpha_a / (alpha_a + beta_a), 6),
+        'posterior_mean_b': round(alpha_b / (alpha_b + beta_b), 6),
+        'prob_b_greater_than_a': round(prob_b_greater, 6),
+        'expected_uplift': round(np.mean(diff_samples), 6),
+        'relative_uplift_pct': round(relative_uplift * 100, 2),
+        'credible_level': credible_level,
+        'diff_hdi_lower': round(diff_ci_lower, 6),
+        'diff_hdi_upper': round(diff_ci_upper, 6),
+        'recommendation': 'B is better' if prob_b_greater > 0.95 else ('A is better' if prob_b_greater < 0.05 else 'Inconclusive')
+    })
+
+output = pd.DataFrame(results)
+`,
+  },
+
+  'data-quality-score': {
+    type: 'data-quality-score',
+    category: 'analysis',
+    label: 'Data Quality Score',
+    description: 'Comprehensive data quality assessment',
+    icon: 'CheckCircle',
+    defaultConfig: {
+      columns: [],
+      completenessWeight: 0.3,
+      validityWeight: 0.3,
+      uniquenessWeight: 0.2,
+      consistencyWeight: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+completeness_weight = config.get('completenessWeight', 0.3)
+validity_weight = config.get('validityWeight', 0.3)
+uniqueness_weight = config.get('uniquenessWeight', 0.2)
+consistency_weight = config.get('consistencyWeight', 0.2)
+
+# Use all columns if none specified
+if not columns or len(columns) == 0:
+    columns = df.columns.tolist()
+
+# Validate columns exist
+valid_columns = [c for c in columns if c in df.columns]
+if not valid_columns:
+    raise ValueError("Data Quality Score: No valid columns found")
+
+results = []
+issues = []
+
+for col in valid_columns:
+    col_data = df[col]
+    n_total = len(col_data)
+
+    # 1. Completeness: % of non-null values
+    n_missing = col_data.isnull().sum()
+    completeness = (n_total - n_missing) / n_total * 100
+
+    if n_missing > 0:
+        missing_rows = df[col_data.isnull()].index.tolist()[:5]
+        issues.append({
+            'column': col,
+            'issue_type': 'Missing Values',
+            'severity': 'high' if n_missing / n_total > 0.1 else 'medium',
+            'count': int(n_missing),
+            'percentage': round(n_missing / n_total * 100, 2),
+            'sample_rows': str(missing_rows)
+        })
+
+    # 2. Validity: check data types and patterns
+    validity = 100.0
+    n_invalid = 0
+
+    # Try to detect data type issues
+    if col_data.dtype == 'object':
+        # Check for mixed types
+        non_null = col_data.dropna()
+        if len(non_null) > 0:
+            # Check if should be numeric
+            numeric_count = pd.to_numeric(non_null, errors='coerce').notna().sum()
+            if numeric_count > 0 and numeric_count < len(non_null):
+                n_invalid = len(non_null) - numeric_count
+                validity = (len(non_null) - n_invalid) / len(non_null) * 100
+                issues.append({
+                    'column': col,
+                    'issue_type': 'Mixed Data Types',
+                    'severity': 'medium',
+                    'count': int(n_invalid),
+                    'percentage': round(n_invalid / n_total * 100, 2),
+                    'sample_rows': ''
+                })
+    else:
+        # For numeric columns, check for infinities
+        if np.issubdtype(col_data.dtype, np.number):
+            n_inf = np.isinf(col_data.dropna()).sum()
+            if n_inf > 0:
+                validity = (n_total - n_inf) / n_total * 100
+                issues.append({
+                    'column': col,
+                    'issue_type': 'Infinite Values',
+                    'severity': 'high',
+                    'count': int(n_inf),
+                    'percentage': round(n_inf / n_total * 100, 2),
+                    'sample_rows': ''
+                })
+
+    # 3. Uniqueness: % of unique values (for detecting duplicates)
+    n_unique = col_data.nunique()
+    uniqueness = n_unique / n_total * 100
+
+    # Check for potential ID columns with duplicates
+    if uniqueness > 90 and uniqueness < 100 and n_total > 10:
+        n_duplicates = n_total - n_unique
+        duplicate_values = col_data[col_data.duplicated()].head(3).tolist()
+        issues.append({
+            'column': col,
+            'issue_type': 'Duplicate Values',
+            'severity': 'low',
+            'count': int(n_duplicates),
+            'percentage': round(n_duplicates / n_total * 100, 2),
+            'sample_rows': str(duplicate_values)
+        })
+
+    # 4. Consistency: check for outliers and inconsistent patterns
+    consistency = 100.0
+    n_outliers = 0
+
+    if np.issubdtype(col_data.dtype, np.number):
+        # Use IQR method for outlier detection
+        q1 = col_data.quantile(0.25)
+        q3 = col_data.quantile(0.75)
+        iqr = q3 - q1
+        lower = q1 - 1.5 * iqr
+        upper = q3 + 1.5 * iqr
+        n_outliers = ((col_data < lower) | (col_data > upper)).sum()
+
+        if n_outliers > 0:
+            consistency = (n_total - n_outliers) / n_total * 100
+            outlier_rows = df[(col_data < lower) | (col_data > upper)].index.tolist()[:5]
+            issues.append({
+                'column': col,
+                'issue_type': 'Statistical Outliers',
+                'severity': 'low' if n_outliers / n_total < 0.05 else 'medium',
+                'count': int(n_outliers),
+                'percentage': round(n_outliers / n_total * 100, 2),
+                'sample_rows': str(outlier_rows)
+            })
+
+    # Calculate weighted score for this column
+    col_score = (
+        completeness * completeness_weight +
+        validity * validity_weight +
+        uniqueness * uniqueness_weight +
+        consistency * consistency_weight
+    ) / (completeness_weight + validity_weight + uniqueness_weight + consistency_weight)
+
+    results.append({
+        'column': col,
+        'completeness_score': round(completeness, 2),
+        'validity_score': round(validity, 2),
+        'uniqueness_score': round(uniqueness, 2),
+        'consistency_score': round(consistency, 2),
+        'overall_score': round(col_score, 2),
+        'n_missing': int(n_missing),
+        'n_unique': int(n_unique),
+        'n_outliers': int(n_outliers)
+    })
+
+# Calculate overall data quality score
+if results:
+    overall_score = np.mean([r['overall_score'] for r in results])
+
+    # Add summary row
+    results.insert(0, {
+        'column': '*** OVERALL ***',
+        'completeness_score': round(np.mean([r['completeness_score'] for r in results[1:]]), 2) if len(results) > 1 else 0,
+        'validity_score': round(np.mean([r['validity_score'] for r in results[1:]]), 2) if len(results) > 1 else 0,
+        'uniqueness_score': round(np.mean([r['uniqueness_score'] for r in results[1:]]), 2) if len(results) > 1 else 0,
+        'consistency_score': round(np.mean([r['consistency_score'] for r in results[1:]]), 2) if len(results) > 1 else 0,
+        'overall_score': round(overall_score, 2),
+        'n_missing': sum(r['n_missing'] for r in results[1:]) if len(results) > 1 else 0,
+        'n_unique': '',
+        'n_outliers': sum(r['n_outliers'] for r in results[1:]) if len(results) > 1 else 0
+    })
+
+# Convert issues to dataframe and append
+if issues:
+    issues_df = pd.DataFrame(issues)
+    results_df = pd.DataFrame(results)
+    output = pd.concat([results_df, pd.DataFrame([{'column': '--- ISSUES ---'}]), issues_df], ignore_index=True)
+else:
+    output = pd.DataFrame(results)
+`,
+  },
+
+  'changepoint-detection': {
+    type: 'changepoint-detection',
+    category: 'analysis',
+    label: 'Change Point Detection',
+    description: 'Detect structural breaks in time series',
+    icon: 'GitCommit',
+    defaultConfig: {
+      valueColumn: '',
+      dateColumn: '',
+      method: 'cusum',
+      minSegmentSize: 10,
+      maxChangePoints: 5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+value_column = config.get('valueColumn', '')
+date_column = config.get('dateColumn', '')
+method = config.get('method', 'cusum')
+min_segment_size = int(config.get('minSegmentSize', 10))
+max_changepoints = int(config.get('maxChangePoints', 5))
+
+if not value_column:
+    raise ValueError("Change Point Detection: Please specify a value column")
+
+if value_column not in df.columns:
+    raise ValueError(f"Change Point Detection: Column '{value_column}' not found")
+
+# Sort by date if provided
+if date_column and date_column in df.columns:
+    df = df.sort_values(date_column).reset_index(drop=True)
+
+# Get values
+values = pd.to_numeric(df[value_column], errors='coerce').dropna().values
+n = len(values)
+
+if n < 2 * min_segment_size:
+    raise ValueError(f"Change Point Detection: Need at least {2 * min_segment_size} data points")
+
+changepoints = []
+
+if method == 'cusum':
+    # CUSUM (Cumulative Sum) method
+    mean = np.mean(values)
+    std = np.std(values, ddof=1)
+
+    # Calculate CUSUM
+    cusum_pos = np.zeros(n)
+    cusum_neg = np.zeros(n)
+
+    for i in range(1, n):
+        cusum_pos[i] = max(0, cusum_pos[i-1] + (values[i] - mean) / std - 0.5)
+        cusum_neg[i] = max(0, cusum_neg[i-1] - (values[i] - mean) / std - 0.5)
+
+    # Detect changepoints where CUSUM exceeds threshold
+    threshold = 4.0  # Typical threshold
+
+    # Find peaks in CUSUM
+    for i in range(min_segment_size, n - min_segment_size):
+        if cusum_pos[i] > threshold or cusum_neg[i] > threshold:
+            # Check if this is a local maximum
+            is_max = True
+            for j in range(max(0, i-5), min(n, i+6)):
+                if j != i:
+                    if cusum_pos[i] <= cusum_pos[j] or cusum_neg[i] <= cusum_neg[j]:
+                        is_max = False
+                        break
+
+            if is_max and len(changepoints) < max_changepoints:
+                # Reset CUSUM after detection
+                score = max(cusum_pos[i], cusum_neg[i])
+                changepoints.append((i, score))
+                cusum_pos[i:] = 0
+                cusum_neg[i:] = 0
+
+elif method == 'pelt':
+    # Pruned Exact Linear Time (PELT) - simplified version
+    # Using binary segmentation as approximation
+
+    def segment_cost(start, end):
+        if end - start < 2:
+            return float('inf')
+        segment = values[start:end]
+        return np.sum((segment - np.mean(segment))**2)
+
+    def find_best_split(start, end):
+        if end - start < 2 * min_segment_size:
+            return None, float('inf')
+
+        best_pos = None
+        best_gain = 0
+
+        base_cost = segment_cost(start, end)
+
+        for i in range(start + min_segment_size, end - min_segment_size + 1):
+            split_cost = segment_cost(start, i) + segment_cost(i, end)
+            gain = base_cost - split_cost
+
+            if gain > best_gain:
+                best_gain = gain
+                best_pos = i
+
+        return best_pos, best_gain
+
+    # Iteratively find changepoints
+    segments = [(0, n)]
+
+    while len(changepoints) < max_changepoints and segments:
+        best_segment = None
+        best_split = None
+        best_gain = 0
+
+        for seg in segments:
+            pos, gain = find_best_split(seg[0], seg[1])
+            if pos is not None and gain > best_gain:
+                best_segment = seg
+                best_split = pos
+                best_gain = gain
+
+        if best_split is None or best_gain < 0.01 * np.var(values) * n:
+            break
+
+        segments.remove(best_segment)
+        segments.append((best_segment[0], best_split))
+        segments.append((best_split, best_segment[1]))
+
+        changepoints.append((best_split, best_gain))
+
+elif method == 'binary':
+    # Binary Segmentation
+    def segment_mean_diff(pos):
+        if pos < min_segment_size or n - pos < min_segment_size:
+            return 0
+        before = values[:pos]
+        after = values[pos:]
+        return abs(np.mean(before) - np.mean(after))
+
+    candidates = []
+    for i in range(min_segment_size, n - min_segment_size):
+        diff = segment_mean_diff(i)
+        if diff > 0:
+            candidates.append((i, diff))
+
+    # Sort by difference and select top changepoints
+    candidates.sort(key=lambda x: x[1], reverse=True)
+
+    for pos, score in candidates[:max_changepoints]:
+        # Verify statistical significance
+        before = values[:pos]
+        after = values[pos:]
+        t_stat, p_value = stats.ttest_ind(before, after)
+
+        if p_value < 0.05:
+            changepoints.append((pos, score))
+
+# Sort changepoints by position
+changepoints.sort(key=lambda x: x[0])
+
+# Build results
+results = []
+prev_end = 0
+
+for i, (pos, score) in enumerate(changepoints):
+    # Statistics before changepoint
+    before_start = prev_end
+    before_segment = values[before_start:pos]
+
+    # Statistics after changepoint
+    after_end = changepoints[i+1][0] if i+1 < len(changepoints) else n
+    after_segment = values[pos:after_end]
+
+    # Get date if available
+    date_val = ''
+    if date_column and date_column in df.columns:
+        date_val = str(df.iloc[pos][date_column])
+
+    results.append({
+        'changepoint_index': pos,
+        'date': date_val,
+        'method': method,
+        'confidence_score': round(score, 4),
+        'mean_before': round(np.mean(before_segment), 4),
+        'mean_after': round(np.mean(after_segment), 4),
+        'std_before': round(np.std(before_segment, ddof=1), 4),
+        'std_after': round(np.std(after_segment, ddof=1), 4),
+        'change_magnitude': round(np.mean(after_segment) - np.mean(before_segment), 4),
+        'change_pct': round((np.mean(after_segment) - np.mean(before_segment)) / (abs(np.mean(before_segment)) + 1e-10) * 100, 2),
+        'segment_before_size': len(before_segment),
+        'segment_after_size': len(after_segment)
+    })
+
+    prev_end = pos
+
+if not results:
+    results.append({
+        'changepoint_index': 'No changepoints detected',
+        'date': '',
+        'method': method,
+        'confidence_score': 0,
+        'mean_before': round(np.mean(values), 4),
+        'mean_after': round(np.mean(values), 4),
+        'std_before': round(np.std(values, ddof=1), 4),
+        'std_after': round(np.std(values, ddof=1), 4),
+        'change_magnitude': 0,
+        'change_pct': 0,
+        'segment_before_size': n,
+        'segment_after_size': 0
+    })
+
+output = pd.DataFrame(results)
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -6412,6 +7446,12 @@ export const blockCategories = [
       'attribution-modeling',
       'breakeven-analysis',
       'confidence-intervals',
+      'bootstrap-analysis',
+      'posthoc-tests',
+      'power-analysis',
+      'bayesian-inference',
+      'data-quality-score',
+      'changepoint-detection',
     ] as BlockType[],
   },
   {
