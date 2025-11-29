@@ -3608,6 +3608,501 @@ function renderConfigFields(
         </div>
       );
 
+    case 'datetime-extract': {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Date Column
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Extract Components
+            </label>
+            <div className="space-y-2 bg-bg-tertiary rounded-lg p-3">
+              {[
+                { key: 'extractYear', label: 'Year' },
+                { key: 'extractMonth', label: 'Month' },
+                { key: 'extractDay', label: 'Day' },
+                { key: 'extractWeekday', label: 'Weekday (0=Mon, 6=Sun)' },
+                { key: 'extractHour', label: 'Hour' },
+                { key: 'extractMinute', label: 'Minute' },
+              ].map(({ key, label }) => (
+                <label key={key} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={(config[key] as boolean) ?? (key === 'extractYear' || key === 'extractMonth' || key === 'extractDay' || key === 'extractWeekday')}
+                    onChange={(e) => onChange(key, e.target.checked)}
+                    className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                  />
+                  <span className="text-small text-text-primary">{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Input
+            label="Column Prefix (optional)"
+            value={(config.prefix as string) || ''}
+            onChange={(e) => onChange('prefix', e.target.value)}
+            placeholder="e.g., date"
+          />
+
+          <p className="text-small text-text-muted">
+            Extracts date/time components from a datetime column into new columns.
+          </p>
+        </div>
+      );
+    }
+
+    case 'string-operations': {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Column
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Operation
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.operation as string) || 'lower'}
+              onChange={(e) => onChange('operation', e.target.value)}
+            >
+              <option value="lower">Lowercase</option>
+              <option value="upper">Uppercase</option>
+              <option value="title">Title Case</option>
+              <option value="strip">Trim Whitespace</option>
+              <option value="replace">Replace Text</option>
+              <option value="replace_regex">Replace (Regex)</option>
+              <option value="extract">Extract (Regex)</option>
+              <option value="len">String Length</option>
+              <option value="split_first">Split (First Part)</option>
+              <option value="split_last">Split (Last Part)</option>
+            </select>
+          </div>
+
+          {['replace', 'replace_regex', 'extract', 'split_first', 'split_last'].includes(config.operation as string) && (
+            <Input
+              label={config.operation === 'extract' ? 'Regex Pattern' : config.operation?.toString().includes('split') ? 'Delimiter' : 'Find'}
+              value={(config.pattern as string) || ''}
+              onChange={(e) => onChange('pattern', e.target.value)}
+              placeholder={config.operation === 'extract' ? 'e.g., \\d+' : config.operation?.toString().includes('split') ? 'e.g., ,' : 'Text to find'}
+            />
+          )}
+
+          {['replace', 'replace_regex'].includes(config.operation as string) && (
+            <Input
+              label="Replace With"
+              value={(config.replacement as string) || ''}
+              onChange={(e) => onChange('replacement', e.target.value)}
+              placeholder="Replacement text"
+            />
+          )}
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty to modify in place"
+          />
+        </div>
+      );
+    }
+
+    case 'window-functions': {
+      const windowGroupBy = (config.groupBy as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Column
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Operation
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.operation as string) || 'rolling_mean'}
+              onChange={(e) => onChange('operation', e.target.value)}
+            >
+              <optgroup label="Rolling Window">
+                <option value="rolling_mean">Rolling Mean</option>
+                <option value="rolling_sum">Rolling Sum</option>
+                <option value="rolling_min">Rolling Min</option>
+                <option value="rolling_max">Rolling Max</option>
+                <option value="rolling_std">Rolling Std Dev</option>
+              </optgroup>
+              <optgroup label="Cumulative">
+                <option value="cumsum">Cumulative Sum</option>
+                <option value="cumprod">Cumulative Product</option>
+                <option value="cummax">Cumulative Max</option>
+                <option value="cummin">Cumulative Min</option>
+              </optgroup>
+              <optgroup label="Lag/Lead">
+                <option value="shift">Lag (Previous Values)</option>
+                <option value="shift_back">Lead (Future Values)</option>
+                <option value="diff">Difference</option>
+                <option value="pct_change">Percent Change</option>
+              </optgroup>
+            </select>
+          </div>
+
+          {['rolling_mean', 'rolling_sum', 'rolling_min', 'rolling_max', 'rolling_std', 'shift', 'shift_back', 'diff', 'pct_change'].includes(config.operation as string) && (
+            <Input
+              label="Window Size / Periods"
+              type="number"
+              value={(config.windowSize as number) || 3}
+              onChange={(e) => onChange('windowSize', parseInt(e.target.value) || 3)}
+              min={1}
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Group By (optional)
+            </label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={windowGroupBy.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked
+                          ? [...windowGroupBy, col]
+                          : windowGroupBy.filter((c) => c !== col);
+                        onChange('groupBy', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">
+                Run pipeline to see columns
+              </p>
+            )}
+          </div>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Auto-generated if empty"
+          />
+        </div>
+      );
+    }
+
+    case 'bin-bucket': {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Column
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Binning Method
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.method as string) || 'equal_width'}
+              onChange={(e) => onChange('method', e.target.value)}
+            >
+              <option value="equal_width">Equal Width (pd.cut)</option>
+              <option value="equal_freq">Equal Frequency (pd.qcut)</option>
+            </select>
+          </div>
+
+          <Input
+            label="Number of Bins"
+            type="number"
+            value={(config.bins as number) || 5}
+            onChange={(e) => onChange('bins', parseInt(e.target.value) || 5)}
+            min={2}
+          />
+
+          <Input
+            label="Labels (optional, comma-separated)"
+            value={(config.labels as string) || ''}
+            onChange={(e) => onChange('labels', e.target.value)}
+            placeholder="e.g., Low, Medium, High"
+          />
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Auto-generated if empty"
+          />
+
+          <p className="text-small text-text-muted">
+            Equal Width: bins have same range. Equal Frequency: bins have same count.
+          </p>
+        </div>
+      );
+    }
+
+    case 'rank': {
+      const rankGroupBy = (config.groupBy as string[]) || [];
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Column to Rank
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Rank Method
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.method as string) || 'average'}
+              onChange={(e) => onChange('method', e.target.value)}
+            >
+              <option value="average">Average (ties get average rank)</option>
+              <option value="min">Min (ties get lowest rank)</option>
+              <option value="max">Max (ties get highest rank)</option>
+              <option value="first">First (ties ranked by order)</option>
+              <option value="dense">Dense (no gaps in ranking)</option>
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.ascending as boolean) !== false}
+              onChange={(e) => onChange('ascending', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <span className="text-small text-text-primary">Ascending (lowest value = rank 1)</span>
+          </label>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Group By (optional)
+            </label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                    <input
+                      type="checkbox"
+                      checked={rankGroupBy.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked
+                          ? [...rankGroupBy, col]
+                          : rankGroupBy.filter((c) => c !== col);
+                        onChange('groupBy', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">
+                Run pipeline to see columns
+              </p>
+            )}
+          </div>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Auto-generated if empty"
+          />
+        </div>
+      );
+    }
+
+    case 'type-conversion': {
+      return (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Column
+            </label>
+            {availableColumns.length > 0 ? (
+              <select
+                className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+              >
+                <option value="">Select column</option>
+                {availableColumns.map((col) => (
+                  <option key={col} value={col}>{col}</option>
+                ))}
+              </select>
+            ) : (
+              <Input
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Column name"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Convert To
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.targetType as string) || 'numeric'}
+              onChange={(e) => onChange('targetType', e.target.value)}
+            >
+              <option value="numeric">Numeric (auto)</option>
+              <option value="integer">Integer</option>
+              <option value="float">Float</option>
+              <option value="string">String</option>
+              <option value="datetime">Date/Time</option>
+              <option value="boolean">Boolean</option>
+              <option value="category">Category</option>
+            </select>
+          </div>
+
+          {(config.targetType as string) === 'datetime' && (
+            <Input
+              label="Date Format (optional)"
+              value={(config.dateFormat as string) || ''}
+              onChange={(e) => onChange('dateFormat', e.target.value)}
+              placeholder="e.g., %Y-%m-%d or %d/%m/%Y"
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Error Handling
+            </label>
+            <select
+              className="w-full px-3 py-2 bg-bg-tertiary border border-border-default rounded-lg text-text-primary text-small focus:outline-none focus:ring-2 focus:ring-electric-indigo/50"
+              value={(config.errors as string) || 'coerce'}
+              onChange={(e) => onChange('errors', e.target.value)}
+            >
+              <option value="coerce">Coerce (invalid becomes NaN)</option>
+              <option value="raise">Raise (stop on error)</option>
+              <option value="ignore">Ignore (keep original)</option>
+            </select>
+          </div>
+
+          <p className="text-small text-text-muted">
+            Converts the column data type. Handles comma-formatted numbers automatically.
+          </p>
+        </div>
+      );
+    }
+
     default:
       return (
         <p className="text-small text-text-muted">
