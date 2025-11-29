@@ -35,12 +35,6 @@ export type BlockType =
   | 'split-column'
   | 'merge-columns'
   | 'conditional-column'
-  | 'datetime-extract'
-  | 'string-operations'
-  | 'window-functions'
-  | 'bin-bucket'
-  | 'rank'
-  | 'type-conversion'
   // Analysis
   | 'statistics'
   | 'regression'
