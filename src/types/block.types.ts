@@ -89,6 +89,12 @@ export type BlockType =
   | 'tfidf-vectorization'
   | 'topic-modeling'
   | 'similarity-analysis'
+  | 'svm'
+  | 'xgboost'
+  | 'model-explainability'
+  | 'regression-diagnostics'
+  | 'vif-analysis'
+  | 'funnel-analysis'
   // Visualization
   | 'chart'
   | 'table'
