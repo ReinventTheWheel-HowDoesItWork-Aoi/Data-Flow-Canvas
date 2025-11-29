@@ -72,6 +72,13 @@ import {
   BarChart,
   Medal,
   RefreshCw,
+  ArrowLeftRight,
+  MoveHorizontal,
+  CalendarRange,
+  FlipHorizontal,
+  AlignJustify,
+  Link as LinkIcon,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -88,7 +95,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (23 blocks)
+  // Transform (30 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -112,8 +119,15 @@ const blocks: BlockInfo[] = [
   { icon: BarChart, name: 'Bin/Bucket', description: 'Group numbers into ranges (equal width, frequency, custom)', category: 'Transform' },
   { icon: Medal, name: 'Rank', description: 'Assign rank positions with optional grouping', category: 'Transform' },
   { icon: RefreshCw, name: 'Type Conversion', description: 'Convert column types (string, int, float, datetime)', category: 'Transform' },
+  { icon: ArrowLeftRight, name: 'Fill Forward/Backward', description: 'Fill missing values with previous or next values', category: 'Transform' },
+  { icon: MoveHorizontal, name: 'Lag/Lead', description: 'Create columns with shifted values (lag or lead)', category: 'Transform' },
+  { icon: Hash, name: 'Row Number', description: 'Add a unique row number column', category: 'Transform' },
+  { icon: CalendarRange, name: 'Date Difference', description: 'Calculate difference between two date columns', category: 'Transform' },
+  { icon: FlipHorizontal, name: 'Transpose', description: 'Flip rows and columns', category: 'Transform' },
+  { icon: AlignJustify, name: 'String Pad', description: 'Pad strings to a fixed length with specified character', category: 'Transform' },
+  { icon: TrendingUp, name: 'Cumulative Operations', description: 'Calculate running totals, cumulative counts, and percentages', category: 'Transform' },
 
-  // Analysis (19 blocks)
+  // Analysis (26 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -133,6 +147,13 @@ const blocks: BlockInfo[] = [
   { icon: FlaskConical, name: 'A/B Test Analysis', description: 'Statistical analysis for A/B experiments with lift and significance', category: 'Analysis' },
   { icon: Users, name: 'Cohort Analysis', description: 'Analyze user retention and behavior by cohort over time', category: 'Analysis' },
   { icon: Target, name: 'RFM Analysis', description: 'Segment customers by Recency, Frequency, Monetary value', category: 'Analysis' },
+  { icon: FlaskConical, name: 'ANOVA', description: 'Analysis of variance to compare means across groups', category: 'Analysis' },
+  { icon: Grid3x3, name: 'Chi-Square Test', description: 'Test independence between categorical variables', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Correlation Analysis', description: 'Calculate correlation coefficients with statistical significance', category: 'Analysis' },
+  { icon: Activity, name: 'Survival Analysis', description: 'Kaplan-Meier survival analysis for time-to-event data', category: 'Analysis' },
+  { icon: LinkIcon, name: 'Association Rules', description: 'Find item associations using Apriori algorithm', category: 'Analysis' },
+  { icon: MessageSquare, name: 'Sentiment Analysis', description: 'Analyze text sentiment (positive, negative, neutral)', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Moving Average', description: 'Calculate simple, exponential, or weighted moving averages', category: 'Analysis' },
 
   // Visualization (11 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -233,6 +254,13 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Bin/Bucket': { name: 'blocks.binBucket', description: 'blockDescriptions.binBucket' },
   'Rank': { name: 'blocks.rank', description: 'blockDescriptions.rank' },
   'Type Conversion': { name: 'blocks.typeConversion', description: 'blockDescriptions.typeConversion' },
+  'Fill Forward/Backward': { name: 'blocks.fillForwardBackward', description: 'blockDescriptions.fillForwardBackward' },
+  'Lag/Lead': { name: 'blocks.lagLead', description: 'blockDescriptions.lagLead' },
+  'Row Number': { name: 'blocks.rowNumber', description: 'blockDescriptions.rowNumber' },
+  'Date Difference': { name: 'blocks.dateDifference', description: 'blockDescriptions.dateDifference' },
+  'Transpose': { name: 'blocks.transpose', description: 'blockDescriptions.transpose' },
+  'String Pad': { name: 'blocks.stringPad', description: 'blockDescriptions.stringPad' },
+  'Cumulative Operations': { name: 'blocks.cumulativeOperations', description: 'blockDescriptions.cumulativeOperations' },
   'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
   'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
   'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
@@ -252,6 +280,13 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'A/B Test Analysis': { name: 'blocks.abTest', description: 'blockDescriptions.abTest' },
   'Cohort Analysis': { name: 'blocks.cohortAnalysis', description: 'blockDescriptions.cohortAnalysis' },
   'RFM Analysis': { name: 'blocks.rfmAnalysis', description: 'blockDescriptions.rfmAnalysis' },
+  'ANOVA': { name: 'blocks.anova', description: 'blockDescriptions.anova' },
+  'Chi-Square Test': { name: 'blocks.chiSquareTest', description: 'blockDescriptions.chiSquareTest' },
+  'Correlation Analysis': { name: 'blocks.correlationAnalysis', description: 'blockDescriptions.correlationAnalysis' },
+  'Survival Analysis': { name: 'blocks.survivalAnalysis', description: 'blockDescriptions.survivalAnalysis' },
+  'Association Rules': { name: 'blocks.associationRules', description: 'blockDescriptions.associationRules' },
+  'Sentiment Analysis': { name: 'blocks.sentimentAnalysis', description: 'blockDescriptions.sentimentAnalysis' },
+  'Moving Average': { name: 'blocks.movingAverage', description: 'blockDescriptions.movingAverage' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -370,7 +405,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">57</p>
+                <p className="text-h2 font-bold text-text-primary">71</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
