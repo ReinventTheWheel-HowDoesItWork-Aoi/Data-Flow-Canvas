@@ -3,7 +3,7 @@
  * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
  */
 
-import { useCallback, useRef, DragEvent, useState } from 'react';
+import { useCallback, useRef, useEffect, DragEvent, MouseEvent } from 'react';
 import {
   ReactFlow,
   Background,
@@ -20,8 +20,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useCanvasStore } from '@/stores/canvasStore';
+import { useCollaboration } from '@/hooks/useCollaboration';
 import { BaseBlock } from '@/components/blocks/BaseBlock';
 import { AnimatedEdge } from './AnimatedEdge';
+import { CollaboratorCursors } from '@/components/collaboration';
 import { cn } from '@/lib/utils/cn';
 import type { BlockType, BlockData, PipelineBlock, PipelineEdge } from '@/types';
 
@@ -48,6 +50,96 @@ export function Canvas() {
   const addEdgeToStore = useCanvasStore((state) => state.addEdge);
   const setViewport = useCanvasStore((state) => state.setViewport);
   const addBlock = useCanvasStore((state) => state.addBlock);
+
+  // Collaboration hook
+  const {
+    isConnected,
+    remoteCursors,
+    updateCursor,
+    broadcastBlockAdd,
+    broadcastBlockUpdate,
+    broadcastBlockDelete,
+    broadcastEdgeAdd,
+    broadcastEdgeDelete,
+  } = useCollaboration();
+
+  // Track previous blocks/edges to detect changes
+  const prevBlocksRef = useRef<PipelineBlock[]>(blocks);
+  const prevEdgesRef = useRef<PipelineEdge[]>(edges);
+
+  // Detect and broadcast block changes
+  useEffect(() => {
+    if (!isConnected) {
+      prevBlocksRef.current = blocks;
+      return;
+    }
+
+    const prevBlocks = prevBlocksRef.current;
+    const prevBlockIds = new Set(prevBlocks.map((b) => b.id));
+    const currentBlockIds = new Set(blocks.map((b) => b.id));
+
+    // Detect added blocks
+    blocks.forEach((block) => {
+      if (!prevBlockIds.has(block.id)) {
+        broadcastBlockAdd(block);
+      }
+    });
+
+    // Detect removed blocks
+    prevBlocks.forEach((block) => {
+      if (!currentBlockIds.has(block.id)) {
+        broadcastBlockDelete(block.id);
+      }
+    });
+
+    // Detect updated blocks (position or data changes)
+    blocks.forEach((block) => {
+      const prevBlock = prevBlocks.find((b) => b.id === block.id);
+      if (prevBlock) {
+        const posChanged =
+          prevBlock.position.x !== block.position.x ||
+          prevBlock.position.y !== block.position.y;
+        const dataChanged = JSON.stringify(prevBlock.data) !== JSON.stringify(block.data);
+
+        if (posChanged || dataChanged) {
+          broadcastBlockUpdate(block.id, {
+            position: block.position,
+            data: block.data,
+          });
+        }
+      }
+    });
+
+    prevBlocksRef.current = blocks;
+  }, [blocks, isConnected, broadcastBlockAdd, broadcastBlockDelete, broadcastBlockUpdate]);
+
+  // Detect and broadcast edge changes
+  useEffect(() => {
+    if (!isConnected) {
+      prevEdgesRef.current = edges;
+      return;
+    }
+
+    const prevEdges = prevEdgesRef.current;
+    const prevEdgeIds = new Set(prevEdges.map((e) => e.id));
+    const currentEdgeIds = new Set(edges.map((e) => e.id));
+
+    // Detect added edges
+    edges.forEach((edge) => {
+      if (!prevEdgeIds.has(edge.id)) {
+        broadcastEdgeAdd(edge);
+      }
+    });
+
+    // Detect removed edges
+    prevEdges.forEach((edge) => {
+      if (!currentEdgeIds.has(edge.id)) {
+        broadcastEdgeDelete(edge.id);
+      }
+    });
+
+    prevEdgesRef.current = edges;
+  }, [edges, isConnected, broadcastEdgeAdd, broadcastEdgeDelete]);
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -125,12 +217,27 @@ export function Canvas() {
     [addBlock, screenToFlowPosition]
   );
 
+  // Track mouse movement for cursor collaboration
+  const onMouseMove = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (!isConnected || !reactFlowWrapper.current) return;
+
+      const bounds = reactFlowWrapper.current.getBoundingClientRect();
+      const x = event.clientX - bounds.left;
+      const y = event.clientY - bounds.top;
+
+      updateCursor(x, y);
+    },
+    [isConnected, updateCursor]
+  );
+
   return (
     <div
       ref={reactFlowWrapper}
-      className="w-full h-full"
+      className="w-full h-full relative"
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onMouseMove={onMouseMove}
     >
       <ReactFlow
         nodes={blocks}
@@ -184,6 +291,9 @@ export function Canvas() {
           maskColor="rgb(var(--color-bg-primary) / 0.8)"
         />
       </ReactFlow>
+
+      {/* Remote collaborator cursors */}
+      {isConnected && <CollaboratorCursors cursors={remoteCursors} />}
     </div>
   );
 }
