@@ -141,6 +141,60 @@ export function BlockBody({ type, data }: BlockBodyProps) {
           </div>
         );
 
+      case 'datetime-extract':
+        return (
+          <div className="text-small text-text-muted">
+            {config.column
+              ? `${config.column}: ${((config.extractions as string[]) || []).length} parts`
+              : 'Select date column'}
+          </div>
+        );
+
+      case 'string-operations':
+        return (
+          <div className="text-small text-text-muted capitalize">
+            {config.column
+              ? `${(config.operation as string)?.replace('_', ' ') || 'lowercase'}`
+              : 'Configure operation'}
+          </div>
+        );
+
+      case 'window-functions':
+        return (
+          <div className="text-small text-text-muted">
+            {config.column
+              ? `${(config.operation as string)?.replace('_', ' ') || 'rolling mean'}`
+              : 'Configure window'}
+          </div>
+        );
+
+      case 'bin-bucket':
+        return (
+          <div className="text-small text-text-muted">
+            {config.column
+              ? `${config.numBins || 5} bins (${(config.method as string)?.replace('_', ' ') || 'equal width'})`
+              : 'Configure bins'}
+          </div>
+        );
+
+      case 'rank':
+        return (
+          <div className="text-small text-text-muted">
+            {config.column
+              ? `${config.method || 'average'} rank`
+              : 'Configure ranking'}
+          </div>
+        );
+
+      case 'type-conversion':
+        return (
+          <div className="text-small text-text-muted">
+            {config.column
+              ? `→ ${(config.targetType as string) || 'string'}`
+              : 'Configure conversion'}
+          </div>
+        );
+
       default:
         return null;
     }
