@@ -48,6 +48,12 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'split-column': 'blocks.splitColumn',
   'merge-columns': 'blocks.mergeColumns',
   'conditional-column': 'blocks.conditionalColumn',
+  'datetime-extract': 'blocks.datetimeExtract',
+  'string-operations': 'blocks.stringOperations',
+  'window-functions': 'blocks.windowFunctions',
+  'bin-bucket': 'blocks.binBucket',
+  'rank': 'blocks.rank',
+  'type-conversion': 'blocks.typeConversion',
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
   'clustering': 'blocks.clustering',
@@ -103,6 +109,12 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'split-column': 'blockDescriptions.splitColumn',
   'merge-columns': 'blockDescriptions.mergeColumns',
   'conditional-column': 'blockDescriptions.conditionalColumn',
+  'datetime-extract': 'blockDescriptions.datetimeExtract',
+  'string-operations': 'blockDescriptions.stringOperations',
+  'window-functions': 'blockDescriptions.windowFunctions',
+  'bin-bucket': 'blockDescriptions.binBucket',
+  'rank': 'blockDescriptions.rank',
+  'type-conversion': 'blockDescriptions.typeConversion',
   'statistics': 'blockDescriptions.statistics',
   'regression': 'blockDescriptions.regression',
   'clustering': 'blockDescriptions.clustering',
@@ -1810,6 +1822,579 @@ function renderConfigFields(
             onChange={(e) => onChange('falseValue', e.target.value)}
             placeholder="e.g., minor"
           />
+        </div>
+      );
+    }
+
+    case 'datetime-extract': {
+      const selectedExtractions = (config.extractions as string[]) || ['year', 'month', 'day'];
+      const extractionOptions = [
+        { value: 'year', label: 'Year' },
+        { value: 'month', label: 'Month (1-12)' },
+        { value: 'day', label: 'Day (1-31)' },
+        { value: 'weekday', label: 'Weekday Name' },
+        { value: 'weekday_num', label: 'Weekday Number (0-6)' },
+        { value: 'hour', label: 'Hour (0-23)' },
+        { value: 'minute', label: 'Minute (0-59)' },
+        { value: 'second', label: 'Second (0-59)' },
+        { value: 'quarter', label: 'Quarter (1-4)' },
+        { value: 'week', label: 'Week of Year' },
+        { value: 'dayofyear', label: 'Day of Year' },
+        { value: 'is_weekend', label: 'Is Weekend' },
+        { value: 'date', label: 'Date Only' },
+      ];
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Date Column">
+                <SelectValue placeholder="Select a date column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Date Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Extract Parts
+            </label>
+            <div className="space-y-2 max-h-60 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+              {extractionOptions.map((opt) => (
+                <label
+                  key={opt.value}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedExtractions.includes(opt.value)}
+                    onChange={(e) => {
+                      const newExtractions = e.target.checked
+                        ? [...selectedExtractions, opt.value]
+                        : selectedExtractions.filter((ex) => ex !== opt.value);
+                      onChange('extractions', newExtractions);
+                    }}
+                    className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                  />
+                  <span className="text-small text-text-primary">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Input
+            label="Column Prefix (optional)"
+            value={(config.prefix as string) || ''}
+            onChange={(e) => onChange('prefix', e.target.value)}
+            placeholder="Leave empty to use column name"
+          />
+
+          <p className="text-small text-text-muted">
+            Creates new columns like {String(config.prefix || config.column || 'date')}_year, {String(config.prefix || config.column || 'date')}_month, etc.
+          </p>
+        </div>
+      );
+    }
+
+    case 'string-operations': {
+      const operation = (config.operation as string) || 'lowercase';
+      const showFindReplace = operation === 'find_replace';
+      const showRegex = operation === 'regex_replace' || operation === 'regex_extract';
+
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <Select
+            value={operation}
+            onValueChange={(v) => onChange('operation', v)}
+          >
+            <SelectTrigger label="Operation">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lowercase">Lowercase</SelectItem>
+              <SelectItem value="uppercase">Uppercase</SelectItem>
+              <SelectItem value="titlecase">Title Case</SelectItem>
+              <SelectItem value="trim">Trim (both sides)</SelectItem>
+              <SelectItem value="trim_left">Trim Left</SelectItem>
+              <SelectItem value="trim_right">Trim Right</SelectItem>
+              <SelectItem value="find_replace">Find & Replace</SelectItem>
+              <SelectItem value="regex_replace">Regex Replace</SelectItem>
+              <SelectItem value="regex_extract">Regex Extract</SelectItem>
+              <SelectItem value="length">Get Length</SelectItem>
+              <SelectItem value="remove_digits">Remove Digits</SelectItem>
+              <SelectItem value="remove_punctuation">Remove Punctuation</SelectItem>
+              <SelectItem value="remove_whitespace">Normalize Whitespace</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {showFindReplace && (
+            <>
+              <Input
+                label="Find Text"
+                value={(config.findText as string) || ''}
+                onChange={(e) => onChange('findText', e.target.value)}
+                placeholder="Text to find"
+              />
+              <Input
+                label="Replace With"
+                value={(config.replaceText as string) || ''}
+                onChange={(e) => onChange('replaceText', e.target.value)}
+                placeholder="Replacement text"
+              />
+            </>
+          )}
+
+          {showRegex && (
+            <>
+              <Input
+                label="Regex Pattern"
+                value={(config.regexPattern as string) || ''}
+                onChange={(e) => onChange('regexPattern', e.target.value)}
+                placeholder="e.g., [0-9]+ or \w+"
+              />
+              {operation === 'regex_replace' && (
+                <Input
+                  label="Replace With"
+                  value={(config.replaceText as string) || ''}
+                  onChange={(e) => onChange('replaceText', e.target.value)}
+                  placeholder="Replacement text"
+                />
+              )}
+            </>
+          )}
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty to modify in place"
+          />
+        </div>
+      );
+    }
+
+    case 'window-functions': {
+      const windowOperation = (config.operation as string) || 'rolling_mean';
+      const groupByCols = (config.groupBy as string[]) || [];
+      const isRolling = windowOperation.startsWith('rolling_');
+      const isShift = windowOperation === 'lag' || windowOperation === 'lead' || windowOperation === 'pct_change' || windowOperation === 'diff';
+
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select a numeric column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <Select
+            value={windowOperation}
+            onValueChange={(v) => onChange('operation', v)}
+          >
+            <SelectTrigger label="Operation">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="rolling_mean">Rolling Mean (Moving Avg)</SelectItem>
+              <SelectItem value="rolling_sum">Rolling Sum</SelectItem>
+              <SelectItem value="rolling_min">Rolling Min</SelectItem>
+              <SelectItem value="rolling_max">Rolling Max</SelectItem>
+              <SelectItem value="rolling_std">Rolling Std Dev</SelectItem>
+              <SelectItem value="cumsum">Cumulative Sum</SelectItem>
+              <SelectItem value="cumprod">Cumulative Product</SelectItem>
+              <SelectItem value="cummin">Cumulative Min</SelectItem>
+              <SelectItem value="cummax">Cumulative Max</SelectItem>
+              <SelectItem value="lag">Lag (Previous Row)</SelectItem>
+              <SelectItem value="lead">Lead (Next Row)</SelectItem>
+              <SelectItem value="pct_change">Percent Change</SelectItem>
+              <SelectItem value="diff">Difference</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {(isRolling || isShift) && (
+            <Input
+              label={isRolling ? 'Window Size' : 'Periods'}
+              type="number"
+              value={(config.windowSize as number) || 3}
+              onChange={(e) => onChange('windowSize', parseInt(e.target.value) || 3)}
+              min={1}
+            />
+          )}
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Group By (optional)
+            </label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label
+                    key={col}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={groupByCols.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked
+                          ? [...groupByCols, col]
+                          : groupByCols.filter((c) => c !== col);
+                        onChange('groupBy', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">
+                Run pipeline to see columns
+              </p>
+            )}
+          </div>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-generated name"
+          />
+        </div>
+      );
+    }
+
+    case 'bin-bucket': {
+      const method = (config.method as string) || 'equal_width';
+      const showCustomEdges = method === 'custom';
+
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select a numeric column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <Select
+            value={method}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Binning Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="equal_width">Equal Width (same range per bin)</SelectItem>
+              <SelectItem value="equal_frequency">Equal Frequency (same count per bin)</SelectItem>
+              <SelectItem value="custom">Custom Edges</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {!showCustomEdges && (
+            <Input
+              label="Number of Bins"
+              type="number"
+              value={(config.numBins as number) || 5}
+              onChange={(e) => onChange('numBins', parseInt(e.target.value) || 5)}
+              min={2}
+              max={100}
+            />
+          )}
+
+          {showCustomEdges && (
+            <Input
+              label="Bin Edges (comma-separated)"
+              value={(config.customEdges as string) || ''}
+              onChange={(e) => onChange('customEdges', e.target.value)}
+              placeholder="e.g., 0, 18, 30, 50, 100"
+            />
+          )}
+
+          <Input
+            label="Custom Labels (optional)"
+            value={(config.customLabels as string) || ''}
+            onChange={(e) => onChange('customLabels', e.target.value)}
+            placeholder="e.g., low, medium, high"
+          />
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-generated name"
+          />
+
+          <p className="text-small text-text-muted">
+            {method === 'equal_width'
+              ? 'Divides range into equal-sized intervals'
+              : method === 'equal_frequency'
+              ? 'Each bin contains approximately the same number of rows'
+              : 'Define exact boundaries between bins'}
+          </p>
+        </div>
+      );
+    }
+
+    case 'rank': {
+      const rankGroupBy = (config.groupBy as string[]) || [];
+
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column to Rank">
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column to Rank"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <Select
+            value={(config.method as string) || 'average'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Ranking Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="average">Average (ties get average rank)</SelectItem>
+              <SelectItem value="min">Min (ties get lowest rank)</SelectItem>
+              <SelectItem value="max">Max (ties get highest rank)</SelectItem>
+              <SelectItem value="dense">Dense (no gaps in ranks)</SelectItem>
+              <SelectItem value="first">First (ties by row order)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.ascending as boolean) !== false}
+              onChange={(e) => onChange('ascending', e.target.checked)}
+              className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+            />
+            <span className="text-small text-text-primary">
+              Ascending (lowest value = rank 1)
+            </span>
+          </label>
+
+          <div className="space-y-2">
+            <label className="block text-small font-medium text-text-secondary">
+              Group By (optional)
+            </label>
+            {availableColumns.length > 0 ? (
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                {availableColumns.map((col) => (
+                  <label
+                    key={col}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={rankGroupBy.includes(col)}
+                      onChange={(e) => {
+                        const newCols = e.target.checked
+                          ? [...rankGroupBy, col]
+                          : rankGroupBy.filter((c) => c !== col);
+                        onChange('groupBy', newCols);
+                      }}
+                      className="w-4 h-4 rounded border-border-default text-electric-indigo focus:ring-electric-indigo"
+                    />
+                    <span className="text-small text-text-primary font-mono">{col}</span>
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <p className="text-small text-text-muted bg-bg-tertiary p-3 rounded-lg">
+                Run pipeline to see columns
+              </p>
+            )}
+            <p className="text-small text-text-muted">
+              Rank within each group (e.g., rank per region)
+            </p>
+          </div>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-generated name"
+          />
+        </div>
+      );
+    }
+
+    case 'type-conversion': {
+      const targetType = (config.targetType as string) || 'string';
+      const showDatetimeFormat = targetType === 'datetime';
+
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>
+                    {col}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Run pipeline to see columns"
+            />
+          )}
+
+          <Select
+            value={targetType}
+            onValueChange={(v) => onChange('targetType', v)}
+          >
+            <SelectTrigger label="Convert To">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="string">String (text)</SelectItem>
+              <SelectItem value="integer">Integer (whole numbers)</SelectItem>
+              <SelectItem value="float">Float (decimals)</SelectItem>
+              <SelectItem value="boolean">Boolean (true/false)</SelectItem>
+              <SelectItem value="datetime">DateTime</SelectItem>
+              <SelectItem value="category">Category</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {showDatetimeFormat && (
+            <Input
+              label="DateTime Format (optional)"
+              value={(config.datetimeFormat as string) || ''}
+              onChange={(e) => onChange('datetimeFormat', e.target.value)}
+              placeholder="e.g., %Y-%m-%d or %d/%m/%Y"
+            />
+          )}
+
+          <Select
+            value={(config.errorHandling as string) || 'coerce'}
+            onValueChange={(v) => onChange('errorHandling', v)}
+          >
+            <SelectTrigger label="On Error">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="coerce">Coerce (set invalid to null)</SelectItem>
+              <SelectItem value="raise">Raise Error</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <p className="text-small text-text-muted">
+            {targetType === 'string' && 'Converts any value to text'}
+            {targetType === 'integer' && 'Converts to whole numbers (decimals truncated)'}
+            {targetType === 'float' && 'Converts to decimal numbers'}
+            {targetType === 'boolean' && 'Recognizes: true/false, yes/no, 1/0, t/f, y/n'}
+            {targetType === 'datetime' && 'Parses date/time strings. Common formats are auto-detected.'}
+            {targetType === 'category' && 'Optimized for columns with limited unique values'}
+          </p>
         </div>
       );
     }
