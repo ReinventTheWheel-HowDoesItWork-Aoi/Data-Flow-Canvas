@@ -4,3 +4,4 @@
  */
 
 export { CollaborationModal } from './CollaborationModal';
+export { CollaboratorCursors } from './CollaboratorCursors';
