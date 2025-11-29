@@ -5047,6 +5047,755 @@ output = result
 `,
   },
 
+  'customer-ltv': {
+    type: 'customer-ltv',
+    category: 'analysis',
+    label: 'Customer Lifetime Value',
+    description: 'Calculate CLV using RFM-based approach',
+    icon: 'DollarSign',
+    defaultConfig: {
+      customerIdColumn: '',
+      transactionDateColumn: '',
+      monetaryColumn: '',
+      projectionPeriods: 12,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from datetime import datetime
+
+df = input_data.copy()
+customer_col = config.get('customerIdColumn', '')
+date_col = config.get('transactionDateColumn', '')
+monetary_col = config.get('monetaryColumn', '')
+projection_periods = config.get('projectionPeriods', 12)
+
+if not customer_col or not date_col or not monetary_col:
+    raise ValueError("Customer LTV: Please specify customer ID, transaction date, and monetary columns")
+
+if customer_col not in df.columns:
+    raise ValueError(f"Customer LTV: Customer ID column '{customer_col}' not found")
+if date_col not in df.columns:
+    raise ValueError(f"Customer LTV: Transaction date column '{date_col}' not found")
+if monetary_col not in df.columns:
+    raise ValueError(f"Customer LTV: Monetary column '{monetary_col}' not found")
+
+# Convert columns
+df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+df[monetary_col] = pd.to_numeric(df[monetary_col], errors='coerce')
+df = df.dropna(subset=[date_col, monetary_col])
+
+if len(df) == 0:
+    raise ValueError("Customer LTV: No valid data after cleaning")
+
+# Calculate reference date
+reference_date = df[date_col].max() + pd.Timedelta(days=1)
+observation_period = (df[date_col].max() - df[date_col].min()).days
+
+if observation_period <= 0:
+    observation_period = 365
+
+# Calculate RFM metrics per customer
+rfm = df.groupby(customer_col).agg(
+    recency=(date_col, lambda x: (reference_date - x.max()).days),
+    frequency=(customer_col, 'count'),
+    monetary=(monetary_col, 'sum'),
+    first_purchase=(date_col, 'min'),
+    last_purchase=(date_col, 'max'),
+    avg_order_value=(monetary_col, 'mean')
+).reset_index()
+
+rfm.columns = [customer_col, 'recency', 'frequency', 'total_monetary', 'first_purchase', 'last_purchase', 'avg_order_value']
+
+# Calculate customer tenure in days
+rfm['tenure_days'] = (rfm['last_purchase'] - rfm['first_purchase']).dt.days + 1
+
+# Calculate purchase frequency rate (purchases per day during active period)
+rfm['purchase_rate'] = rfm['frequency'] / rfm['tenure_days'].clip(lower=1)
+
+# Calculate average order value
+rfm['avg_order_value'] = rfm['avg_order_value'].round(2)
+
+# Estimate future purchases for projection period
+projection_days = projection_periods * 30  # Assume 30 days per period
+rfm['predicted_purchases'] = (rfm['purchase_rate'] * projection_days).round(2)
+
+# Calculate predicted CLV
+rfm['predicted_clv'] = (rfm['predicted_purchases'] * rfm['avg_order_value']).round(2)
+
+# Calculate historical CLV
+rfm['historical_clv'] = rfm['total_monetary'].round(2)
+
+# Segment customers by CLV percentiles
+clv_percentiles = rfm['predicted_clv'].quantile([0.25, 0.50, 0.75]).values
+
+def segment_customer(clv):
+    if clv >= clv_percentiles[2]:
+        return 'Premium'
+    elif clv >= clv_percentiles[1]:
+        return 'High'
+    elif clv >= clv_percentiles[0]:
+        return 'Medium'
+    else:
+        return 'Low'
+
+rfm['clv_segment'] = rfm['predicted_clv'].apply(segment_customer)
+
+# Calculate churn risk based on recency
+recency_median = rfm['recency'].median()
+recency_75 = rfm['recency'].quantile(0.75)
+
+def churn_risk(recency):
+    if recency <= recency_median:
+        return 'Low'
+    elif recency <= recency_75:
+        return 'Medium'
+    else:
+        return 'High'
+
+rfm['churn_risk'] = rfm['recency'].apply(churn_risk)
+
+# Clean up output columns
+rfm = rfm[[customer_col, 'recency', 'frequency', 'total_monetary', 'avg_order_value',
+           'tenure_days', 'predicted_purchases', 'historical_clv', 'predicted_clv',
+           'clv_segment', 'churn_risk']]
+
+output = rfm
+`,
+  },
+
+  'churn-analysis': {
+    type: 'churn-analysis',
+    category: 'analysis',
+    label: 'Churn Prediction',
+    description: 'Binary classification optimized for churn prediction',
+    icon: 'UserMinus',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      handleImbalance: true,
+      threshold: 0.5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import classification_report, roc_auc_score
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+handle_imbalance = config.get('handleImbalance', True)
+threshold = config.get('threshold', 0.5)
+
+if not features or not target_col:
+    raise ValueError("Churn Analysis: Please specify feature columns and target column")
+
+if target_col not in df.columns:
+    raise ValueError(f"Churn Analysis: Target column '{target_col}' not found")
+
+missing_features = [f for f in features if f not in df.columns]
+if missing_features:
+    raise ValueError(f"Churn Analysis: Feature columns not found: {missing_features}")
+
+# Prepare features
+X = df[features].copy()
+y = df[target_col].copy()
+
+# Handle categorical features
+label_encoders = {}
+for col in X.columns:
+    if X[col].dtype == 'object':
+        le = LabelEncoder()
+        X[col] = le.fit_transform(X[col].fillna('missing').astype(str))
+        label_encoders[col] = le
+    else:
+        X[col] = pd.to_numeric(X[col], errors='coerce').fillna(0)
+
+# Encode target if needed
+if y.dtype == 'object':
+    le_target = LabelEncoder()
+    y = le_target.fit_transform(y.fillna('unknown').astype(str))
+
+# Handle class imbalance
+class_weight = 'balanced' if handle_imbalance else None
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+# Scale features
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+# Train model
+model = RandomForestClassifier(n_estimators=100, class_weight=class_weight, random_state=42, n_jobs=-1)
+model.fit(X_train_scaled, y_train)
+
+# Predict probabilities
+y_proba = model.predict_proba(scaler.transform(X))[:, 1]
+
+# Calculate feature importance
+feature_importance = pd.DataFrame({
+    'feature': features,
+    'importance': model.feature_importances_
+}).sort_values('importance', ascending=False)
+
+# Create output dataframe
+result = df.copy()
+result['churn_probability'] = np.round(y_proba, 4)
+result['churn_prediction'] = (y_proba >= threshold).astype(int)
+
+# Risk segments
+def risk_segment(prob):
+    if prob >= 0.7:
+        return 'High Risk'
+    elif prob >= 0.4:
+        return 'Medium Risk'
+    else:
+        return 'Low Risk'
+
+result['risk_segment'] = result['churn_probability'].apply(risk_segment)
+
+# Add feature importance as metadata columns
+for i, row in feature_importance.head(5).iterrows():
+    result[f'top_driver_{feature_importance.index.get_loc(i)+1}'] = row['feature']
+    result[f'driver_importance_{feature_importance.index.get_loc(i)+1}'] = round(row['importance'], 4)
+
+# Model performance on test set
+y_test_proba = model.predict_proba(X_test_scaled)[:, 1]
+test_auc = roc_auc_score(y_test, y_test_proba)
+result['model_auc'] = round(test_auc, 4)
+
+output = result
+`,
+  },
+
+  'growth-metrics': {
+    type: 'growth-metrics',
+    category: 'analysis',
+    label: 'Growth Metrics',
+    description: 'Calculate business growth rate metrics',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      granularity: 'month',
+      rollingWindow: 3,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+granularity = config.get('granularity', 'month')
+rolling_window = config.get('rollingWindow', 3)
+
+if not date_col or not value_col:
+    raise ValueError("Growth Metrics: Please specify date and value columns")
+
+if date_col not in df.columns:
+    raise ValueError(f"Growth Metrics: Date column '{date_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Growth Metrics: Value column '{value_col}' not found")
+
+# Convert columns
+df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
+df = df.dropna(subset=[date_col, value_col])
+
+if len(df) == 0:
+    raise ValueError("Growth Metrics: No valid data after cleaning")
+
+# Set date as index for resampling
+df = df.set_index(date_col)
+
+# Resample based on granularity
+freq_map = {'day': 'D', 'week': 'W', 'month': 'M', 'quarter': 'Q', 'year': 'Y'}
+freq = freq_map.get(granularity, 'M')
+agg_df = df[[value_col]].resample(freq).sum().reset_index()
+agg_df.columns = ['period', 'value']
+
+# Calculate period-over-period growth
+agg_df['prev_period_value'] = agg_df['value'].shift(1)
+agg_df['period_growth'] = ((agg_df['value'] - agg_df['prev_period_value']) / agg_df['prev_period_value'] * 100).round(2)
+
+# Calculate MoM/QoQ/YoY based on granularity
+if granularity == 'month':
+    agg_df['yoy_value'] = agg_df['value'].shift(12)
+    agg_df['yoy_growth'] = ((agg_df['value'] - agg_df['yoy_value']) / agg_df['yoy_value'] * 100).round(2)
+elif granularity == 'quarter':
+    agg_df['yoy_value'] = agg_df['value'].shift(4)
+    agg_df['yoy_growth'] = ((agg_df['value'] - agg_df['yoy_value']) / agg_df['yoy_value'] * 100).round(2)
+elif granularity == 'day':
+    agg_df['wow_value'] = agg_df['value'].shift(7)
+    agg_df['wow_growth'] = ((agg_df['value'] - agg_df['wow_value']) / agg_df['wow_value'] * 100).round(2)
+
+# Rolling average
+agg_df['rolling_avg'] = agg_df['value'].rolling(window=rolling_window, min_periods=1).mean().round(2)
+
+# Calculate CAGR (Compound Annual Growth Rate)
+if len(agg_df) >= 2:
+    first_value = agg_df['value'].iloc[0]
+    last_value = agg_df['value'].iloc[-1]
+    n_periods = len(agg_df) - 1
+
+    # Annualize based on granularity
+    periods_per_year = {'day': 365, 'week': 52, 'month': 12, 'quarter': 4, 'year': 1}
+    ppy = periods_per_year.get(granularity, 12)
+    n_years = n_periods / ppy
+
+    if first_value > 0 and n_years > 0:
+        cagr = ((last_value / first_value) ** (1 / n_years) - 1) * 100
+        agg_df['cagr'] = round(cagr, 2)
+    else:
+        agg_df['cagr'] = np.nan
+else:
+    agg_df['cagr'] = np.nan
+
+# Calculate acceleration (change in growth rate)
+agg_df['growth_acceleration'] = (agg_df['period_growth'] - agg_df['period_growth'].shift(1)).round(2)
+
+# Classify trend
+def classify_trend(row):
+    if pd.isna(row['period_growth']):
+        return 'N/A'
+    elif row['period_growth'] > 0:
+        if pd.notna(row['growth_acceleration']) and row['growth_acceleration'] > 0:
+            return 'Accelerating Growth'
+        elif pd.notna(row['growth_acceleration']) and row['growth_acceleration'] < 0:
+            return 'Decelerating Growth'
+        else:
+            return 'Growing'
+    elif row['period_growth'] < 0:
+        if pd.notna(row['growth_acceleration']) and row['growth_acceleration'] < 0:
+            return 'Accelerating Decline'
+        elif pd.notna(row['growth_acceleration']) and row['growth_acceleration'] > 0:
+            return 'Decelerating Decline'
+        else:
+            return 'Declining'
+    else:
+        return 'Flat'
+
+agg_df['trend'] = agg_df.apply(classify_trend, axis=1)
+
+output = agg_df
+`,
+  },
+
+  'attribution-modeling': {
+    type: 'attribution-modeling',
+    category: 'analysis',
+    label: 'Attribution Modeling',
+    description: 'Multi-touch marketing attribution analysis',
+    icon: 'GitBranch',
+    defaultConfig: {
+      userIdColumn: '',
+      channelColumn: '',
+      conversionColumn: '',
+      timestampColumn: '',
+      model: 'linear',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+user_col = config.get('userIdColumn', '')
+channel_col = config.get('channelColumn', '')
+conversion_col = config.get('conversionColumn', '')
+timestamp_col = config.get('timestampColumn', '')
+model_type = config.get('model', 'linear')
+
+if not user_col or not channel_col or not conversion_col:
+    raise ValueError("Attribution Modeling: Please specify user ID, channel, and conversion columns")
+
+for col in [user_col, channel_col, conversion_col]:
+    if col not in df.columns:
+        raise ValueError(f"Attribution Modeling: Column '{col}' not found")
+
+# Convert conversion to numeric
+df[conversion_col] = pd.to_numeric(df[conversion_col], errors='coerce').fillna(0)
+
+# Sort by timestamp if provided
+if timestamp_col and timestamp_col in df.columns:
+    df[timestamp_col] = pd.to_datetime(df[timestamp_col], errors='coerce')
+    df = df.sort_values([user_col, timestamp_col])
+
+# Group by user to get touchpoint sequences
+user_journeys = df.groupby(user_col).agg({
+    channel_col: list,
+    conversion_col: 'sum'
+}).reset_index()
+user_journeys.columns = [user_col, 'touchpoints', 'conversions']
+
+# Filter to users with conversions
+converting_users = user_journeys[user_journeys['conversions'] > 0].copy()
+
+# Initialize channel attribution
+channels = df[channel_col].unique()
+attribution = {ch: 0.0 for ch in channels}
+channel_touchpoints = {ch: 0 for ch in channels}
+
+# Apply attribution model
+for _, row in converting_users.iterrows():
+    touchpoints = row['touchpoints']
+    conversion_value = row['conversions']
+    n_touches = len(touchpoints)
+
+    if n_touches == 0:
+        continue
+
+    # Count touchpoints per channel
+    for tp in touchpoints:
+        channel_touchpoints[tp] = channel_touchpoints.get(tp, 0) + 1
+
+    if model_type == 'first-touch':
+        attribution[touchpoints[0]] += conversion_value
+
+    elif model_type == 'last-touch':
+        attribution[touchpoints[-1]] += conversion_value
+
+    elif model_type == 'linear':
+        credit = conversion_value / n_touches
+        for tp in touchpoints:
+            attribution[tp] += credit
+
+    elif model_type == 'time-decay':
+        # More recent touchpoints get more credit
+        weights = [2 ** i for i in range(n_touches)]
+        total_weight = sum(weights)
+        for i, tp in enumerate(touchpoints):
+            credit = (weights[i] / total_weight) * conversion_value
+            attribution[tp] += credit
+
+    elif model_type == 'position-based':
+        # 40% first, 40% last, 20% middle
+        if n_touches == 1:
+            attribution[touchpoints[0]] += conversion_value
+        elif n_touches == 2:
+            attribution[touchpoints[0]] += conversion_value * 0.5
+            attribution[touchpoints[-1]] += conversion_value * 0.5
+        else:
+            attribution[touchpoints[0]] += conversion_value * 0.4
+            attribution[touchpoints[-1]] += conversion_value * 0.4
+            middle_credit = conversion_value * 0.2 / (n_touches - 2)
+            for tp in touchpoints[1:-1]:
+                attribution[tp] += middle_credit
+
+# Build result dataframe
+result = pd.DataFrame([
+    {
+        'channel': ch,
+        'attributed_conversions': round(attribution[ch], 2),
+        'total_touchpoints': channel_touchpoints[ch],
+    }
+    for ch in channels
+])
+
+# Calculate percentages and efficiency
+total_attributed = result['attributed_conversions'].sum()
+result['attribution_share'] = (result['attributed_conversions'] / total_attributed * 100).round(2) if total_attributed > 0 else 0
+
+# Efficiency score (conversions per touchpoint)
+result['efficiency_score'] = (result['attributed_conversions'] / result['total_touchpoints'].clip(lower=1)).round(4)
+
+# Rank channels
+result['rank'] = result['attributed_conversions'].rank(ascending=False, method='min').astype(int)
+
+# Sort by attributed conversions
+result = result.sort_values('attributed_conversions', ascending=False)
+
+# Add model type used
+result['attribution_model'] = model_type
+
+output = result
+`,
+  },
+
+  'breakeven-analysis': {
+    type: 'breakeven-analysis',
+    category: 'analysis',
+    label: 'Break-even Analysis',
+    description: 'Calculate financial break-even point',
+    icon: 'Scale',
+    defaultConfig: {
+      fixedCosts: 10000,
+      variableCostPerUnit: 5,
+      pricePerUnit: 15,
+      currentSalesUnits: 0,
+      scenarioRange: 50,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+fixed_costs = config.get('fixedCosts', 10000)
+variable_cost = config.get('variableCostPerUnit', 5)
+price = config.get('pricePerUnit', 15)
+current_sales = config.get('currentSalesUnits', 0)
+scenario_range = config.get('scenarioRange', 50)
+
+# Validate inputs
+if price <= variable_cost:
+    raise ValueError("Break-even Analysis: Price per unit must be greater than variable cost per unit")
+
+if fixed_costs < 0 or variable_cost < 0 or price <= 0:
+    raise ValueError("Break-even Analysis: Costs must be non-negative and price must be positive")
+
+# Calculate contribution margin
+contribution_margin = price - variable_cost
+contribution_margin_ratio = contribution_margin / price
+
+# Calculate break-even point
+breakeven_units = np.ceil(fixed_costs / contribution_margin)
+breakeven_revenue = breakeven_units * price
+
+# Current profit/loss
+current_revenue = current_sales * price
+current_total_cost = fixed_costs + (current_sales * variable_cost)
+current_profit = current_revenue - current_total_cost
+
+# Margin of safety
+margin_of_safety_units = max(0, current_sales - breakeven_units)
+margin_of_safety_pct = (margin_of_safety_units / current_sales * 100) if current_sales > 0 else 0
+
+# Create scenario analysis
+scenarios = []
+scenario_min = max(0, int(breakeven_units - scenario_range))
+scenario_max = int(breakeven_units + scenario_range)
+
+for units in range(scenario_min, scenario_max + 1, max(1, (scenario_max - scenario_min) // 20)):
+    revenue = units * price
+    total_cost = fixed_costs + (units * variable_cost)
+    profit = revenue - total_cost
+
+    scenarios.append({
+        'units_sold': int(units),
+        'revenue': round(revenue, 2),
+        'fixed_costs': round(fixed_costs, 2),
+        'variable_costs': round(units * variable_cost, 2),
+        'total_costs': round(total_cost, 2),
+        'profit_loss': round(profit, 2),
+        'is_breakeven': units == breakeven_units,
+        'is_current': units == current_sales
+    })
+
+result = pd.DataFrame(scenarios)
+
+# Add summary metrics
+result['breakeven_units'] = int(breakeven_units)
+result['breakeven_revenue'] = round(breakeven_revenue, 2)
+result['contribution_margin'] = round(contribution_margin, 2)
+result['contribution_margin_ratio'] = round(contribution_margin_ratio * 100, 2)
+result['margin_of_safety_units'] = int(margin_of_safety_units)
+result['margin_of_safety_pct'] = round(margin_of_safety_pct, 2)
+result['current_profit_loss'] = round(current_profit, 2)
+
+# Calculate units needed for target profits
+target_profits = [0, 5000, 10000, 25000, 50000]
+for target in target_profits:
+    units_needed = np.ceil((fixed_costs + target) / contribution_margin)
+    result[f'units_for_{target}_profit'] = int(units_needed)
+
+output = result
+`,
+  },
+
+  'confidence-intervals': {
+    type: 'confidence-intervals',
+    category: 'analysis',
+    label: 'Confidence Intervals',
+    description: 'Calculate confidence intervals for means and proportions',
+    icon: 'ArrowLeftRight',
+    defaultConfig: {
+      column: '',
+      column2: '',
+      confidenceLevel: 0.95,
+      analysisType: 'one-sample-mean',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+column = config.get('column', '')
+column2 = config.get('column2', '')
+confidence_level = config.get('confidenceLevel', 0.95)
+analysis_type = config.get('analysisType', 'one-sample-mean')
+
+if not column:
+    raise ValueError("Confidence Intervals: Please specify the primary column")
+
+if column not in df.columns:
+    raise ValueError(f"Confidence Intervals: Column '{column}' not found")
+
+# Convert to numeric
+data1 = pd.to_numeric(df[column], errors='coerce').dropna()
+
+if len(data1) < 2:
+    raise ValueError("Confidence Intervals: Need at least 2 data points")
+
+alpha = 1 - confidence_level
+results = []
+
+if analysis_type == 'one-sample-mean':
+    n = len(data1)
+    mean = data1.mean()
+    std = data1.std(ddof=1)
+    se = std / np.sqrt(n)
+
+    # Use t-distribution for small samples
+    t_crit = stats.t.ppf(1 - alpha/2, df=n-1)
+    margin_of_error = t_crit * se
+    ci_lower = mean - margin_of_error
+    ci_upper = mean + margin_of_error
+
+    results.append({
+        'analysis_type': 'One-Sample Mean',
+        'column': column,
+        'n': n,
+        'point_estimate': round(mean, 4),
+        'std_dev': round(std, 4),
+        'std_error': round(se, 4),
+        'confidence_level': confidence_level,
+        'ci_lower': round(ci_lower, 4),
+        'ci_upper': round(ci_upper, 4),
+        'margin_of_error': round(margin_of_error, 4),
+        'interpretation': f"We are {confidence_level*100:.0f}% confident the true mean is between {ci_lower:.4f} and {ci_upper:.4f}"
+    })
+
+elif analysis_type == 'one-sample-proportion':
+    # Treat values > 0 as successes
+    successes = (data1 > 0).sum()
+    n = len(data1)
+    p_hat = successes / n
+
+    # Wilson score interval (better for proportions)
+    z = stats.norm.ppf(1 - alpha/2)
+    denominator = 1 + z**2/n
+    center = (p_hat + z**2/(2*n)) / denominator
+    margin = z * np.sqrt((p_hat*(1-p_hat) + z**2/(4*n))/n) / denominator
+
+    ci_lower = max(0, center - margin)
+    ci_upper = min(1, center + margin)
+
+    results.append({
+        'analysis_type': 'One-Sample Proportion',
+        'column': column,
+        'n': n,
+        'successes': int(successes),
+        'point_estimate': round(p_hat, 4),
+        'confidence_level': confidence_level,
+        'ci_lower': round(ci_lower, 4),
+        'ci_upper': round(ci_upper, 4),
+        'margin_of_error': round(margin, 4),
+        'interpretation': f"We are {confidence_level*100:.0f}% confident the true proportion is between {ci_lower:.4f} and {ci_upper:.4f}"
+    })
+
+elif analysis_type == 'two-sample-mean':
+    if not column2 or column2 not in df.columns:
+        raise ValueError("Confidence Intervals: Please specify a second column for two-sample analysis")
+
+    data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
+
+    if len(data2) < 2:
+        raise ValueError("Confidence Intervals: Second column needs at least 2 data points")
+
+    n1, n2 = len(data1), len(data2)
+    mean1, mean2 = data1.mean(), data2.mean()
+    var1, var2 = data1.var(ddof=1), data2.var(ddof=1)
+
+    # Welch's t-test (unequal variances)
+    se = np.sqrt(var1/n1 + var2/n2)
+    diff = mean1 - mean2
+
+    # Welch-Satterthwaite degrees of freedom
+    df_ws = (var1/n1 + var2/n2)**2 / ((var1/n1)**2/(n1-1) + (var2/n2)**2/(n2-1))
+    t_crit = stats.t.ppf(1 - alpha/2, df=df_ws)
+
+    margin_of_error = t_crit * se
+    ci_lower = diff - margin_of_error
+    ci_upper = diff + margin_of_error
+
+    results.append({
+        'analysis_type': 'Two-Sample Mean Difference',
+        'column': column,
+        'column2': column2,
+        'n1': n1,
+        'n2': n2,
+        'mean1': round(mean1, 4),
+        'mean2': round(mean2, 4),
+        'point_estimate': round(diff, 4),
+        'std_error': round(se, 4),
+        'confidence_level': confidence_level,
+        'ci_lower': round(ci_lower, 4),
+        'ci_upper': round(ci_upper, 4),
+        'margin_of_error': round(margin_of_error, 4),
+        'interpretation': f"We are {confidence_level*100:.0f}% confident the difference in means is between {ci_lower:.4f} and {ci_upper:.4f}"
+    })
+
+elif analysis_type == 'paired':
+    if not column2 or column2 not in df.columns:
+        raise ValueError("Confidence Intervals: Please specify a second column for paired analysis")
+
+    data2 = pd.to_numeric(df[column2], errors='coerce')
+
+    # Align and remove missing
+    paired_df = pd.DataFrame({'a': data1.values, 'b': data2.values}).dropna()
+
+    if len(paired_df) < 2:
+        raise ValueError("Confidence Intervals: Need at least 2 paired observations")
+
+    differences = paired_df['a'] - paired_df['b']
+    n = len(differences)
+    mean_diff = differences.mean()
+    std_diff = differences.std(ddof=1)
+    se = std_diff / np.sqrt(n)
+
+    t_crit = stats.t.ppf(1 - alpha/2, df=n-1)
+    margin_of_error = t_crit * se
+    ci_lower = mean_diff - margin_of_error
+    ci_upper = mean_diff + margin_of_error
+
+    results.append({
+        'analysis_type': 'Paired Difference',
+        'column': column,
+        'column2': column2,
+        'n_pairs': n,
+        'mean_difference': round(mean_diff, 4),
+        'std_difference': round(std_diff, 4),
+        'point_estimate': round(mean_diff, 4),
+        'std_error': round(se, 4),
+        'confidence_level': confidence_level,
+        'ci_lower': round(ci_lower, 4),
+        'ci_upper': round(ci_upper, 4),
+        'margin_of_error': round(margin_of_error, 4),
+        'interpretation': f"We are {confidence_level*100:.0f}% confident the mean paired difference is between {ci_lower:.4f} and {ci_upper:.4f}"
+    })
+
+output = pd.DataFrame(results)
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -5657,6 +6406,12 @@ export const blockCategories = [
       'regression-diagnostics',
       'vif-analysis',
       'funnel-analysis',
+      'customer-ltv',
+      'churn-analysis',
+      'growth-metrics',
+      'attribution-modeling',
+      'breakeven-analysis',
+      'confidence-intervals',
     ] as BlockType[],
   },
   {
