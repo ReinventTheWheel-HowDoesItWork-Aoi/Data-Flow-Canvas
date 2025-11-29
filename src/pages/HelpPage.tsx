@@ -79,6 +79,8 @@ import {
   AlignJustify,
   Link as LinkIcon,
   MessageSquare,
+  DollarSign,
+  UserMinus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -127,7 +129,7 @@ const blocks: BlockInfo[] = [
   { icon: AlignJustify, name: 'String Pad', description: 'Pad strings to a fixed length with specified character', category: 'Transform' },
   { icon: TrendingUp, name: 'Cumulative Operations', description: 'Calculate running totals, cumulative counts, and percentages', category: 'Transform' },
 
-  // Analysis (46 blocks)
+  // Analysis (52 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -174,6 +176,12 @@ const blocks: BlockInfo[] = [
   { icon: FileSearch, name: 'Regression Diagnostics', description: 'Analyze regression model assumptions and residuals', category: 'Analysis' },
   { icon: Scale, name: 'VIF Analysis', description: 'Detect multicollinearity with Variance Inflation Factor', category: 'Analysis' },
   { icon: Filter, name: 'Funnel Analysis', description: 'Analyze conversion funnels and drop-off rates', category: 'Analysis' },
+  { icon: DollarSign, name: 'Customer Lifetime Value', description: 'Calculate CLV using RFM-based approach', category: 'Analysis' },
+  { icon: UserMinus, name: 'Churn Prediction', description: 'Binary classification optimized for churn prediction', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Growth Metrics', description: 'Calculate business growth rate metrics', category: 'Analysis' },
+  { icon: GitBranch, name: 'Attribution Modeling', description: 'Multi-touch marketing attribution analysis', category: 'Analysis' },
+  { icon: Scale, name: 'Break-even Analysis', description: 'Calculate financial break-even point', category: 'Analysis' },
+  { icon: ArrowLeftRight, name: 'Confidence Intervals', description: 'Calculate confidence intervals for means and proportions', category: 'Analysis' },
 
   // Visualization (11 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -327,6 +335,12 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Regression Diagnostics': { name: 'blocks.regressionDiagnostics', description: 'blockDescriptions.regressionDiagnostics' },
   'VIF Analysis': { name: 'blocks.vifAnalysis', description: 'blockDescriptions.vifAnalysis' },
   'Funnel Analysis': { name: 'blocks.funnelAnalysis', description: 'blockDescriptions.funnelAnalysis' },
+  'Customer Lifetime Value': { name: 'blocks.customerLtv', description: 'blockDescriptions.customerLtv' },
+  'Churn Prediction': { name: 'blocks.churnAnalysis', description: 'blockDescriptions.churnAnalysis' },
+  'Growth Metrics': { name: 'blocks.growthMetrics', description: 'blockDescriptions.growthMetrics' },
+  'Attribution Modeling': { name: 'blocks.attributionModeling', description: 'blockDescriptions.attributionModeling' },
+  'Break-even Analysis': { name: 'blocks.breakevenAnalysis', description: 'blockDescriptions.breakevenAnalysis' },
+  'Confidence Intervals': { name: 'blocks.confidenceIntervals', description: 'blockDescriptions.confidenceIntervals' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -445,7 +459,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">91</p>
+                <p className="text-h2 font-bold text-text-primary">97</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
