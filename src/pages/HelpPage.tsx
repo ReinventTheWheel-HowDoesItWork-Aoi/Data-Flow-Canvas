@@ -127,7 +127,7 @@ const blocks: BlockInfo[] = [
   { icon: AlignJustify, name: 'String Pad', description: 'Pad strings to a fixed length with specified character', category: 'Transform' },
   { icon: TrendingUp, name: 'Cumulative Operations', description: 'Calculate running totals, cumulative counts, and percentages', category: 'Transform' },
 
-  // Analysis (26 blocks)
+  // Analysis (46 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -168,6 +168,12 @@ const blocks: BlockInfo[] = [
   { icon: Hash, name: 'TF-IDF Vectorization', description: 'Convert text to TF-IDF numerical features', category: 'Analysis' },
   { icon: Layers, name: 'Topic Modeling', description: 'Discover hidden topics in text using LDA', category: 'Analysis' },
   { icon: GitMerge, name: 'Similarity Analysis', description: 'Calculate similarity between rows or find similar items', category: 'Analysis' },
+  { icon: Target, name: 'SVM', description: 'Support Vector Machine for classification and regression', category: 'Analysis' },
+  { icon: TrendingUp, name: 'XGBoost', description: 'Extreme Gradient Boosting for high-performance ML', category: 'Analysis' },
+  { icon: Lightbulb, name: 'Model Explainability', description: 'Explain model predictions with SHAP and feature importance', category: 'Analysis' },
+  { icon: FileSearch, name: 'Regression Diagnostics', description: 'Analyze regression model assumptions and residuals', category: 'Analysis' },
+  { icon: Scale, name: 'VIF Analysis', description: 'Detect multicollinearity with Variance Inflation Factor', category: 'Analysis' },
+  { icon: Filter, name: 'Funnel Analysis', description: 'Analyze conversion funnels and drop-off rates', category: 'Analysis' },
 
   // Visualization (11 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -315,6 +321,12 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'TF-IDF Vectorization': { name: 'blocks.tfidfVectorization', description: 'blockDescriptions.tfidfVectorization' },
   'Topic Modeling': { name: 'blocks.topicModeling', description: 'blockDescriptions.topicModeling' },
   'Similarity Analysis': { name: 'blocks.similarityAnalysis', description: 'blockDescriptions.similarityAnalysis' },
+  'SVM': { name: 'blocks.svm', description: 'blockDescriptions.svm' },
+  'XGBoost': { name: 'blocks.xgboost', description: 'blockDescriptions.xgboost' },
+  'Model Explainability': { name: 'blocks.modelExplainability', description: 'blockDescriptions.modelExplainability' },
+  'Regression Diagnostics': { name: 'blocks.regressionDiagnostics', description: 'blockDescriptions.regressionDiagnostics' },
+  'VIF Analysis': { name: 'blocks.vifAnalysis', description: 'blockDescriptions.vifAnalysis' },
+  'Funnel Analysis': { name: 'blocks.funnelAnalysis', description: 'blockDescriptions.funnelAnalysis' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -433,7 +445,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">85</p>
+                <p className="text-h2 font-bold text-text-primary">91</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
