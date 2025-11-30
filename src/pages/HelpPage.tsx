@@ -100,6 +100,19 @@ import {
   GitCompare,
   ListOrdered,
   Trophy,
+  Filter as FunnelIcon,
+  GitPullRequestArrow,
+  LayoutGrid as TreemapIcon,
+  Sun,
+  Gauge as GaugeIcon,
+  Radar,
+  BarChartHorizontal,
+  CandlestickChart,
+  Map,
+  Cloud,
+  BarChart4,
+  SeparatorHorizontal,
+  Network as DendrogramIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -242,7 +255,7 @@ const blocks: BlockInfo[] = [
   { icon: CheckCircle, name: 'Data Quality Score', description: 'Comprehensive data quality assessment', category: 'Analysis' },
   { icon: GitCommitHorizontal, name: 'Change Point Detection', description: 'Detect structural breaks in time series', category: 'Analysis' },
 
-  // Visualization (11 blocks)
+  // Visualization (24 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
   { icon: Table, name: 'Table', description: 'Display data in an interactive table', category: 'Visualization' },
   { icon: Grid2x2, name: 'Correlation Matrix', description: 'Visualize correlations as a heatmap', category: 'Visualization' },
@@ -254,6 +267,19 @@ const blocks: BlockInfo[] = [
   { icon: ScatterChart, name: 'Q-Q Plot', description: 'Quantile-Quantile plot to check normality', category: 'Visualization' },
   { icon: Grid3x3, name: 'Confusion Matrix', description: 'Visualize classification results', category: 'Visualization' },
   { icon: TrendingUp, name: 'ROC Curve', description: 'ROC curve for binary classification evaluation', category: 'Visualization' },
+  { icon: FunnelIcon, name: 'Funnel Chart', description: 'Visualize sequential stages with progressive reduction', category: 'Visualization' },
+  { icon: GitPullRequestArrow, name: 'Sankey Diagram', description: 'Show flow between nodes with proportional width bands', category: 'Visualization' },
+  { icon: TreemapIcon, name: 'Treemap', description: 'Display hierarchical data as nested rectangles', category: 'Visualization' },
+  { icon: Sun, name: 'Sunburst Chart', description: 'Radial hierarchical visualization with concentric rings', category: 'Visualization' },
+  { icon: GaugeIcon, name: 'Gauge Chart', description: 'Speedometer-style display for single metrics', category: 'Visualization' },
+  { icon: Radar, name: 'Radar Chart', description: 'Multi-axis radial chart for comparing variables', category: 'Visualization' },
+  { icon: BarChartHorizontal, name: 'Waterfall Chart', description: 'Show cumulative effect of sequential values', category: 'Visualization' },
+  { icon: CandlestickChart, name: 'Candlestick Chart', description: 'Financial OHLC visualization for price data', category: 'Visualization' },
+  { icon: Map, name: 'Choropleth Map', description: 'Geographic heatmap coloring regions by values', category: 'Visualization' },
+  { icon: Cloud, name: 'Word Cloud', description: 'Text visualization where word size represents frequency', category: 'Visualization' },
+  { icon: BarChart4, name: 'Pareto Chart', description: 'Combined bar and cumulative line for 80/20 analysis', category: 'Visualization' },
+  { icon: SeparatorHorizontal, name: 'Parallel Coordinates', description: 'High-dimensional data with connected lines', category: 'Visualization' },
+  { icon: DendrogramIcon, name: 'Dendrogram', description: 'Tree diagram showing hierarchical clustering', category: 'Visualization' },
 
   // Output (1 block)
   { icon: Download, name: 'Export CSV', description: 'Export data to CSV format and download', category: 'Output' },
@@ -451,6 +477,19 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Q-Q Plot': { name: 'blocks.qqPlot', description: 'blockDescriptions.qqPlot' },
   'Confusion Matrix': { name: 'blocks.confusionMatrix', description: 'blockDescriptions.confusionMatrix' },
   'ROC Curve': { name: 'blocks.rocCurve', description: 'blockDescriptions.rocCurve' },
+  'Funnel Chart': { name: 'blocks.funnelChart', description: 'blockDescriptions.funnelChart' },
+  'Sankey Diagram': { name: 'blocks.sankeyDiagram', description: 'blockDescriptions.sankeyDiagram' },
+  'Treemap': { name: 'blocks.treemap', description: 'blockDescriptions.treemap' },
+  'Sunburst Chart': { name: 'blocks.sunburstChart', description: 'blockDescriptions.sunburstChart' },
+  'Gauge Chart': { name: 'blocks.gaugeChart', description: 'blockDescriptions.gaugeChart' },
+  'Radar Chart': { name: 'blocks.radarChart', description: 'blockDescriptions.radarChart' },
+  'Waterfall Chart': { name: 'blocks.waterfallChart', description: 'blockDescriptions.waterfallChart' },
+  'Candlestick Chart': { name: 'blocks.candlestickChart', description: 'blockDescriptions.candlestickChart' },
+  'Choropleth Map': { name: 'blocks.choroplethMap', description: 'blockDescriptions.choroplethMap' },
+  'Word Cloud': { name: 'blocks.wordCloud', description: 'blockDescriptions.wordCloud' },
+  'Pareto Chart': { name: 'blocks.paretoChart', description: 'blockDescriptions.paretoChart' },
+  'Parallel Coordinates': { name: 'blocks.parallelCoordinates', description: 'blockDescriptions.parallelCoordinates' },
+  'Dendrogram': { name: 'blocks.dendrogram', description: 'blockDescriptions.dendrogram' },
   'Export CSV': { name: 'blocks.export', description: 'blockDescriptions.export' },
 };
 
@@ -558,7 +597,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">137</p>
+                <p className="text-h2 font-bold text-text-primary">150</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
