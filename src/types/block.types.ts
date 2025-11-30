@@ -153,6 +153,19 @@ export type BlockType =
   | 'qq-plot'
   | 'confusion-matrix'
   | 'roc-curve'
+  | 'funnel-chart'
+  | 'sankey-diagram'
+  | 'treemap'
+  | 'sunburst-chart'
+  | 'gauge-chart'
+  | 'radar-chart'
+  | 'waterfall-chart'
+  | 'candlestick-chart'
+  | 'choropleth-map'
+  | 'word-cloud'
+  | 'pareto-chart'
+  | 'parallel-coordinates'
+  | 'dendrogram'
   // Output
   | 'export';
 
