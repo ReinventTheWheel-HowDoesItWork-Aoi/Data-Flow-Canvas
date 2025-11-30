@@ -9343,6 +9343,831 @@ output = result.reset_index(drop=True)
 `,
   },
 
+  // New Visualization Blocks
+  'funnel-chart': {
+    type: 'funnel-chart',
+    category: 'visualization',
+    label: 'Funnel Chart',
+    description: 'Visualize sequential stages with progressive reduction (conversion funnels, sales pipelines)',
+    icon: 'Filter',
+    defaultConfig: {
+      stageColumn: '',
+      valueColumn: '',
+      title: '',
+      showPercentage: true,
+      showDropoff: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+stage_col = config.get('stageColumn', '')
+value_col = config.get('valueColumn', '')
+show_pct = config.get('showPercentage', True)
+show_dropoff = config.get('showDropoff', True)
+
+if not stage_col or not value_col:
+    raise ValueError("Funnel Chart: Please select stage and value columns")
+
+if stage_col not in df.columns:
+    raise ValueError(f"Funnel Chart: Stage column '{stage_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Funnel Chart: Value column '{value_col}' not found")
+
+# Aggregate by stage
+funnel_data = df.groupby(stage_col, sort=False)[value_col].sum().reset_index()
+funnel_data.columns = ['stage', 'value']
+
+# Calculate percentages and dropoff
+total = funnel_data['value'].iloc[0] if len(funnel_data) > 0 else 1
+funnel_data['percentage'] = (funnel_data['value'] / total * 100).round(2)
+funnel_data['dropoff'] = funnel_data['value'].diff().fillna(0).round(2)
+funnel_data['dropoff_pct'] = (funnel_data['dropoff'] / funnel_data['value'].shift(1) * 100).fillna(0).round(2)
+
+output = {
+    'chartType': 'funnel',
+    'data': funnel_data.to_dict('records'),
+    'title': config.get('title', '') or 'Funnel Chart',
+    'showPercentage': show_pct,
+    'showDropoff': show_dropoff,
+}
+`,
+  },
+
+  'sankey-diagram': {
+    type: 'sankey-diagram',
+    category: 'visualization',
+    label: 'Sankey Diagram',
+    description: 'Show flow/movement between nodes with proportional width bands (user journeys, budget flows)',
+    icon: 'GitMerge',
+    defaultConfig: {
+      sourceColumn: '',
+      targetColumn: '',
+      valueColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+source_col = config.get('sourceColumn', '')
+target_col = config.get('targetColumn', '')
+value_col = config.get('valueColumn', '')
+
+if not source_col or not target_col:
+    raise ValueError("Sankey Diagram: Please select source and target columns")
+
+if source_col not in df.columns:
+    raise ValueError(f"Sankey Diagram: Source column '{source_col}' not found")
+if target_col not in df.columns:
+    raise ValueError(f"Sankey Diagram: Target column '{target_col}' not found")
+
+# Aggregate flows
+if value_col and value_col in df.columns:
+    flows = df.groupby([source_col, target_col])[value_col].sum().reset_index()
+    flows.columns = ['source', 'target', 'value']
+else:
+    flows = df.groupby([source_col, target_col]).size().reset_index(name='value')
+    flows.columns = ['source', 'target', 'value']
+
+# Get unique nodes
+all_nodes = pd.concat([flows['source'], flows['target']]).unique().tolist()
+node_indices = {node: i for i, node in enumerate(all_nodes)}
+
+# Create links with indices
+links = []
+for _, row in flows.iterrows():
+    links.append({
+        'source': node_indices[row['source']],
+        'target': node_indices[row['target']],
+        'value': float(row['value']),
+        'sourceLabel': str(row['source']),
+        'targetLabel': str(row['target']),
+    })
+
+output = {
+    'chartType': 'sankey',
+    'nodes': [{'label': str(n)} for n in all_nodes],
+    'links': links,
+    'title': config.get('title', '') or 'Sankey Diagram',
+}
+`,
+  },
+
+  'treemap': {
+    type: 'treemap',
+    category: 'visualization',
+    label: 'Treemap',
+    description: 'Display hierarchical data as nested rectangles sized by value (budget breakdown, composition)',
+    icon: 'LayoutGrid',
+    defaultConfig: {
+      pathColumns: [],
+      valueColumn: '',
+      colorColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+path_cols = config.get('pathColumns', [])
+value_col = config.get('valueColumn', '')
+color_col = config.get('colorColumn', '')
+
+if not path_cols or len(path_cols) == 0:
+    raise ValueError("Treemap: Please select at least one path column for hierarchy")
+
+valid_paths = [c for c in path_cols if c in df.columns]
+if not valid_paths:
+    raise ValueError("Treemap: No valid path columns found")
+
+# Build hierarchical data
+if value_col and value_col in df.columns:
+    agg_df = df.groupby(valid_paths)[value_col].sum().reset_index()
+else:
+    agg_df = df.groupby(valid_paths).size().reset_index(name='count')
+    value_col = 'count'
+
+# Create treemap data structure
+labels = []
+parents = []
+values = []
+ids = []
+
+# Add root
+labels.append('')
+parents.append('')
+values.append(0)
+ids.append('')
+
+for _, row in agg_df.iterrows():
+    path_parts = [str(row[c]) for c in valid_paths]
+    current_id = ''
+    for i, part in enumerate(path_parts):
+        new_id = '/'.join(path_parts[:i+1])
+        if new_id not in ids:
+            ids.append(new_id)
+            labels.append(part)
+            parents.append(current_id)
+            if i == len(path_parts) - 1:
+                values.append(float(row[value_col]))
+            else:
+                values.append(0)
+        current_id = new_id
+
+output = {
+    'chartType': 'treemap',
+    'ids': ids,
+    'labels': labels,
+    'parents': parents,
+    'values': values,
+    'title': config.get('title', '') or 'Treemap',
+}
+`,
+  },
+
+  'sunburst-chart': {
+    type: 'sunburst-chart',
+    category: 'visualization',
+    label: 'Sunburst Chart',
+    description: 'Radial hierarchical visualization with concentric rings (org structure, taxonomy)',
+    icon: 'Sun',
+    defaultConfig: {
+      pathColumns: [],
+      valueColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+path_cols = config.get('pathColumns', [])
+value_col = config.get('valueColumn', '')
+
+if not path_cols or len(path_cols) == 0:
+    raise ValueError("Sunburst Chart: Please select at least one path column for hierarchy")
+
+valid_paths = [c for c in path_cols if c in df.columns]
+if not valid_paths:
+    raise ValueError("Sunburst Chart: No valid path columns found")
+
+# Build hierarchical data
+if value_col and value_col in df.columns:
+    agg_df = df.groupby(valid_paths)[value_col].sum().reset_index()
+else:
+    agg_df = df.groupby(valid_paths).size().reset_index(name='count')
+    value_col = 'count'
+
+# Create sunburst data structure
+labels = []
+parents = []
+values = []
+ids = []
+
+for _, row in agg_df.iterrows():
+    path_parts = [str(row[c]) for c in valid_paths]
+    current_id = ''
+    for i, part in enumerate(path_parts):
+        new_id = '/'.join(path_parts[:i+1])
+        if new_id not in ids:
+            ids.append(new_id)
+            labels.append(part)
+            parents.append(current_id)
+            if i == len(path_parts) - 1:
+                values.append(float(row[value_col]))
+            else:
+                values.append(0)
+        current_id = new_id
+
+output = {
+    'chartType': 'sunburst',
+    'ids': ids,
+    'labels': labels,
+    'parents': parents,
+    'values': values,
+    'title': config.get('title', '') or 'Sunburst Chart',
+}
+`,
+  },
+
+  'gauge-chart': {
+    type: 'gauge-chart',
+    category: 'visualization',
+    label: 'Gauge Chart',
+    description: 'Speedometer-style display for single metrics against targets (KPIs, performance scores)',
+    icon: 'Gauge',
+    defaultConfig: {
+      valueColumn: '',
+      minValue: 0,
+      maxValue: 100,
+      thresholds: [30, 70],
+      colors: ['#EF4444', '#F59E0B', '#10B981'],
+      title: '',
+      suffix: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+min_val = float(config.get('minValue', 0))
+max_val = float(config.get('maxValue', 100))
+thresholds = config.get('thresholds', [30, 70])
+colors = config.get('colors', ['#EF4444', '#F59E0B', '#10B981'])
+suffix = config.get('suffix', '')
+
+if not value_col:
+    raise ValueError("Gauge Chart: Please select a value column")
+
+if value_col not in df.columns:
+    raise ValueError(f"Gauge Chart: Column '{value_col}' not found")
+
+# Get the value (use first row or aggregate)
+value = df[value_col].mean()
+if pd.isna(value):
+    value = 0
+
+# Determine color based on thresholds
+color_idx = 0
+for i, threshold in enumerate(thresholds):
+    if value >= threshold:
+        color_idx = i + 1
+
+output = {
+    'chartType': 'gauge',
+    'value': round(float(value), 2),
+    'min': min_val,
+    'max': max_val,
+    'thresholds': thresholds,
+    'colors': colors,
+    'currentColor': colors[min(color_idx, len(colors)-1)],
+    'title': config.get('title', '') or 'Gauge',
+    'suffix': suffix,
+}
+`,
+  },
+
+  'radar-chart': {
+    type: 'radar-chart',
+    category: 'visualization',
+    label: 'Radar Chart',
+    description: 'Multi-axis radial chart comparing multiple variables (skill profiles, product features)',
+    icon: 'Radar',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumns: [],
+      title: '',
+      fill: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+value_cols = config.get('valueColumns', [])
+fill = config.get('fill', True)
+
+if not value_cols or len(value_cols) == 0:
+    raise ValueError("Radar Chart: Please select value columns to display")
+
+valid_cols = [c for c in value_cols if c in df.columns]
+if not valid_cols:
+    raise ValueError("Radar Chart: No valid value columns found")
+
+# If category column specified, create traces for each category
+if cat_col and cat_col in df.columns:
+    traces = []
+    for cat_value in df[cat_col].unique():
+        cat_df = df[df[cat_col] == cat_value]
+        values = [float(cat_df[c].mean()) for c in valid_cols]
+        traces.append({
+            'name': str(cat_value),
+            'values': values + [values[0]],  # Close the polygon
+        })
+    theta = valid_cols + [valid_cols[0]]
+else:
+    # Single trace with mean values
+    values = [float(df[c].mean()) for c in valid_cols]
+    traces = [{
+        'name': 'Values',
+        'values': values + [values[0]],
+    }]
+    theta = valid_cols + [valid_cols[0]]
+
+output = {
+    'chartType': 'radar',
+    'traces': traces,
+    'theta': theta,
+    'fill': fill,
+    'title': config.get('title', '') or 'Radar Chart',
+}
+`,
+  },
+
+  'waterfall-chart': {
+    type: 'waterfall-chart',
+    category: 'visualization',
+    label: 'Waterfall Chart',
+    description: 'Show cumulative effect of sequential positive/negative values (revenue breakdown, variance)',
+    icon: 'BarChart3',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      title: '',
+      showTotal: true,
+      positiveColor: '#10B981',
+      negativeColor: '#EF4444',
+      totalColor: '#3B82F6',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+show_total = config.get('showTotal', True)
+
+if not cat_col or not value_col:
+    raise ValueError("Waterfall Chart: Please select category and value columns")
+
+if cat_col not in df.columns:
+    raise ValueError(f"Waterfall Chart: Category column '{cat_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Waterfall Chart: Value column '{value_col}' not found")
+
+# Build waterfall data
+categories = df[cat_col].tolist()
+values = df[value_col].tolist()
+
+# Determine measure type for each bar
+measures = []
+for i, v in enumerate(values):
+    if i == 0:
+        measures.append('absolute')
+    else:
+        measures.append('relative')
+
+# Add total if requested
+if show_total:
+    categories.append('Total')
+    values.append(sum(values))
+    measures.append('total')
+
+output = {
+    'chartType': 'waterfall',
+    'categories': categories,
+    'values': [float(v) for v in values],
+    'measures': measures,
+    'title': config.get('title', '') or 'Waterfall Chart',
+    'positiveColor': config.get('positiveColor', '#10B981'),
+    'negativeColor': config.get('negativeColor', '#EF4444'),
+    'totalColor': config.get('totalColor', '#3B82F6'),
+}
+`,
+  },
+
+  'candlestick-chart': {
+    type: 'candlestick-chart',
+    category: 'visualization',
+    label: 'Candlestick Chart',
+    description: 'Financial OHLC visualization for stock/price data with optional volume',
+    icon: 'CandlestickChart',
+    defaultConfig: {
+      dateColumn: '',
+      openColumn: '',
+      highColumn: '',
+      lowColumn: '',
+      closeColumn: '',
+      volumeColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+open_col = config.get('openColumn', '')
+high_col = config.get('highColumn', '')
+low_col = config.get('lowColumn', '')
+close_col = config.get('closeColumn', '')
+volume_col = config.get('volumeColumn', '')
+
+if not all([date_col, open_col, high_col, low_col, close_col]):
+    raise ValueError("Candlestick Chart: Please select date, open, high, low, and close columns")
+
+required_cols = [date_col, open_col, high_col, low_col, close_col]
+for col in required_cols:
+    if col not in df.columns:
+        raise ValueError(f"Candlestick Chart: Column '{col}' not found")
+
+df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+df = df.sort_values(date_col)
+
+data = {
+    'dates': df[date_col].dt.strftime('%Y-%m-%d').tolist(),
+    'open': df[open_col].tolist(),
+    'high': df[high_col].tolist(),
+    'low': df[low_col].tolist(),
+    'close': df[close_col].tolist(),
+}
+
+if volume_col and volume_col in df.columns:
+    data['volume'] = df[volume_col].tolist()
+
+output = {
+    'chartType': 'candlestick',
+    'data': data,
+    'title': config.get('title', '') or 'Candlestick Chart',
+}
+`,
+  },
+
+  'choropleth-map': {
+    type: 'choropleth-map',
+    category: 'visualization',
+    label: 'Choropleth Map',
+    description: 'Geographic heatmap coloring regions by data values (sales by state, population)',
+    icon: 'Map',
+    defaultConfig: {
+      locationColumn: '',
+      valueColumn: '',
+      locationType: 'usa-states',
+      colorScale: 'Blues',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+loc_col = config.get('locationColumn', '')
+value_col = config.get('valueColumn', '')
+loc_type = config.get('locationType', 'usa-states')
+color_scale = config.get('colorScale', 'Blues')
+
+if not loc_col or not value_col:
+    raise ValueError("Choropleth Map: Please select location and value columns")
+
+if loc_col not in df.columns:
+    raise ValueError(f"Choropleth Map: Location column '{loc_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Choropleth Map: Value column '{value_col}' not found")
+
+# Aggregate by location
+map_data = df.groupby(loc_col)[value_col].sum().reset_index()
+map_data.columns = ['location', 'value']
+
+output = {
+    'chartType': 'choropleth',
+    'locations': map_data['location'].tolist(),
+    'values': [float(v) for v in map_data['value'].tolist()],
+    'locationType': loc_type,
+    'colorScale': color_scale,
+    'title': config.get('title', '') or 'Choropleth Map',
+}
+`,
+  },
+
+  'word-cloud': {
+    type: 'word-cloud',
+    category: 'visualization',
+    label: 'Word Cloud',
+    description: 'Text visualization where word size represents frequency (survey responses, NLP)',
+    icon: 'Cloud',
+    defaultConfig: {
+      textColumn: '',
+      weightColumn: '',
+      maxWords: 100,
+      minFontSize: 12,
+      maxFontSize: 60,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+import re
+
+df = input_data.copy()
+text_col = config.get('textColumn', '')
+weight_col = config.get('weightColumn', '')
+max_words = int(config.get('maxWords', 100))
+
+if not text_col:
+    raise ValueError("Word Cloud: Please select a text column")
+
+if text_col not in df.columns:
+    raise ValueError(f"Word Cloud: Text column '{text_col}' not found")
+
+# If weight column provided, use it; otherwise count word frequencies
+if weight_col and weight_col in df.columns:
+    # Assume pre-aggregated word/weight pairs
+    word_data = df[[text_col, weight_col]].dropna()
+    word_data.columns = ['word', 'weight']
+    word_data = word_data.groupby('word')['weight'].sum().reset_index()
+else:
+    # Count word frequencies from text
+    all_text = ' '.join(df[text_col].dropna().astype(str))
+    words = re.findall(r'\\b[a-zA-Z]{3,}\\b', all_text.lower())
+
+    # Common stopwords to filter
+    stopwords = {'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'were', 'they', 'this', 'that', 'with', 'from', 'will', 'would', 'there', 'their', 'what', 'about', 'which', 'when', 'make', 'like', 'just', 'over', 'such', 'into', 'than', 'them', 'some', 'could', 'other'}
+    words = [w for w in words if w not in stopwords]
+
+    word_counts = pd.Series(words).value_counts().reset_index()
+    word_counts.columns = ['word', 'weight']
+    word_data = word_counts
+
+# Get top N words
+word_data = word_data.nlargest(max_words, 'weight')
+
+# Normalize weights for font sizing
+max_weight = word_data['weight'].max()
+min_weight = word_data['weight'].min()
+if max_weight > min_weight:
+    word_data['normalized'] = (word_data['weight'] - min_weight) / (max_weight - min_weight)
+else:
+    word_data['normalized'] = 1
+
+output = {
+    'chartType': 'wordcloud',
+    'words': word_data[['word', 'weight', 'normalized']].to_dict('records'),
+    'title': config.get('title', '') or 'Word Cloud',
+    'minFontSize': int(config.get('minFontSize', 12)),
+    'maxFontSize': int(config.get('maxFontSize', 60)),
+}
+`,
+  },
+
+  'pareto-chart': {
+    type: 'pareto-chart',
+    category: 'visualization',
+    label: 'Pareto Chart',
+    description: 'Combined bar + cumulative line chart for 80/20 analysis (defect causes, revenue sources)',
+    icon: 'BarChart3',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      title: '',
+      showLine: true,
+      show80Line: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+show_line = config.get('showLine', True)
+show_80_line = config.get('show80Line', True)
+
+if not cat_col or not value_col:
+    raise ValueError("Pareto Chart: Please select category and value columns")
+
+if cat_col not in df.columns:
+    raise ValueError(f"Pareto Chart: Category column '{cat_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Pareto Chart: Value column '{value_col}' not found")
+
+# Aggregate and sort by value descending
+pareto_data = df.groupby(cat_col)[value_col].sum().reset_index()
+pareto_data.columns = ['category', 'value']
+pareto_data = pareto_data.sort_values('value', ascending=False).reset_index(drop=True)
+
+# Calculate cumulative percentage
+total = pareto_data['value'].sum()
+pareto_data['cumulative'] = pareto_data['value'].cumsum()
+pareto_data['cumulative_pct'] = (pareto_data['cumulative'] / total * 100).round(2)
+pareto_data['pct'] = (pareto_data['value'] / total * 100).round(2)
+
+# Find 80% threshold index
+threshold_idx = (pareto_data['cumulative_pct'] >= 80).idxmax() if (pareto_data['cumulative_pct'] >= 80).any() else len(pareto_data) - 1
+
+output = {
+    'chartType': 'pareto',
+    'data': pareto_data.to_dict('records'),
+    'thresholdIndex': int(threshold_idx),
+    'title': config.get('title', '') or 'Pareto Chart',
+    'showLine': show_line,
+    'show80Line': show_80_line,
+}
+`,
+  },
+
+  'parallel-coordinates': {
+    type: 'parallel-coordinates',
+    category: 'visualization',
+    label: 'Parallel Coordinates',
+    description: 'High-dimensional data visualization with connected lines across vertical axes',
+    icon: 'AlignVerticalDistributeCenter',
+    defaultConfig: {
+      columns: [],
+      colorColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+color_col = config.get('colorColumn', '')
+
+if not columns or len(columns) == 0:
+    # Use all numeric columns if none specified
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()[:10]
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError("Parallel Coordinates: No valid columns found")
+
+# Prepare data
+pc_data = df[valid_cols].copy()
+
+# Normalize each column to 0-1 range for display
+dimensions = []
+for col in valid_cols:
+    col_data = pd.to_numeric(pc_data[col], errors='coerce')
+    min_val = col_data.min()
+    max_val = col_data.max()
+    dimensions.append({
+        'label': col,
+        'values': col_data.tolist(),
+        'range': [float(min_val), float(max_val)] if pd.notna(min_val) and pd.notna(max_val) else [0, 1],
+    })
+
+# Color by column if specified
+color_values = None
+if color_col and color_col in df.columns:
+    color_data = df[color_col]
+    if color_data.dtype in ['object', 'category']:
+        color_values = pd.factorize(color_data)[0].tolist()
+    else:
+        color_values = pd.to_numeric(color_data, errors='coerce').tolist()
+
+output = {
+    'chartType': 'parallel_coordinates',
+    'dimensions': dimensions,
+    'colorValues': color_values,
+    'colorLabel': color_col if color_col else None,
+    'title': config.get('title', '') or 'Parallel Coordinates',
+}
+`,
+  },
+
+  'dendrogram': {
+    type: 'dendrogram',
+    category: 'visualization',
+    label: 'Dendrogram',
+    description: 'Tree diagram showing hierarchical clustering relationships with distance/similarity',
+    icon: 'GitFork',
+    defaultConfig: {
+      columns: [],
+      linkage: 'ward',
+      distanceMetric: 'euclidean',
+      orientation: 'top',
+      colorThreshold: 0,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy.cluster.hierarchy import linkage, dendrogram as scipy_dendrogram
+from scipy.spatial.distance import pdist
+
+df = input_data.copy()
+columns = config.get('columns', [])
+linkage_method = config.get('linkage', 'ward')
+distance_metric = config.get('distanceMetric', 'euclidean')
+orientation = config.get('orientation', 'top')
+color_threshold = float(config.get('colorThreshold', 0))
+
+# Select numeric columns
+if columns and len(columns) > 0:
+    valid_cols = [c for c in columns if c in df.columns]
+    if valid_cols:
+        data = df[valid_cols].select_dtypes(include=[np.number])
+    else:
+        data = df.select_dtypes(include=[np.number])
+else:
+    data = df.select_dtypes(include=[np.number])
+
+if data.empty or len(data.columns) == 0:
+    raise ValueError("Dendrogram: No numeric columns found for clustering")
+
+# Handle missing values
+data = data.dropna()
+
+if len(data) < 2:
+    raise ValueError("Dendrogram: Need at least 2 samples for clustering")
+
+# Limit samples for performance
+if len(data) > 100:
+    data = data.sample(n=100, random_state=42)
+
+# Compute linkage
+try:
+    if distance_metric == 'euclidean' and linkage_method == 'ward':
+        Z = linkage(data.values, method=linkage_method)
+    else:
+        distances = pdist(data.values, metric=distance_metric)
+        Z = linkage(distances, method=linkage_method)
+except Exception as e:
+    raise ValueError(f"Dendrogram: Clustering failed - {str(e)}")
+
+# Get dendrogram data
+dend = scipy_dendrogram(Z, no_plot=True, color_threshold=color_threshold if color_threshold > 0 else None)
+
+# Format for frontend
+output = {
+    'chartType': 'dendrogram',
+    'icoord': dend['icoord'],
+    'dcoord': dend['dcoord'],
+    'ivl': dend['ivl'],
+    'leaves': dend['leaves'],
+    'color_list': dend['color_list'],
+    'linkageMatrix': Z.tolist(),
+    'orientation': orientation,
+    'title': config.get('title', '') or 'Dendrogram',
+    'sampleCount': len(data),
+}
+`,
+  },
+
   'export': {
     type: 'export',
     category: 'output',
@@ -9520,6 +10345,19 @@ export const blockCategories = [
       'qq-plot',
       'confusion-matrix',
       'roc-curve',
+      'funnel-chart',
+      'sankey-diagram',
+      'treemap',
+      'sunburst-chart',
+      'gauge-chart',
+      'radar-chart',
+      'waterfall-chart',
+      'candlestick-chart',
+      'choropleth-map',
+      'word-cloud',
+      'pareto-chart',
+      'parallel-coordinates',
+      'dendrogram',
     ] as BlockType[],
   },
   {
