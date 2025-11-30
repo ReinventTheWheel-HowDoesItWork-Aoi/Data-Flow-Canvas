@@ -100,6 +100,7 @@ import {
   LineChart,
   Shield,
   Sigma,
+  Settings,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BlockType, BlockState } from '@/types';
@@ -204,6 +205,7 @@ const icons: Record<string, LucideIcon> = {
   LineChart,
   Shield,
   Sigma,
+  Settings,
 };
 
 const iconMap: Record<BlockType, string> = {
@@ -358,6 +360,17 @@ const iconMap: Record<BlockType, string> = {
   'ab-test-calculator': 'FlaskConical',
   'target-encoding': 'Binary',
   'learning-curves': 'TrendingUp',
+  'imbalanced-data-handler': 'Scale',
+  'hyperparameter-tuning': 'Settings',
+  'ensemble-stacking': 'Layers',
+  'advanced-imputation': 'Eraser',
+  'umap-reduction': 'Minimize2',
+  'cluster-validation': 'CheckCircle',
+  'model-comparison': 'GitCompare',
+  'time-series-cv': 'Calendar',
+  'uplift-modeling': 'TrendingUp',
+  'quantile-regression': 'BarChart3',
+  'adversarial-validation': 'AlertTriangle',
   'chart': 'PieChart',
   'table': 'Table',
   'correlation-matrix': 'Grid2x2',
@@ -564,6 +577,17 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'ab-test-calculator': 'blocks.abTestCalculator',
   'target-encoding': 'blocks.targetEncoding',
   'learning-curves': 'blocks.learningCurves',
+  'imbalanced-data-handler': 'blocks.imbalancedDataHandler',
+  'hyperparameter-tuning': 'blocks.hyperparameterTuning',
+  'ensemble-stacking': 'blocks.ensembleStacking',
+  'advanced-imputation': 'blocks.advancedImputation',
+  'umap-reduction': 'blocks.umapReduction',
+  'cluster-validation': 'blocks.clusterValidation',
+  'model-comparison': 'blocks.modelComparison',
+  'time-series-cv': 'blocks.timeSeriesCv',
+  'uplift-modeling': 'blocks.upliftModeling',
+  'quantile-regression': 'blocks.quantileRegression',
+  'adversarial-validation': 'blocks.adversarialValidation',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
