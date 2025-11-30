@@ -18,7 +18,7 @@
 
 ### 🎨 Visual Pipeline Builder
 - **Drag-and-drop interface** — Build pipelines visually with React Flow
-- **137 block types** — Data input (3), transformation (64), analysis (58), visualization (11), and export (1)
+- **150 block types** — Data input (3), transformation (64), analysis (58), visualization (24), and export (1)
 - **Real-time preview** — See data changes as you build
 
 ### 🐍 Python Powered
@@ -40,7 +40,7 @@
 | **Data Input** | Load Data, Sample Data, Create Dataset |
 | **Transform** | Filter Rows, Select Columns, Sort, Group & Aggregate, Join, Derive Column, Handle Missing, Rename Columns, Deduplicate, Sample Rows, Limit Rows, Pivot, Unpivot, Union, Split Column, Merge Columns, Conditional Column, Date/Time Extract, String Operations, Window Functions, Bin/Bucket, Rank, Type Conversion, Fill Forward/Backward, Lag/Lead, Row Number, Date Difference, Transpose, String Pad, Cumulative Operations, Replace Values, Percent Change, Round Numbers, Percent of Total, Absolute Value, Column Math, Extract Substring, Parse Date, Split to Rows, Clip Values, Standardize Text, Case When, Log Transform, Interpolate Missing, Date Truncate, Period-over-Period, Hash Column, Expand Date Range, String Similarity, Generate Sequence, Top N per Group, First/Last per Group |
 | **Analysis** | Statistics, Regression, Clustering, PCA, Outlier Detection, Classification, Normality Test, Hypothesis Testing, Time Series, Feature Importance, Cross Validation, Data Profiling, Value Counts, Cross Tabulation, Scaling, Encoding, A/B Test, Cohort Analysis, RFM Analysis, ANOVA, Chi-Square Test, Correlation Analysis, Survival Analysis, Association Rules, Sentiment Analysis, Moving Average, Train/Test Split, Model Evaluation, K-Nearest Neighbors, Naive Bayes, Gradient Boosting, Pareto Analysis, Trend Analysis, Forecasting, Percentile Analysis, Distribution Fit, Text Preprocessing, TF-IDF Vectorization, Topic Modeling, Similarity Analysis, SVM, XGBoost, Model Explainability, Regression Diagnostics, VIF Analysis, Funnel Analysis, Customer Lifetime Value, Churn Prediction, Growth Metrics, Attribution Modeling, Break-even Analysis, Confidence Intervals, Bootstrap Analysis, Post-hoc Tests, Power Analysis, Bayesian Inference, Data Quality Score, Change Point Detection |
-| **Visualization** | Chart, Table, Correlation Matrix, Violin Plot, Pair Plot, Area Chart, Stacked Chart, Bubble Chart, Q-Q Plot, Confusion Matrix, ROC Curve |
+| **Visualization** | Chart, Table, Correlation Matrix, Violin Plot, Pair Plot, Area Chart, Stacked Chart, Bubble Chart, Q-Q Plot, Confusion Matrix, ROC Curve, Funnel Chart, Sankey Diagram, Treemap, Sunburst Chart, Gauge Chart, Radar Chart, Waterfall Chart, Candlestick Chart, Choropleth Map, Word Cloud, Pareto Chart, Parallel Coordinates, Dendrogram |
 | **Output** | Export |
 
 ## 🚀 Getting Started
