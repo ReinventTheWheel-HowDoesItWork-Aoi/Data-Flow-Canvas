@@ -78,6 +78,13 @@ import {
   GitCompare,
   ListOrdered,
   Trophy,
+  Sun,
+  Gauge,
+  Radar,
+  Map,
+  Cloud,
+  CandlestickChart,
+  AlignVerticalDistributeCenter,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BlockType, BlockState } from '@/types';
@@ -160,6 +167,13 @@ const icons: Record<string, LucideIcon> = {
   GitCompare,
   ListOrdered,
   Trophy,
+  Sun,
+  Gauge,
+  Radar,
+  Map,
+  Cloud,
+  CandlestickChart,
+  AlignVerticalDistributeCenter,
 };
 
 const iconMap: Record<BlockType, string> = {
@@ -299,6 +313,19 @@ const iconMap: Record<BlockType, string> = {
   'qq-plot': 'ScatterChart',
   'confusion-matrix': 'Grid3x3',
   'roc-curve': 'TrendingUp',
+  'funnel-chart': 'Filter',
+  'sankey-diagram': 'GitMerge',
+  'treemap': 'LayoutGrid',
+  'sunburst-chart': 'Sun',
+  'gauge-chart': 'Gauge',
+  'radar-chart': 'Radar',
+  'waterfall-chart': 'BarChart3',
+  'candlestick-chart': 'CandlestickChart',
+  'choropleth-map': 'Map',
+  'word-cloud': 'Cloud',
+  'pareto-chart': 'BarChart3',
+  'parallel-coordinates': 'AlignVerticalDistributeCenter',
+  'dendrogram': 'GitFork',
   'export': 'Download',
 };
 
@@ -440,6 +467,19 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'qq-plot': 'blocks.qqPlot',
   'confusion-matrix': 'blocks.confusionMatrix',
   'roc-curve': 'blocks.rocCurve',
+  'funnel-chart': 'blocks.funnelChart',
+  'sankey-diagram': 'blocks.sankeyDiagram',
+  'treemap': 'blocks.treemap',
+  'sunburst-chart': 'blocks.sunburstChart',
+  'gauge-chart': 'blocks.gaugeChart',
+  'radar-chart': 'blocks.radarChart',
+  'waterfall-chart': 'blocks.waterfallChart',
+  'candlestick-chart': 'blocks.candlestickChart',
+  'choropleth-map': 'blocks.choroplethMap',
+  'word-cloud': 'blocks.wordCloud',
+  'pareto-chart': 'blocks.paretoChart',
+  'parallel-coordinates': 'blocks.parallelCoordinates',
+  'dendrogram': 'blocks.dendrogram',
   'export': 'blocks.export',
 };
 
