@@ -76,6 +76,8 @@ import {
   Percent,
   FileText,
   GitCompare,
+  ListOrdered,
+  Trophy,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { BlockType, BlockState } from '@/types';
@@ -156,6 +158,8 @@ const icons: Record<string, LucideIcon> = {
   Percent,
   FileText,
   GitCompare,
+  ListOrdered,
+  Trophy,
 };
 
 const iconMap: Record<BlockType, string> = {
@@ -216,6 +220,16 @@ const iconMap: Record<BlockType, string> = {
   'filter-expression': 'Code',
   'number-format': 'Hash',
   'extract-pattern': 'Regex',
+  'log-transform': 'TrendingUp',
+  'interpolate-missing': 'TrendingUp',
+  'date-truncate': 'Calendar',
+  'period-over-period': 'GitCompare',
+  'hash-column': 'Hash',
+  'expand-date-range': 'CalendarRange',
+  'string-similarity': 'GitCompare',
+  'generate-sequence': 'ListOrdered',
+  'top-n-per-group': 'Trophy',
+  'first-last-per-group': 'ListFilter',
   'statistics': 'BarChart3',
   'regression': 'TrendingUp',
   'clustering': 'Network',
@@ -347,6 +361,16 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'filter-expression': 'blocks.filterExpression',
   'number-format': 'blocks.numberFormat',
   'extract-pattern': 'blocks.extractPattern',
+  'log-transform': 'blocks.logTransform',
+  'interpolate-missing': 'blocks.interpolateMissing',
+  'date-truncate': 'blocks.dateTruncate',
+  'period-over-period': 'blocks.periodOverPeriod',
+  'hash-column': 'blocks.hashColumn',
+  'expand-date-range': 'blocks.expandDateRange',
+  'string-similarity': 'blocks.stringSimilarity',
+  'generate-sequence': 'blocks.generateSequence',
+  'top-n-per-group': 'blocks.topNPerGroup',
+  'first-last-per-group': 'blocks.firstLastPerGroup',
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
   'clustering': 'blocks.clustering',
