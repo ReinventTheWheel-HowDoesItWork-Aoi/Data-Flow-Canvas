@@ -8660,6 +8660,689 @@ output = {
   },
 
   // Output Blocks
+  'log-transform': {
+    type: 'log-transform',
+    category: 'transform',
+    label: 'Log Transform',
+    description: 'Apply logarithmic or exponential transformations with zero handling',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      operation: 'log',
+      handleZero: 'add_one',
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+operation = config.get('operation', 'log')
+handle_zero = config.get('handleZero', 'add_one')
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Log Transform: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Log Transform: Column '{column}' not found")
+
+values = pd.to_numeric(df[column], errors='coerce')
+out_col = new_column if new_column else f'{column}_{operation}'
+
+# Handle zeros and negatives for log operations
+if operation in ['log', 'log10', 'log2', 'log1p']:
+    if handle_zero == 'add_one':
+        values = values + 1
+    elif handle_zero == 'replace_min':
+        min_positive = values[values > 0].min() if (values > 0).any() else 1
+        values = values.clip(lower=min_positive / 2)
+    elif handle_zero == 'skip':
+        pass  # Will result in NaN for non-positive values
+
+if operation == 'log':
+    df[out_col] = np.log(values)
+elif operation == 'log10':
+    df[out_col] = np.log10(values)
+elif operation == 'log2':
+    df[out_col] = np.log2(values)
+elif operation == 'log1p':
+    df[out_col] = np.log1p(values - 1 if handle_zero == 'add_one' else values)
+elif operation == 'exp':
+    df[out_col] = np.exp(values)
+elif operation == 'sqrt':
+    df[out_col] = np.sqrt(values.clip(lower=0))
+
+output = df
+`,
+  },
+
+  'interpolate-missing': {
+    type: 'interpolate-missing',
+    category: 'transform',
+    label: 'Interpolate Missing',
+    description: 'Fill missing values using interpolation methods',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      method: 'linear',
+      orderColumn: '',
+      limit: 0,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'linear')
+order_col = config.get('orderColumn', '')
+limit = int(config.get('limit', 0)) or None
+
+if not column:
+    raise ValueError("Interpolate Missing: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Interpolate Missing: Column '{column}' not found")
+
+# Sort by order column if specified
+if order_col and order_col in df.columns:
+    df = df.sort_values(order_col).reset_index(drop=True)
+
+if method == 'linear':
+    df[column] = df[column].interpolate(method='linear', limit=limit)
+elif method == 'polynomial':
+    df[column] = df[column].interpolate(method='polynomial', order=2, limit=limit)
+elif method == 'spline':
+    df[column] = df[column].interpolate(method='spline', order=3, limit=limit)
+elif method == 'nearest':
+    df[column] = df[column].interpolate(method='nearest', limit=limit)
+elif method == 'time':
+    if order_col and order_col in df.columns:
+        df = df.set_index(pd.to_datetime(df[order_col]))
+        df[column] = df[column].interpolate(method='time', limit=limit)
+        df = df.reset_index(drop=True)
+    else:
+        df[column] = df[column].interpolate(method='linear', limit=limit)
+elif method == 'ffill':
+    df[column] = df[column].ffill(limit=limit)
+elif method == 'bfill':
+    df[column] = df[column].bfill(limit=limit)
+
+output = df
+`,
+  },
+
+  'date-truncate': {
+    type: 'date-truncate',
+    category: 'transform',
+    label: 'Date Truncate',
+    description: 'Round dates to the start of a time period',
+    icon: 'Calendar',
+    defaultConfig: {
+      column: '',
+      unit: 'day',
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+unit = config.get('unit', 'day')
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Date Truncate: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Date Truncate: Column '{column}' not found")
+
+dt = pd.to_datetime(df[column], errors='coerce')
+out_col = new_column if new_column else f'{column}_truncated'
+
+if unit == 'minute':
+    df[out_col] = dt.dt.floor('min')
+elif unit == 'hour':
+    df[out_col] = dt.dt.floor('h')
+elif unit == 'day':
+    df[out_col] = dt.dt.floor('D')
+elif unit == 'week':
+    df[out_col] = dt.dt.to_period('W').dt.start_time
+elif unit == 'month':
+    df[out_col] = dt.dt.to_period('M').dt.start_time
+elif unit == 'quarter':
+    df[out_col] = dt.dt.to_period('Q').dt.start_time
+elif unit == 'year':
+    df[out_col] = dt.dt.to_period('Y').dt.start_time
+
+output = df
+`,
+  },
+
+  'period-over-period': {
+    type: 'period-over-period',
+    category: 'transform',
+    label: 'Period over Period',
+    description: 'Calculate YoY, MoM, WoW, QoQ, DoD changes',
+    icon: 'GitCompare',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      period: 'mom',
+      changeType: 'percent',
+      groupColumns: [],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+period = config.get('period', 'mom')
+change_type = config.get('changeType', 'percent')
+group_cols = config.get('groupColumns', [])
+
+if not date_col or not value_col:
+    raise ValueError("Period over Period: Please specify date and value columns in the Config tab")
+
+if date_col not in df.columns:
+    raise ValueError(f"Period over Period: Date column '{date_col}' not found")
+if value_col not in df.columns:
+    raise ValueError(f"Period over Period: Value column '{value_col}' not found")
+
+df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+
+# Determine shift periods
+period_map = {
+    'dod': 1,      # Day over Day
+    'wow': 7,      # Week over Week
+    'mom': 30,     # Month over Month (approximate)
+    'qoq': 90,     # Quarter over Quarter
+    'yoy': 365     # Year over Year
+}
+shift_days = period_map.get(period, 30)
+
+df = df.sort_values(date_col).reset_index(drop=True)
+
+if group_cols and len(group_cols) > 0:
+    valid_groups = [c for c in group_cols if c in df.columns]
+    if valid_groups:
+        df['_prev_value'] = df.groupby(valid_groups)[value_col].shift(1)
+    else:
+        df['_prev_value'] = df[value_col].shift(1)
+else:
+    df['_prev_value'] = df[value_col].shift(1)
+
+if change_type == 'percent':
+    df[f'{value_col}_{period}_pct'] = ((df[value_col] - df['_prev_value']) / df['_prev_value'] * 100).round(2)
+elif change_type == 'absolute':
+    df[f'{value_col}_{period}_diff'] = df[value_col] - df['_prev_value']
+else:  # both
+    df[f'{value_col}_{period}_pct'] = ((df[value_col] - df['_prev_value']) / df['_prev_value'] * 100).round(2)
+    df[f'{value_col}_{period}_diff'] = df[value_col] - df['_prev_value']
+
+df = df.drop(columns=['_prev_value'])
+
+output = df
+`,
+  },
+
+  'hash-column': {
+    type: 'hash-column',
+    category: 'transform',
+    label: 'Hash Column',
+    description: 'Hash column values for anonymization using various algorithms',
+    icon: 'Hash',
+    defaultConfig: {
+      column: '',
+      algorithm: 'sha256',
+      truncateLength: 0,
+      newColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import hashlib
+
+df = input_data.copy()
+column = config.get('column', '')
+algorithm = config.get('algorithm', 'sha256')
+truncate = int(config.get('truncateLength', 0))
+new_column = config.get('newColumn', '')
+
+if not column:
+    raise ValueError("Hash Column: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Hash Column: Column '{column}' not found")
+
+out_col = new_column if new_column else f'{column}_hash'
+
+def hash_value(val):
+    if pd.isna(val):
+        return None
+    s = str(val).encode('utf-8')
+    if algorithm == 'sha256':
+        h = hashlib.sha256(s).hexdigest()
+    elif algorithm == 'sha512':
+        h = hashlib.sha512(s).hexdigest()
+    elif algorithm == 'md5':
+        h = hashlib.md5(s).hexdigest()
+    elif algorithm == 'sha1':
+        h = hashlib.sha1(s).hexdigest()
+    elif algorithm == 'blake2':
+        h = hashlib.blake2b(s).hexdigest()
+    else:
+        h = hashlib.sha256(s).hexdigest()
+
+    if truncate > 0:
+        h = h[:truncate]
+    return h
+
+df[out_col] = df[column].apply(hash_value)
+
+output = df
+`,
+  },
+
+  'expand-date-range': {
+    type: 'expand-date-range',
+    category: 'transform',
+    label: 'Expand Date Range',
+    description: 'Fill missing dates in a time series with various fill methods',
+    icon: 'CalendarRange',
+    defaultConfig: {
+      dateColumn: '',
+      freq: 'D',
+      groupColumns: [],
+      fillMethod: 'ffill',
+      startDate: '',
+      endDate: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+freq = config.get('freq', 'D')
+group_cols = config.get('groupColumns', [])
+fill_method = config.get('fillMethod', 'ffill')
+
+if not date_col:
+    raise ValueError("Expand Date Range: Please specify a date column in the Config tab")
+
+if date_col not in df.columns:
+    raise ValueError(f"Expand Date Range: Date column '{date_col}' not found")
+
+df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+
+freq_map = {'D': 'D', 'W': 'W', 'M': 'MS', 'Q': 'QS', 'Y': 'YS', 'H': 'h'}
+pd_freq = freq_map.get(freq, 'D')
+
+if group_cols and len(group_cols) > 0:
+    valid_groups = [c for c in group_cols if c in df.columns]
+    if valid_groups:
+        results = []
+        for name, group in df.groupby(valid_groups):
+            date_range = pd.date_range(group[date_col].min(), group[date_col].max(), freq=pd_freq)
+            expanded = pd.DataFrame({date_col: date_range})
+            for i, col in enumerate(valid_groups):
+                expanded[col] = name if len(valid_groups) == 1 else name[i]
+            merged = expanded.merge(group, on=[date_col] + valid_groups, how='left')
+            results.append(merged)
+        df = pd.concat(results, ignore_index=True)
+    else:
+        date_range = pd.date_range(df[date_col].min(), df[date_col].max(), freq=pd_freq)
+        expanded = pd.DataFrame({date_col: date_range})
+        df = expanded.merge(df, on=date_col, how='left')
+else:
+    date_range = pd.date_range(df[date_col].min(), df[date_col].max(), freq=pd_freq)
+    expanded = pd.DataFrame({date_col: date_range})
+    df = expanded.merge(df, on=date_col, how='left')
+
+# Apply fill method
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+if fill_method == 'ffill':
+    df[numeric_cols] = df[numeric_cols].ffill()
+elif fill_method == 'bfill':
+    df[numeric_cols] = df[numeric_cols].bfill()
+elif fill_method == 'zero':
+    df[numeric_cols] = df[numeric_cols].fillna(0)
+elif fill_method == 'interpolate':
+    df[numeric_cols] = df[numeric_cols].interpolate(method='linear')
+
+output = df.sort_values(date_col).reset_index(drop=True)
+`,
+  },
+
+  'string-similarity': {
+    type: 'string-similarity',
+    category: 'transform',
+    label: 'String Similarity',
+    description: 'Calculate similarity between string columns for fuzzy matching',
+    icon: 'GitCompare',
+    defaultConfig: {
+      column1: '',
+      column2: '',
+      method: 'levenshtein',
+      threshold: 0.8,
+      newColumn: 'similarity',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+col1 = config.get('column1', '')
+col2 = config.get('column2', '')
+method = config.get('method', 'levenshtein')
+threshold = float(config.get('threshold', 0.8))
+new_col = config.get('newColumn', 'similarity')
+
+if not col1 or not col2:
+    raise ValueError("String Similarity: Please specify both columns in the Config tab")
+
+if col1 not in df.columns:
+    raise ValueError(f"String Similarity: Column '{col1}' not found")
+if col2 not in df.columns:
+    raise ValueError(f"String Similarity: Column '{col2}' not found")
+
+def levenshtein_ratio(s1, s2):
+    if pd.isna(s1) or pd.isna(s2):
+        return np.nan
+    s1, s2 = str(s1), str(s2)
+    if len(s1) == 0 and len(s2) == 0:
+        return 1.0
+    if len(s1) == 0 or len(s2) == 0:
+        return 0.0
+
+    rows = len(s1) + 1
+    cols = len(s2) + 1
+    dist = [[0] * cols for _ in range(rows)]
+
+    for i in range(rows):
+        dist[i][0] = i
+    for j in range(cols):
+        dist[0][j] = j
+
+    for i in range(1, rows):
+        for j in range(1, cols):
+            cost = 0 if s1[i-1] == s2[j-1] else 1
+            dist[i][j] = min(dist[i-1][j] + 1, dist[i][j-1] + 1, dist[i-1][j-1] + cost)
+
+    max_len = max(len(s1), len(s2))
+    return 1 - (dist[rows-1][cols-1] / max_len) if max_len > 0 else 1.0
+
+def jaro_similarity(s1, s2):
+    if pd.isna(s1) or pd.isna(s2):
+        return np.nan
+    s1, s2 = str(s1), str(s2)
+    if s1 == s2:
+        return 1.0
+
+    len1, len2 = len(s1), len(s2)
+    if len1 == 0 or len2 == 0:
+        return 0.0
+
+    match_distance = max(len1, len2) // 2 - 1
+    if match_distance < 0:
+        match_distance = 0
+
+    s1_matches = [False] * len1
+    s2_matches = [False] * len2
+    matches = 0
+    transpositions = 0
+
+    for i in range(len1):
+        start = max(0, i - match_distance)
+        end = min(i + match_distance + 1, len2)
+        for j in range(start, end):
+            if s2_matches[j] or s1[i] != s2[j]:
+                continue
+            s1_matches[i] = True
+            s2_matches[j] = True
+            matches += 1
+            break
+
+    if matches == 0:
+        return 0.0
+
+    k = 0
+    for i in range(len1):
+        if not s1_matches[i]:
+            continue
+        while not s2_matches[k]:
+            k += 1
+        if s1[i] != s2[k]:
+            transpositions += 1
+        k += 1
+
+    return (matches/len1 + matches/len2 + (matches - transpositions/2)/matches) / 3
+
+def jaro_winkler(s1, s2, p=0.1):
+    jaro = jaro_similarity(s1, s2)
+    if pd.isna(jaro):
+        return np.nan
+    s1, s2 = str(s1), str(s2)
+    prefix = 0
+    for i in range(min(len(s1), len(s2), 4)):
+        if s1[i] == s2[i]:
+            prefix += 1
+        else:
+            break
+    return jaro + prefix * p * (1 - jaro)
+
+if method == 'levenshtein':
+    df[new_col] = df.apply(lambda r: levenshtein_ratio(r[col1], r[col2]), axis=1)
+elif method == 'jaro':
+    df[new_col] = df.apply(lambda r: jaro_similarity(r[col1], r[col2]), axis=1)
+elif method == 'jaro_winkler':
+    df[new_col] = df.apply(lambda r: jaro_winkler(r[col1], r[col2]), axis=1)
+elif method == 'exact':
+    df[new_col] = (df[col1].astype(str) == df[col2].astype(str)).astype(float)
+elif method == 'contains':
+    df[new_col] = df.apply(lambda r: 1.0 if str(r[col2]) in str(r[col1]) else 0.0, axis=1)
+
+df[new_col] = df[new_col].round(4)
+df[f'{new_col}_match'] = df[new_col] >= threshold
+
+output = df
+`,
+  },
+
+  'generate-sequence': {
+    type: 'generate-sequence',
+    category: 'transform',
+    label: 'Generate Sequence',
+    description: 'Create a new dataset with number sequences, date ranges, or repeated patterns',
+    icon: 'ListOrdered',
+    defaultConfig: {
+      type: 'number',
+      start: 1,
+      end: 10,
+      step: 1,
+      columnName: 'sequence',
+      dateStart: '',
+      dateEnd: '',
+      dateFreq: 'D',
+      repeatValue: '',
+      repeatCount: 10,
+    },
+    inputs: 0,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+seq_type = config.get('type', 'number')
+col_name = config.get('columnName', 'sequence')
+
+if seq_type == 'number':
+    start = float(config.get('start', 1))
+    end = float(config.get('end', 10))
+    step = float(config.get('step', 1))
+
+    if step == 0:
+        raise ValueError("Generate Sequence: Step cannot be zero")
+
+    values = np.arange(start, end + step/2, step)
+    df = pd.DataFrame({col_name: values})
+
+elif seq_type == 'date':
+    date_start = config.get('dateStart', '')
+    date_end = config.get('dateEnd', '')
+    freq = config.get('dateFreq', 'D')
+
+    if not date_start or not date_end:
+        from datetime import datetime, timedelta
+        date_end = datetime.now()
+        date_start = date_end - timedelta(days=30)
+    else:
+        date_start = pd.to_datetime(date_start)
+        date_end = pd.to_datetime(date_end)
+
+    freq_map = {'D': 'D', 'W': 'W', 'M': 'MS', 'Q': 'QS', 'Y': 'YS', 'H': 'h'}
+    pd_freq = freq_map.get(freq, 'D')
+
+    dates = pd.date_range(date_start, date_end, freq=pd_freq)
+    df = pd.DataFrame({col_name: dates})
+
+elif seq_type == 'repeat':
+    value = config.get('repeatValue', 'A')
+    count = int(config.get('repeatCount', 10))
+
+    df = pd.DataFrame({col_name: [value] * count})
+
+else:
+    df = pd.DataFrame({col_name: range(1, 11)})
+
+output = df
+`,
+  },
+
+  'top-n-per-group': {
+    type: 'top-n-per-group',
+    category: 'transform',
+    label: 'Top N per Group',
+    description: 'Get top or bottom N rows per group with optional rank column',
+    icon: 'Trophy',
+    defaultConfig: {
+      groupColumns: [],
+      orderColumn: '',
+      n: 5,
+      ascending: false,
+      includeRank: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+group_cols = config.get('groupColumns', [])
+order_col = config.get('orderColumn', '')
+n = int(config.get('n', 5))
+ascending = config.get('ascending', False)
+include_rank = config.get('includeRank', True)
+
+if not order_col:
+    raise ValueError("Top N per Group: Please specify an order column in the Config tab")
+
+if order_col not in df.columns:
+    raise ValueError(f"Top N per Group: Order column '{order_col}' not found")
+
+if group_cols and len(group_cols) > 0:
+    valid_groups = [c for c in group_cols if c in df.columns]
+    if not valid_groups:
+        raise ValueError("Top N per Group: No valid group columns found")
+
+    # Sort and get top N per group
+    df = df.sort_values([*valid_groups, order_col], ascending=[True]*len(valid_groups) + [ascending])
+
+    result = df.groupby(valid_groups, group_keys=False).head(n)
+
+    if include_rank:
+        result['_rank'] = result.groupby(valid_groups).cumcount() + 1
+        result = result.rename(columns={'_rank': 'rank_in_group'})
+else:
+    df = df.sort_values(order_col, ascending=ascending)
+    result = df.head(n)
+
+    if include_rank:
+        result = result.copy()
+        result['rank'] = range(1, len(result) + 1)
+
+output = result.reset_index(drop=True)
+`,
+  },
+
+  'first-last-per-group': {
+    type: 'first-last-per-group',
+    category: 'transform',
+    label: 'First/Last per Group',
+    description: 'Get the first, last, or both rows per group based on sort order',
+    icon: 'ListFilter',
+    defaultConfig: {
+      groupColumns: [],
+      orderColumn: '',
+      position: 'first',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+group_cols = config.get('groupColumns', [])
+order_col = config.get('orderColumn', '')
+position = config.get('position', 'first')
+
+if not group_cols or len(group_cols) == 0:
+    raise ValueError("First/Last per Group: Please specify at least one group column in the Config tab")
+
+valid_groups = [c for c in group_cols if c in df.columns]
+if not valid_groups:
+    raise ValueError("First/Last per Group: No valid group columns found")
+
+# Sort by order column if specified
+if order_col and order_col in df.columns:
+    df = df.sort_values([*valid_groups, order_col])
+else:
+    df = df.sort_values(valid_groups)
+
+if position == 'first':
+    result = df.groupby(valid_groups, as_index=False).first()
+elif position == 'last':
+    result = df.groupby(valid_groups, as_index=False).last()
+elif position == 'both':
+    first_df = df.groupby(valid_groups, as_index=False).first()
+    first_df['_position'] = 'first'
+    last_df = df.groupby(valid_groups, as_index=False).last()
+    last_df['_position'] = 'last'
+    result = pd.concat([first_df, last_df], ignore_index=True)
+    result = result.sort_values(valid_groups)
+
+output = result.reset_index(drop=True)
+`,
+  },
+
   'export': {
     type: 'export',
     category: 'output',
@@ -8746,6 +9429,16 @@ export const blockCategories = [
       'clip-values',
       'standardize-text',
       'case-when',
+      'log-transform',
+      'interpolate-missing',
+      'date-truncate',
+      'period-over-period',
+      'hash-column',
+      'expand-date-range',
+      'string-similarity',
+      'generate-sequence',
+      'top-n-per-group',
+      'first-last-per-group',
     ] as BlockType[],
   },
   {
