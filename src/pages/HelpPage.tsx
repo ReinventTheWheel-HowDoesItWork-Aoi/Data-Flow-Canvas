@@ -195,7 +195,7 @@ const blocks: BlockInfo[] = [
   { icon: Trophy, name: 'Top N per Group', description: 'Get top or bottom N rows per group based on a ranking column', category: 'Transform' },
   { icon: ListFilter, name: 'First/Last per Group', description: 'Get the first, last, or both rows per group based on sort order', category: 'Transform' },
 
-  // Analysis (84 blocks)
+  // Analysis (95 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -280,6 +280,17 @@ const blocks: BlockInfo[] = [
   { icon: FlaskConical, name: 'A/B Test Calculator', description: 'Calculate statistical significance for A/B tests with confidence intervals', category: 'Analysis' },
   { icon: Binary, name: 'Target Encoding', description: 'Encode categorical variables using target mean with smoothing', category: 'Analysis' },
   { icon: TrendingUp, name: 'Learning Curves', description: 'Analyze model performance vs training set size to diagnose bias/variance', category: 'Analysis' },
+  { icon: Scale, name: 'Imbalanced Data Handler', description: 'Handle class imbalance using SMOTE, ADASYN, undersampling, or hybrid methods', category: 'Analysis' },
+  { icon: Award, name: 'Hyperparameter Tuning', description: 'Optimize model parameters using Grid Search or Random Search with cross-validation', category: 'Analysis' },
+  { icon: Layers, name: 'Ensemble Stacking', description: 'Combine multiple ML models using stacking, voting, or blending for improved predictions', category: 'Analysis' },
+  { icon: Eraser, name: 'Advanced Imputation', description: 'Sophisticated missing value imputation using KNN, Iterative (MICE), or MissForest methods', category: 'Analysis' },
+  { icon: Minimize2, name: 'UMAP Reduction', description: 'Dimensionality reduction using UMAP - faster than t-SNE with better global structure preservation', category: 'Analysis' },
+  { icon: CheckCircle, name: 'Cluster Validation', description: 'Validate clustering quality with Silhouette, Davies-Bouldin, and Calinski-Harabasz scores', category: 'Analysis' },
+  { icon: GitCompare, name: 'Model Comparison', description: 'Compare multiple ML models side-by-side with cross-validation and statistical metrics', category: 'Analysis' },
+  { icon: Calendar, name: 'Time Series CV', description: 'Proper temporal cross-validation that respects time order to prevent data leakage', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Uplift Modeling', description: 'Estimate individual treatment effects to identify who responds best to an intervention', category: 'Analysis' },
+  { icon: BarChart3, name: 'Quantile Regression', description: 'Predict specific quantiles to create prediction intervals with calibrated coverage', category: 'Analysis' },
+  { icon: AlertTriangle, name: 'Adversarial Validation', description: 'Detect distribution shift between train and test sets by training a classifier to distinguish them', category: 'Analysis' },
 
   // Visualization (50 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -544,6 +555,17 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'A/B Test Calculator': { name: 'blocks.abTestCalculator', description: 'blockDescriptions.abTestCalculator' },
   'Target Encoding': { name: 'blocks.targetEncoding', description: 'blockDescriptions.targetEncoding' },
   'Learning Curves': { name: 'blocks.learningCurves', description: 'blockDescriptions.learningCurves' },
+  'Imbalanced Data Handler': { name: 'blocks.imbalancedDataHandler', description: 'blockDescriptions.imbalancedDataHandler' },
+  'Hyperparameter Tuning': { name: 'blocks.hyperparameterTuning', description: 'blockDescriptions.hyperparameterTuning' },
+  'Ensemble Stacking': { name: 'blocks.ensembleStacking', description: 'blockDescriptions.ensembleStacking' },
+  'Advanced Imputation': { name: 'blocks.advancedImputation', description: 'blockDescriptions.advancedImputation' },
+  'UMAP Reduction': { name: 'blocks.umapReduction', description: 'blockDescriptions.umapReduction' },
+  'Cluster Validation': { name: 'blocks.clusterValidation', description: 'blockDescriptions.clusterValidation' },
+  'Model Comparison': { name: 'blocks.modelComparison', description: 'blockDescriptions.modelComparison' },
+  'Time Series CV': { name: 'blocks.timeSeriesCv', description: 'blockDescriptions.timeSeriesCv' },
+  'Uplift Modeling': { name: 'blocks.upliftModeling', description: 'blockDescriptions.upliftModeling' },
+  'Quantile Regression': { name: 'blocks.quantileRegression', description: 'blockDescriptions.quantileRegression' },
+  'Adversarial Validation': { name: 'blocks.adversarialValidation', description: 'blockDescriptions.adversarialValidation' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -701,7 +723,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">202</p>
+                <p className="text-h2 font-bold text-text-primary">213</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
