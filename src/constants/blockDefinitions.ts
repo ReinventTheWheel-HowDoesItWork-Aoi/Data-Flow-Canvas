@@ -8176,6 +8176,2255 @@ output = pd.DataFrame(results)
 `,
   },
 
+  'isolation-forest': {
+    type: 'isolation-forest',
+    category: 'analysis',
+    label: 'Isolation Forest',
+    description: 'Detect anomalies using Isolation Forest algorithm',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      features: [],
+      contamination: 0.1,
+      nEstimators: 100,
+      addScores: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+contamination = float(config.get('contamination', 0.1))
+n_estimators = int(config.get('nEstimators', 100))
+add_scores = config.get('addScores', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features:
+    raise ValueError("Isolation Forest: No numeric columns found or specified")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"Isolation Forest: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1)
+X_clean = X[valid_mask]
+
+if len(X_clean) < 10:
+    raise ValueError("Isolation Forest: Need at least 10 valid data points")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+model = IsolationForest(
+    n_estimators=n_estimators,
+    contamination=contamination,
+    random_state=42,
+    n_jobs=-1
+)
+
+predictions = model.fit_predict(X_scaled)
+scores = model.decision_function(X_scaled)
+
+df['is_anomaly'] = np.nan
+df.loc[valid_mask, 'is_anomaly'] = (predictions == -1).astype(int)
+
+if add_scores:
+    df['anomaly_score'] = np.nan
+    df.loc[valid_mask, 'anomaly_score'] = -scores
+
+output = df
+`,
+  },
+
+  'arima-forecasting': {
+    type: 'arima-forecasting',
+    category: 'analysis',
+    label: 'ARIMA Forecasting',
+    description: 'Time series forecasting using ARIMA/SARIMA models',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      periods: 12,
+      autoArima: true,
+      p: 1,
+      d: 1,
+      q: 1,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+periods = int(config.get('periods', 12))
+p = int(config.get('p', 1))
+d = int(config.get('d', 1))
+q = int(config.get('q', 1))
+
+if not date_col or not value_col:
+    raise ValueError("ARIMA: Please specify date and value columns")
+
+if date_col not in df.columns or value_col not in df.columns:
+    raise ValueError("ARIMA: Required columns not found")
+
+df = df.sort_values(date_col).reset_index(drop=True)
+values = pd.to_numeric(df[value_col], errors='coerce').fillna(method='ffill').fillna(method='bfill').values
+
+if len(values) < 10:
+    raise ValueError("ARIMA: Need at least 10 data points")
+
+def difference(data, d_order):
+    diff_data = data.copy()
+    for _ in range(d_order):
+        diff_data = np.diff(diff_data)
+    return diff_data
+
+def undifference(forecast, last_values, d_order):
+    result = forecast.copy()
+    for i in range(d_order):
+        result = np.cumsum(np.concatenate([[last_values[-(d_order-i)]], result]))
+    return result[1:] if d_order > 0 else result
+
+diff_values = difference(values, d)
+
+def ar_forecast(data, p_order, n_forecast):
+    if p_order == 0 or len(data) < p_order:
+        return np.full(n_forecast, np.mean(data))
+    X = np.array([data[i:len(data)-p_order+i] for i in range(p_order)]).T
+    y = data[p_order:]
+    try:
+        coeffs, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
+    except:
+        coeffs = np.ones(p_order) / p_order
+    forecast = []
+    history = list(data[-p_order:])
+    for _ in range(n_forecast):
+        pred = np.dot(coeffs, history[-p_order:])
+        forecast.append(pred)
+        history.append(pred)
+    return np.array(forecast)
+
+if len(diff_values) > 0:
+    diff_forecast = ar_forecast(diff_values, p, periods)
+    forecast = undifference(diff_forecast, values[-d:] if d > 0 else values[-1:], d)
+else:
+    forecast = np.full(periods, np.mean(values))
+
+residual_std = np.std(diff_values) if len(diff_values) > 0 else np.std(values)
+confidence_mult = np.sqrt(np.arange(1, periods + 1))
+lower_ci = forecast - 1.96 * residual_std * confidence_mult
+upper_ci = forecast + 1.96 * residual_std * confidence_mult
+
+try:
+    last_date = pd.to_datetime(df[date_col].iloc[-1])
+    date_diff = pd.to_datetime(df[date_col]).diff().median()
+    if pd.isna(date_diff):
+        date_diff = pd.Timedelta(days=1)
+    future_dates = [last_date + date_diff * (i + 1) for i in range(periods)]
+except:
+    future_dates = [f"Period_{i+1}" for i in range(periods)]
+
+forecast_df = pd.DataFrame({
+    date_col: future_dates,
+    value_col: np.round(forecast, 4),
+    'lower_ci_95': np.round(lower_ci, 4),
+    'upper_ci_95': np.round(upper_ci, 4),
+    'type': 'forecast'
+})
+
+actual_df = df[[date_col, value_col]].copy()
+actual_df['lower_ci_95'] = np.nan
+actual_df['upper_ci_95'] = np.nan
+actual_df['type'] = 'actual'
+
+output = pd.concat([actual_df, forecast_df], ignore_index=True)
+`,
+  },
+
+  'seasonal-decomposition': {
+    type: 'seasonal-decomposition',
+    category: 'analysis',
+    label: 'Seasonal Decomposition',
+    description: 'Decompose time series into trend, seasonal, and residual components',
+    icon: 'Layers',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      period: 12,
+      model: 'additive',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+period = int(config.get('period', 12))
+model_type = config.get('model', 'additive')
+
+if not date_col or not value_col:
+    raise ValueError("Seasonal Decomposition: Please specify date and value columns")
+
+if date_col not in df.columns or value_col not in df.columns:
+    raise ValueError("Seasonal Decomposition: Required columns not found")
+
+df = df.sort_values(date_col).reset_index(drop=True)
+values = pd.to_numeric(df[value_col], errors='coerce').fillna(method='ffill').fillna(method='bfill')
+
+n = len(values)
+if n < 2 * period:
+    raise ValueError(f"Seasonal Decomposition: Need at least {2 * period} data points for period {period}")
+
+def moving_average(data, window):
+    ma = np.convolve(data, np.ones(window)/window, mode='valid')
+    pad_left = (window - 1) // 2
+    pad_right = window - 1 - pad_left
+    return np.concatenate([np.full(pad_left, np.nan), ma, np.full(pad_right, np.nan)])
+
+trend = moving_average(values.values, period)
+
+if model_type == 'multiplicative':
+    detrended = values.values / np.where(trend != 0, trend, 1)
+else:
+    detrended = values.values - trend
+
+seasonal = np.zeros(n)
+for i in range(period):
+    indices = range(i, n, period)
+    seasonal_mean = np.nanmean([detrended[j] for j in indices if not np.isnan(detrended[j])])
+    for j in indices:
+        seasonal[j] = seasonal_mean
+
+if model_type == 'multiplicative':
+    seasonal = seasonal / np.nanmean(seasonal)
+else:
+    seasonal = seasonal - np.nanmean(seasonal)
+
+if model_type == 'multiplicative':
+    residual = values.values / (trend * np.where(seasonal != 0, seasonal, 1))
+else:
+    residual = values.values - trend - seasonal
+
+result = pd.DataFrame({
+    date_col: df[date_col],
+    'observed': values,
+    'trend': np.round(trend, 4),
+    'seasonal': np.round(seasonal, 4),
+    'residual': np.round(residual, 4)
+})
+
+output = result
+`,
+  },
+
+  'monte-carlo-simulation': {
+    type: 'monte-carlo-simulation',
+    category: 'analysis',
+    label: 'Monte Carlo Simulation',
+    description: 'Run Monte Carlo simulations for risk analysis and uncertainty quantification',
+    icon: 'Shuffle',
+    defaultConfig: {
+      targetColumn: '',
+      distribution: 'normal',
+      simulations: 10000,
+      confidenceLevel: 95,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+target_col = config.get('targetColumn', '')
+distribution = config.get('distribution', 'normal')
+n_simulations = int(config.get('simulations', 10000))
+confidence_level = float(config.get('confidenceLevel', 95))
+
+if not target_col:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) == 0:
+        raise ValueError("Monte Carlo: No numeric columns found")
+    target_col = numeric_cols[0]
+
+if target_col not in df.columns:
+    raise ValueError(f"Monte Carlo: Column '{target_col}' not found")
+
+data = pd.to_numeric(df[target_col], errors='coerce').dropna()
+
+if len(data) < 2:
+    raise ValueError("Monte Carlo: Need at least 2 data points")
+
+mean = data.mean()
+std = data.std()
+
+np.random.seed(42)
+
+if distribution == 'normal':
+    simulated = np.random.normal(mean, std, n_simulations)
+elif distribution == 'lognormal':
+    log_mean = np.log(mean**2 / np.sqrt(std**2 + mean**2))
+    log_std = np.sqrt(np.log(1 + (std/mean)**2))
+    simulated = np.random.lognormal(log_mean, log_std, n_simulations)
+elif distribution == 'uniform':
+    low = mean - 2 * std
+    high = mean + 2 * std
+    simulated = np.random.uniform(low, high, n_simulations)
+elif distribution == 'triangular':
+    low = data.min()
+    high = data.max()
+    mode = data.median()
+    simulated = np.random.triangular(low, mode, high, n_simulations)
+else:
+    simulated = np.random.exponential(mean, n_simulations)
+
+alpha = (100 - confidence_level) / 2
+pct_values = np.percentile(simulated, [alpha, 50, 100 - alpha])
+
+results = pd.DataFrame({
+    'statistic': ['mean', 'std', 'min', 'max', 'median',
+                  f'percentile_{alpha}', f'percentile_{100-alpha}',
+                  'var_at_risk_95', 'expected_shortfall_95',
+                  'skewness', 'kurtosis', 'n_simulations'],
+    'value': [
+        round(np.mean(simulated), 4),
+        round(np.std(simulated), 4),
+        round(np.min(simulated), 4),
+        round(np.max(simulated), 4),
+        round(np.median(simulated), 4),
+        round(pct_values[0], 4),
+        round(pct_values[2], 4),
+        round(np.percentile(simulated, 5), 4),
+        round(np.mean(simulated[simulated <= np.percentile(simulated, 5)]), 4),
+        round(stats.skew(simulated), 4),
+        round(stats.kurtosis(simulated), 4),
+        n_simulations
+    ]
+})
+
+output = results
+`,
+  },
+
+  'propensity-score-matching': {
+    type: 'propensity-score-matching',
+    category: 'analysis',
+    label: 'Propensity Score Matching',
+    description: 'Match treatment and control groups for causal inference',
+    icon: 'GitMerge',
+    defaultConfig: {
+      treatmentColumn: '',
+      covariates: [],
+      outcomeColumn: '',
+      matchingMethod: 'nearest',
+      caliper: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+treatment_col = config.get('treatmentColumn', '')
+covariates = config.get('covariates', [])
+outcome_col = config.get('outcomeColumn', '')
+matching_method = config.get('matchingMethod', 'nearest')
+caliper = float(config.get('caliper', 0.2))
+
+if not treatment_col or not covariates:
+    raise ValueError("PSM: Please specify treatment column and covariates")
+
+missing = [c for c in [treatment_col] + covariates if c not in df.columns]
+if missing:
+    raise ValueError(f"PSM: Column(s) not found: {', '.join(missing)}")
+
+df = df.dropna(subset=[treatment_col] + covariates)
+
+treatment = pd.to_numeric(df[treatment_col], errors='coerce')
+if treatment.nunique() > 2:
+    raise ValueError("PSM: Treatment column must be binary (0/1)")
+
+treatment = (treatment > 0).astype(int)
+
+X = df[covariates].copy()
+for col in covariates:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.fillna(X.mean())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = LogisticRegression(random_state=42, max_iter=1000)
+model.fit(X_scaled, treatment)
+propensity_scores = model.predict_proba(X_scaled)[:, 1]
+
+df['propensity_score'] = propensity_scores
+
+treated_idx = df.index[treatment == 1].tolist()
+control_idx = df.index[treatment == 0].tolist()
+
+treated_ps = propensity_scores[treatment == 1]
+control_ps = propensity_scores[treatment == 0]
+
+matches = []
+used_controls = set()
+
+for i, t_idx in enumerate(treated_idx):
+    t_ps = treated_ps[i]
+    best_match = None
+    best_dist = float('inf')
+
+    for j, c_idx in enumerate(control_idx):
+        if c_idx in used_controls:
+            continue
+        c_ps = control_ps[j]
+        dist = abs(t_ps - c_ps)
+
+        if dist < best_dist and dist <= caliper:
+            best_dist = dist
+            best_match = c_idx
+
+    if best_match is not None:
+        matches.append((t_idx, best_match, best_dist))
+        used_controls.add(best_match)
+
+matched_treated = [m[0] for m in matches]
+matched_control = [m[1] for m in matches]
+matched_indices = matched_treated + matched_control
+
+matched_df = df.loc[matched_indices].copy()
+matched_df['match_group'] = ['treated'] * len(matched_treated) + ['control'] * len(matched_control)
+matched_df['match_distance'] = [m[2] for m in matches] + [m[2] for m in matches]
+
+output = matched_df
+`,
+  },
+
+  'difference-in-differences': {
+    type: 'difference-in-differences',
+    category: 'analysis',
+    label: 'Difference-in-Differences',
+    description: 'Estimate causal effects using difference-in-differences analysis',
+    icon: 'GitCompare',
+    defaultConfig: {
+      timeColumn: '',
+      groupColumn: '',
+      treatmentColumn: '',
+      outcomeColumn: '',
+      prePostColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+time_col = config.get('timeColumn', '')
+group_col = config.get('groupColumn', '')
+treatment_col = config.get('treatmentColumn', '')
+outcome_col = config.get('outcomeColumn', '')
+pre_post_col = config.get('prePostColumn', '')
+
+if not group_col or not outcome_col:
+    raise ValueError("DiD: Please specify group and outcome columns")
+
+required = [group_col, outcome_col]
+if treatment_col:
+    required.append(treatment_col)
+if pre_post_col:
+    required.append(pre_post_col)
+
+missing = [c for c in required if c not in df.columns]
+if missing:
+    raise ValueError(f"DiD: Column(s) not found: {', '.join(missing)}")
+
+if treatment_col:
+    df['is_treated'] = (pd.to_numeric(df[treatment_col], errors='coerce') > 0).astype(int)
+else:
+    groups = df[group_col].unique()
+    if len(groups) != 2:
+        raise ValueError("DiD: Need exactly 2 groups (treatment and control)")
+    df['is_treated'] = (df[group_col] == groups[1]).astype(int)
+
+if pre_post_col:
+    df['is_post'] = (pd.to_numeric(df[pre_post_col], errors='coerce') > 0).astype(int)
+elif time_col:
+    df['time_numeric'] = pd.to_numeric(df[time_col], errors='coerce')
+    if df['time_numeric'].notna().sum() == 0:
+        df['time_numeric'] = pd.to_datetime(df[time_col], errors='coerce').view('int64')
+    median_time = df['time_numeric'].median()
+    df['is_post'] = (df['time_numeric'] > median_time).astype(int)
+else:
+    raise ValueError("DiD: Please specify time or pre/post period column")
+
+outcome = pd.to_numeric(df[outcome_col], errors='coerce')
+df['outcome_numeric'] = outcome
+
+means = df.groupby(['is_treated', 'is_post'])['outcome_numeric'].agg(['mean', 'std', 'count']).reset_index()
+
+try:
+    control_pre = means[(means['is_treated']==0) & (means['is_post']==0)]['mean'].values[0]
+    control_post = means[(means['is_treated']==0) & (means['is_post']==1)]['mean'].values[0]
+    treated_pre = means[(means['is_treated']==1) & (means['is_post']==0)]['mean'].values[0]
+    treated_post = means[(means['is_treated']==1) & (means['is_post']==1)]['mean'].values[0]
+except IndexError:
+    raise ValueError("DiD: Missing data in one or more treatment-time groups")
+
+did_estimate = (treated_post - treated_pre) - (control_post - control_pre)
+
+n_groups = df.groupby(['is_treated', 'is_post'])['outcome_numeric'].count()
+pooled_var = df.groupby(['is_treated', 'is_post'])['outcome_numeric'].var().mean()
+se = np.sqrt(pooled_var * (1/n_groups.sum()) * 4)
+
+t_stat = did_estimate / se if se > 0 else 0
+p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df=len(df)-4))
+
+ci_lower = did_estimate - 1.96 * se
+ci_upper = did_estimate + 1.96 * se
+
+results = pd.DataFrame({
+    'metric': [
+        'did_estimate', 'standard_error', 't_statistic', 'p_value',
+        'ci_lower_95', 'ci_upper_95',
+        'treated_pre_mean', 'treated_post_mean',
+        'control_pre_mean', 'control_post_mean',
+        'treated_change', 'control_change'
+    ],
+    'value': [
+        round(did_estimate, 4), round(se, 4), round(t_stat, 4), round(p_value, 4),
+        round(ci_lower, 4), round(ci_upper, 4),
+        round(treated_pre, 4), round(treated_post, 4),
+        round(control_pre, 4), round(control_post, 4),
+        round(treated_post - treated_pre, 4), round(control_post - control_pre, 4)
+    ]
+})
+
+output = results
+`,
+  },
+
+  'factor-analysis': {
+    type: 'factor-analysis',
+    category: 'analysis',
+    label: 'Factor Analysis',
+    description: 'Discover latent factors underlying observed variables',
+    icon: 'Layers',
+    defaultConfig: {
+      features: [],
+      nFactors: 3,
+      rotation: 'varimax',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+n_factors = int(config.get('nFactors', 3))
+rotation = config.get('rotation', 'varimax')
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if len(features) < 3:
+    raise ValueError("Factor Analysis: Need at least 3 numeric columns")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"Factor Analysis: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+X = X.dropna()
+
+if len(X) < n_factors * 2:
+    raise ValueError("Factor Analysis: Not enough valid data points")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+corr_matrix = np.corrcoef(X_scaled.T)
+
+eigenvalues, eigenvectors = np.linalg.eigh(corr_matrix)
+
+idx = np.argsort(eigenvalues)[::-1]
+eigenvalues = eigenvalues[idx]
+eigenvectors = eigenvectors[:, idx]
+
+positive_mask = eigenvalues > 0
+eigenvalues = eigenvalues[positive_mask]
+eigenvectors = eigenvectors[:, positive_mask]
+
+n_factors = min(n_factors, len(eigenvalues))
+eigenvalues = eigenvalues[:n_factors]
+eigenvectors = eigenvectors[:, :n_factors]
+
+loadings = eigenvectors * np.sqrt(eigenvalues)
+
+if rotation == 'varimax' and n_factors > 1:
+    for _ in range(100):
+        old_loadings = loadings.copy()
+        for i in range(n_factors):
+            for j in range(i + 1, n_factors):
+                u = loadings[:, i]**2 - loadings[:, j]**2
+                v = 2 * loadings[:, i] * loadings[:, j]
+                A = np.sum(u)
+                B = np.sum(v)
+                C = np.sum(u**2 - v**2)
+                D = 2 * np.sum(u * v)
+                phi = 0.25 * np.arctan2(D - 2*A*B/len(u), C - (A**2 - B**2)/len(u))
+                cos_phi = np.cos(phi)
+                sin_phi = np.sin(phi)
+                loadings[:, i], loadings[:, j] = (
+                    cos_phi * loadings[:, i] + sin_phi * loadings[:, j],
+                    -sin_phi * loadings[:, i] + cos_phi * loadings[:, j]
+                )
+        if np.allclose(loadings, old_loadings, atol=1e-6):
+            break
+
+loading_cols = [f'Factor_{i+1}' for i in range(n_factors)]
+loadings_df = pd.DataFrame(loadings, index=features, columns=loading_cols)
+loadings_df['communality'] = np.sum(loadings**2, axis=1)
+loadings_df = loadings_df.round(4)
+loadings_df.index.name = 'variable'
+loadings_df = loadings_df.reset_index()
+
+output = loadings_df
+`,
+  },
+
+  'dbscan-clustering': {
+    type: 'dbscan-clustering',
+    category: 'analysis',
+    label: 'DBSCAN Clustering',
+    description: 'Density-based clustering that identifies outliers automatically',
+    icon: 'Network',
+    defaultConfig: {
+      features: [],
+      eps: 0.5,
+      minSamples: 5,
+      metric: 'euclidean',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.cluster import DBSCAN
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+eps = float(config.get('eps', 0.5))
+min_samples = int(config.get('minSamples', 5))
+metric = config.get('metric', 'euclidean')
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features:
+    raise ValueError("DBSCAN: No numeric columns found or specified")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"DBSCAN: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1)
+X_clean = X[valid_mask]
+
+if len(X_clean) < min_samples:
+    raise ValueError(f"DBSCAN: Need at least {min_samples} valid data points")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+model = DBSCAN(eps=eps, min_samples=min_samples, metric=metric)
+labels = model.fit_predict(X_scaled)
+
+df['cluster'] = np.nan
+df.loc[valid_mask, 'cluster'] = labels
+
+df['is_noise'] = np.nan
+df.loc[valid_mask, 'is_noise'] = (labels == -1).astype(int)
+
+core_sample_mask = np.zeros(len(labels), dtype=bool)
+core_sample_mask[model.core_sample_indices_] = True
+df['is_core_sample'] = np.nan
+df.loc[valid_mask, 'is_core_sample'] = core_sample_mask.astype(int)
+
+output = df
+`,
+  },
+
+  'elastic-net': {
+    type: 'elastic-net',
+    category: 'analysis',
+    label: 'Elastic Net Regression',
+    description: 'Regularized regression combining L1 and L2 penalties',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      features: [],
+      target: '',
+      alpha: 1.0,
+      l1Ratio: 0.5,
+      testSize: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import ElasticNet
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+alpha = float(config.get('alpha', 1.0))
+l1_ratio = float(config.get('l1Ratio', 0.5))
+test_size = float(config.get('testSize', 0.2))
+
+if not target:
+    raise ValueError("Elastic Net: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Elastic Net: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Elastic Net: No feature columns found or specified")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"Elastic Net: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+y = pd.to_numeric(df[target], errors='coerce')
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X = X[valid_mask]
+y = y[valid_mask]
+
+if len(X) < 10:
+    raise ValueError("Elastic Net: Need at least 10 valid data points")
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42, max_iter=10000)
+model.fit(X_train_scaled, y_train)
+
+y_train_pred = model.predict(X_train_scaled)
+y_test_pred = model.predict(X_test_scaled)
+
+train_rmse = np.sqrt(mean_squared_error(y_train, y_train_pred))
+test_rmse = np.sqrt(mean_squared_error(y_test, y_test_pred))
+train_r2 = r2_score(y_train, y_train_pred)
+test_r2 = r2_score(y_test, y_test_pred)
+
+coefficients = pd.DataFrame({
+    'feature': features,
+    'coefficient': np.round(model.coef_, 6),
+    'abs_coefficient': np.round(np.abs(model.coef_), 6),
+    'selected': model.coef_ != 0
+}).sort_values('abs_coefficient', ascending=False)
+
+output = coefficients
+`,
+  },
+
+  'var-analysis': {
+    type: 'var-analysis',
+    category: 'analysis',
+    label: 'Vector Autoregression (VAR)',
+    description: 'Multivariate time series analysis for interdependent variables',
+    icon: 'Activity',
+    defaultConfig: {
+      dateColumn: '',
+      variables: [],
+      maxLags: 4,
+      forecastPeriods: 10,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+variables = config.get('variables', [])
+max_lags = int(config.get('maxLags', 4))
+forecast_periods = int(config.get('forecastPeriods', 10))
+
+if not variables or len(variables) < 2:
+    raise ValueError("VAR: Please specify at least 2 variables")
+
+missing = [c for c in variables if c not in df.columns]
+if missing:
+    raise ValueError(f"VAR: Column(s) not found: {', '.join(missing)}")
+
+if date_col and date_col in df.columns:
+    df = df.sort_values(date_col).reset_index(drop=True)
+
+data = df[variables].copy()
+for col in variables:
+    data[col] = pd.to_numeric(data[col], errors='coerce')
+data = data.dropna()
+
+n = len(data)
+k = len(variables)
+
+if n < max_lags * 2 + 10:
+    raise ValueError(f"VAR: Need at least {max_lags * 2 + 10} data points")
+
+Y = data.values[max_lags:]
+T = len(Y)
+
+X_list = [np.ones((T, 1))]
+for lag in range(1, max_lags + 1):
+    X_list.append(data.values[max_lags - lag:-lag if lag < max_lags else T + max_lags - lag])
+
+X = np.hstack(X_list)
+
+coefficients = {}
+for i, var in enumerate(variables):
+    y = Y[:, i]
+    try:
+        beta = np.linalg.lstsq(X, y, rcond=None)[0]
+        coefficients[var] = beta
+    except:
+        coefficients[var] = np.zeros(X.shape[1])
+
+last_values = data.values[-max_lags:].copy()
+forecasts = []
+
+for h in range(forecast_periods):
+    forecast_row = []
+    for i, var in enumerate(variables):
+        beta = coefficients[var]
+        pred = beta[0]
+        for lag in range(1, max_lags + 1):
+            idx = 1 + (lag - 1) * k
+            if h < lag:
+                pred += np.dot(beta[idx:idx + k], last_values[-(lag - h)])
+            else:
+                pred += np.dot(beta[idx:idx + k], forecasts[h - lag])
+        forecast_row.append(pred)
+    forecasts.append(forecast_row)
+    last_values = np.vstack([last_values[1:], forecast_row])
+
+forecasts = np.array(forecasts)
+
+if date_col and date_col in df.columns:
+    try:
+        last_date = pd.to_datetime(df[date_col].iloc[-1])
+        date_diff = pd.to_datetime(df[date_col]).diff().median()
+        if pd.isna(date_diff):
+            date_diff = pd.Timedelta(days=1)
+        future_dates = [last_date + date_diff * (i + 1) for i in range(forecast_periods)]
+    except:
+        future_dates = [f"t+{i+1}" for i in range(forecast_periods)]
+else:
+    future_dates = [f"t+{i+1}" for i in range(forecast_periods)]
+
+forecast_df = pd.DataFrame(forecasts, columns=variables)
+forecast_df['period'] = future_dates
+forecast_df['type'] = 'forecast'
+
+hist_df = data.copy()
+if date_col and date_col in df.columns:
+    hist_df['period'] = df[date_col].iloc[-len(data):].values
+else:
+    hist_df['period'] = range(len(data))
+hist_df['type'] = 'actual'
+
+result = pd.concat([hist_df, forecast_df], ignore_index=True)
+
+output = result
+`,
+  },
+
+  'interrupted-time-series': {
+    type: 'interrupted-time-series',
+    category: 'analysis',
+    label: 'Interrupted Time Series',
+    description: 'Analyze the impact of interventions on time series data',
+    icon: 'GitBranch',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      interventionDate: '',
+      interventionIndex: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+intervention_date = config.get('interventionDate', '')
+intervention_idx = config.get('interventionIndex', '')
+
+if not value_col:
+    raise ValueError("ITS: Please specify a value column")
+
+if value_col not in df.columns:
+    raise ValueError(f"ITS: Column '{value_col}' not found")
+
+if date_col and date_col in df.columns:
+    df = df.sort_values(date_col).reset_index(drop=True)
+
+values = pd.to_numeric(df[value_col], errors='coerce').values
+n = len(values)
+
+if intervention_idx:
+    intervention_point = int(intervention_idx)
+elif intervention_date and date_col:
+    try:
+        dates = pd.to_datetime(df[date_col])
+        intervention_dt = pd.to_datetime(intervention_date)
+        intervention_point = (dates >= intervention_dt).idxmax()
+    except:
+        intervention_point = n // 2
+else:
+    intervention_point = n // 2
+
+if intervention_point < 5 or intervention_point > n - 5:
+    raise ValueError("ITS: Intervention point must have at least 5 observations before and after")
+
+time = np.arange(n)
+intervention = (time >= intervention_point).astype(int)
+time_since_intervention = np.maximum(0, time - intervention_point)
+
+pre_values = values[:intervention_point]
+pre_time = time[:intervention_point]
+post_values = values[intervention_point:]
+post_time = time[intervention_point:]
+
+pre_slope, pre_intercept, _, _, _ = stats.linregress(pre_time, pre_values)
+post_slope, post_intercept, _, _, _ = stats.linregress(post_time, post_values)
+
+counterfactual = pre_intercept + pre_slope * time
+
+X = np.column_stack([np.ones(n), time, intervention, time_since_intervention])
+y = values
+
+try:
+    beta, _, _, _ = np.linalg.lstsq(X, y, rcond=None)
+    intercept, trend, level_change, trend_change = beta
+except:
+    intercept, trend, level_change, trend_change = pre_intercept, pre_slope, 0, 0
+
+predicted = intercept + trend * time + level_change * intervention + trend_change * time_since_intervention
+
+immediate_effect = level_change
+sustained_effect = level_change + trend_change * (n - 1 - intervention_point)
+
+residual_std = np.std(y - predicted)
+se_level = residual_std / np.sqrt(n)
+t_level = level_change / se_level if se_level > 0 else 0
+p_level = 2 * (1 - stats.t.cdf(abs(t_level), df=n-4))
+
+results = pd.DataFrame({
+    'metric': [
+        'intervention_point', 'n_pre', 'n_post',
+        'pre_trend_slope', 'post_trend_slope',
+        'level_change', 'trend_change',
+        'immediate_effect', 'sustained_effect_end',
+        'level_change_pvalue', 'significant_at_05',
+        'pre_mean', 'post_mean', 'mean_difference'
+    ],
+    'value': [
+        intervention_point, intervention_point, n - intervention_point,
+        round(pre_slope, 4), round(post_slope, 4),
+        round(level_change, 4), round(trend_change, 4),
+        round(immediate_effect, 4), round(sustained_effect, 4),
+        round(p_level, 4), 'Yes' if p_level < 0.05 else 'No',
+        round(np.mean(pre_values), 4), round(np.mean(post_values), 4),
+        round(np.mean(post_values) - np.mean(pre_values), 4)
+    ]
+})
+
+output = results
+`,
+  },
+
+  'granger-causality': {
+    type: 'granger-causality',
+    category: 'analysis',
+    label: 'Granger Causality Test',
+    description: 'Test whether one time series helps predict another',
+    icon: 'GitCompare',
+    defaultConfig: {
+      variable1: '',
+      variable2: '',
+      dateColumn: '',
+      maxLags: 4,
+      significanceLevel: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+var1 = config.get('variable1', '')
+var2 = config.get('variable2', '')
+date_col = config.get('dateColumn', '')
+max_lags = int(config.get('maxLags', 4))
+sig_level = float(config.get('significanceLevel', 0.05))
+
+if not var1 or not var2:
+    raise ValueError("Granger Causality: Please specify two variables")
+
+if var1 not in df.columns or var2 not in df.columns:
+    raise ValueError("Granger Causality: Specified columns not found")
+
+if date_col and date_col in df.columns:
+    df = df.sort_values(date_col).reset_index(drop=True)
+
+y1 = pd.to_numeric(df[var1], errors='coerce').values
+y2 = pd.to_numeric(df[var2], errors='coerce').values
+
+valid = ~(np.isnan(y1) | np.isnan(y2))
+y1 = y1[valid]
+y2 = y2[valid]
+
+n = len(y1)
+
+if n < max_lags * 2 + 10:
+    raise ValueError(f"Granger Causality: Need at least {max_lags * 2 + 10} data points")
+
+def granger_test(x, y, max_lag):
+    results = []
+    for lag in range(1, max_lag + 1):
+        Y = y[lag:]
+        X_restricted = np.column_stack([y[lag-i-1:-i-1 if i < lag-1 else None] for i in range(lag)])
+        X_restricted = np.column_stack([np.ones(len(Y)), X_restricted])
+        X_unrestricted = X_restricted.copy()
+        for i in range(lag):
+            X_unrestricted = np.column_stack([X_unrestricted, x[lag-i-1:-i-1 if i < lag-1 else None]])
+        try:
+            beta_r = np.linalg.lstsq(X_restricted, Y, rcond=None)[0]
+            ssr_r = np.sum((Y - X_restricted @ beta_r)**2)
+            beta_u = np.linalg.lstsq(X_unrestricted, Y, rcond=None)[0]
+            ssr_u = np.sum((Y - X_unrestricted @ beta_u)**2)
+            df1 = lag
+            df2 = len(Y) - 2 * lag - 1
+            if df2 > 0 and ssr_u > 0:
+                f_stat = ((ssr_r - ssr_u) / df1) / (ssr_u / df2)
+                p_value = 1 - stats.f.cdf(f_stat, df1, df2)
+            else:
+                f_stat = 0
+                p_value = 1
+            results.append({'lag': lag, 'f_statistic': round(f_stat, 4), 'p_value': round(p_value, 4), 'significant': p_value < sig_level})
+        except:
+            results.append({'lag': lag, 'f_statistic': np.nan, 'p_value': np.nan, 'significant': False})
+    return results
+
+results_1_to_2 = granger_test(y1, y2, max_lags)
+results_2_to_1 = granger_test(y2, y1, max_lags)
+
+all_results = []
+for r in results_1_to_2:
+    all_results.append({
+        'direction': f'{var1} -> {var2}',
+        'lag': r['lag'],
+        'f_statistic': r['f_statistic'],
+        'p_value': r['p_value'],
+        'significant': 'Yes' if r['significant'] else 'No'
+    })
+for r in results_2_to_1:
+    all_results.append({
+        'direction': f'{var2} -> {var1}',
+        'lag': r['lag'],
+        'f_statistic': r['f_statistic'],
+        'p_value': r['p_value'],
+        'significant': 'Yes' if r['significant'] else 'No'
+    })
+
+output = pd.DataFrame(all_results)
+`,
+  },
+
+  'local-outlier-factor': {
+    type: 'local-outlier-factor',
+    category: 'analysis',
+    label: 'Local Outlier Factor',
+    description: 'Detect local outliers based on density deviation from neighbors',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      features: [],
+      nNeighbors: 20,
+      contamination: 0.1,
+      addScores: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+n_neighbors = int(config.get('nNeighbors', 20))
+contamination = float(config.get('contamination', 0.1))
+add_scores = config.get('addScores', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features:
+    raise ValueError("LOF: No numeric columns found or specified")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"LOF: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1)
+X_clean = X[valid_mask]
+
+if len(X_clean) < n_neighbors + 1:
+    raise ValueError(f"LOF: Need at least {n_neighbors + 1} valid data points")
+
+n_neighbors = min(n_neighbors, len(X_clean) - 1)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+model = LocalOutlierFactor(
+    n_neighbors=n_neighbors,
+    contamination=contamination,
+    novelty=False,
+    n_jobs=-1
+)
+
+predictions = model.fit_predict(X_scaled)
+scores = model.negative_outlier_factor_
+
+df['is_outlier'] = np.nan
+df.loc[valid_mask, 'is_outlier'] = (predictions == -1).astype(int)
+
+if add_scores:
+    df['lof_score'] = np.nan
+    df.loc[valid_mask, 'lof_score'] = -scores
+
+df['local_density_rank'] = np.nan
+density_ranks = (-scores).argsort().argsort() / len(scores)
+df.loc[valid_mask, 'local_density_rank'] = density_ranks
+
+output = df
+`,
+  },
+
+  // New Analysis Blocks for Data Scientists
+  'feature-selection': {
+    type: 'feature-selection',
+    category: 'analysis',
+    label: 'Feature Selection',
+    description: 'Select most predictive features using RFE, SelectKBest, or Mutual Information',
+    icon: 'Filter',
+    defaultConfig: {
+      features: [],
+      target: '',
+      method: 'selectkbest',
+      nFeatures: 10,
+      scoreFunc: 'f_classif',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import SelectKBest, f_classif, f_regression, mutual_info_classif, mutual_info_regression, RFE
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+method = config.get('method', 'selectkbest')
+n_features = int(config.get('nFeatures', 10))
+score_func = config.get('scoreFunc', 'f_classif')
+
+if not target:
+    raise ValueError("Feature Selection: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Feature Selection: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Feature Selection: No numeric feature columns found")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"Feature Selection: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 10:
+    raise ValueError("Feature Selection: Need at least 10 valid samples")
+
+n_features = min(n_features, len(features))
+is_classification = y_clean.nunique() <= 20
+
+if method == 'selectkbest':
+    if score_func == 'f_classif':
+        func = f_classif if is_classification else f_regression
+    elif score_func == 'mutual_info':
+        func = mutual_info_classif if is_classification else mutual_info_regression
+    else:
+        func = f_classif if is_classification else f_regression
+    selector = SelectKBest(score_func=func, k=n_features)
+    selector.fit(X_clean, y_clean)
+    scores = selector.scores_
+    selected_mask = selector.get_support()
+elif method == 'rfe':
+    if is_classification:
+        estimator = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1)
+    else:
+        estimator = RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+    selector = RFE(estimator, n_features_to_select=n_features, step=1)
+    selector.fit(X_clean, y_clean)
+    scores = selector.ranking_
+    selected_mask = selector.support_
+elif method == 'mutual_info':
+    if is_classification:
+        scores = mutual_info_classif(X_clean, y_clean, random_state=42)
+    else:
+        scores = mutual_info_regression(X_clean, y_clean, random_state=42)
+    indices = np.argsort(scores)[::-1][:n_features]
+    selected_mask = np.zeros(len(features), dtype=bool)
+    selected_mask[indices] = True
+else:
+    raise ValueError(f"Feature Selection: Unknown method '{method}'")
+
+selected_features = [f for f, s in zip(features, selected_mask) if s]
+feature_scores = pd.DataFrame({
+    'feature': features,
+    'score': scores if method != 'rfe' else (len(features) - scores + 1),
+    'selected': selected_mask,
+    'rank': np.argsort(np.argsort(-np.array(scores if method != 'rfe' else (len(features) - scores + 1)))) + 1
+}).sort_values('rank')
+
+output_df = df[[target] + selected_features].copy()
+output_df.attrs['feature_scores'] = feature_scores.to_dict('records')
+output_df.attrs['selected_features'] = selected_features
+output = output_df
+`,
+  },
+
+  'outlier-treatment': {
+    type: 'outlier-treatment',
+    category: 'analysis',
+    label: 'Outlier Treatment',
+    description: 'Cap, remove, or impute outliers using IQR, Z-score, or percentile methods',
+    icon: 'Shield',
+    defaultConfig: {
+      columns: [],
+      method: 'iqr',
+      action: 'cap',
+      threshold: 1.5,
+      lowerPercentile: 1,
+      upperPercentile: 99,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+method = config.get('method', 'iqr')
+action = config.get('action', 'cap')
+threshold = float(config.get('threshold', 1.5))
+lower_pct = float(config.get('lowerPercentile', 1))
+upper_pct = float(config.get('upperPercentile', 99))
+
+if not columns:
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not columns:
+    raise ValueError("Outlier Treatment: No numeric columns found or specified")
+
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Outlier Treatment: Column(s) not found: {', '.join(missing)}")
+
+outlier_info = []
+for col in columns:
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+    valid_data = df[col].dropna()
+    if len(valid_data) == 0:
+        continue
+    if method == 'iqr':
+        Q1 = valid_data.quantile(0.25)
+        Q3 = valid_data.quantile(0.75)
+        IQR = Q3 - Q1
+        lower_bound = Q1 - threshold * IQR
+        upper_bound = Q3 + threshold * IQR
+    elif method == 'zscore':
+        mean = valid_data.mean()
+        std = valid_data.std()
+        lower_bound = mean - threshold * std
+        upper_bound = mean + threshold * std
+    elif method == 'percentile':
+        lower_bound = valid_data.quantile(lower_pct / 100)
+        upper_bound = valid_data.quantile(upper_pct / 100)
+    else:
+        raise ValueError(f"Outlier Treatment: Unknown method '{method}'")
+    is_outlier = (df[col] < lower_bound) | (df[col] > upper_bound)
+    n_outliers = is_outlier.sum()
+    outlier_info.append({
+        'column': col, 'lower_bound': float(lower_bound), 'upper_bound': float(upper_bound),
+        'n_outliers': int(n_outliers), 'pct_outliers': float(n_outliers / len(df) * 100)
+    })
+    if action == 'cap':
+        df.loc[df[col] < lower_bound, col] = lower_bound
+        df.loc[df[col] > upper_bound, col] = upper_bound
+    elif action == 'remove':
+        df = df[~is_outlier]
+    elif action == 'null':
+        df.loc[is_outlier, col] = np.nan
+    elif action == 'mean':
+        mean_val = valid_data[(valid_data >= lower_bound) & (valid_data <= upper_bound)].mean()
+        df.loc[is_outlier, col] = mean_val
+    elif action == 'median':
+        median_val = valid_data[(valid_data >= lower_bound) & (valid_data <= upper_bound)].median()
+        df.loc[is_outlier, col] = median_val
+
+df.attrs['outlier_treatment'] = outlier_info
+output = df
+`,
+  },
+
+  'data-drift': {
+    type: 'data-drift',
+    category: 'analysis',
+    label: 'Data Drift Detection',
+    description: 'Detect distribution shifts between reference and current data using KS-test and PSI',
+    icon: 'GitCompare',
+    defaultConfig: {
+      columns: [],
+      method: 'ks_test',
+      threshold: 0.05,
+      psiBins: 10,
+    },
+    inputs: 2,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+reference_df = input_data[0].copy()
+current_df = input_data[1].copy()
+columns = config.get('columns', [])
+method = config.get('method', 'ks_test')
+threshold = float(config.get('threshold', 0.05))
+psi_bins = int(config.get('psiBins', 10))
+
+if not columns:
+    common_cols = set(reference_df.columns) & set(current_df.columns)
+    columns = [c for c in common_cols if reference_df[c].dtype in [np.float64, np.int64, np.float32, np.int32]]
+
+if not columns:
+    raise ValueError("Data Drift: No common numeric columns found")
+
+def calculate_psi(reference, current, bins=10):
+    ref_min, ref_max = reference.min(), reference.max()
+    bin_edges = np.linspace(ref_min, ref_max, bins + 1)
+    bin_edges[0] = -np.inf
+    bin_edges[-1] = np.inf
+    ref_counts = np.histogram(reference, bins=bin_edges)[0]
+    cur_counts = np.histogram(current, bins=bin_edges)[0]
+    ref_pct = (ref_counts + 0.001) / (len(reference) + 0.001 * bins)
+    cur_pct = (cur_counts + 0.001) / (len(current) + 0.001 * bins)
+    psi = np.sum((cur_pct - ref_pct) * np.log(cur_pct / ref_pct))
+    return psi
+
+drift_results = []
+for col in columns:
+    ref_data = pd.to_numeric(reference_df[col], errors='coerce').dropna()
+    cur_data = pd.to_numeric(current_df[col], errors='coerce').dropna()
+    if len(ref_data) < 5 or len(cur_data) < 5:
+        continue
+    result = {'column': col}
+    if method in ['ks_test', 'both']:
+        ks_stat, ks_pval = stats.ks_2samp(ref_data, cur_data)
+        result['ks_statistic'] = float(ks_stat)
+        result['ks_pvalue'] = float(ks_pval)
+        result['ks_drift_detected'] = ks_pval < threshold
+    if method in ['psi', 'both']:
+        psi = calculate_psi(ref_data.values, cur_data.values, psi_bins)
+        result['psi'] = float(psi)
+        result['psi_drift_detected'] = psi > 0.2
+        result['psi_severity'] = 'no_drift' if psi < 0.1 else ('slight_drift' if psi < 0.2 else 'significant_drift')
+    result['ref_mean'] = float(ref_data.mean())
+    result['cur_mean'] = float(cur_data.mean())
+    result['mean_shift_pct'] = float((cur_data.mean() - ref_data.mean()) / (ref_data.mean() + 1e-10) * 100)
+    drift_results.append(result)
+
+output = pd.DataFrame(drift_results)
+`,
+  },
+
+  'polynomial-features': {
+    type: 'polynomial-features',
+    category: 'analysis',
+    label: 'Polynomial Features',
+    description: 'Create polynomial and interaction features from numeric columns',
+    icon: 'Sigma',
+    defaultConfig: {
+      columns: [],
+      degree: 2,
+      interactionOnly: false,
+      includeBias: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import PolynomialFeatures
+
+df = input_data.copy()
+columns = config.get('columns', [])
+degree = int(config.get('degree', 2))
+interaction_only = config.get('interactionOnly', False)
+include_bias = config.get('includeBias', False)
+
+if not columns:
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not columns:
+    raise ValueError("Polynomial Features: No numeric columns found or specified")
+
+if len(columns) > 10:
+    raise ValueError("Polynomial Features: Maximum 10 columns allowed to avoid memory issues")
+
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Polynomial Features: Column(s) not found: {', '.join(missing)}")
+
+X = df[columns].copy()
+for col in columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1)
+X_clean = X[valid_mask].values
+
+poly = PolynomialFeatures(degree=degree, interaction_only=interaction_only, include_bias=include_bias)
+X_poly = poly.fit_transform(X_clean)
+feature_names = poly.get_feature_names_out(columns)
+
+poly_df = pd.DataFrame(X_poly, columns=feature_names, index=df[valid_mask].index)
+new_features = [f for f in feature_names if f not in columns]
+
+for feat in new_features:
+    df[feat] = np.nan
+    df.loc[valid_mask, feat] = poly_df[feat].values
+
+df.attrs['polynomial_features'] = {
+    'original_columns': columns, 'new_features': new_features, 'degree': degree, 'n_features_created': len(new_features)
+}
+output = df
+`,
+  },
+
+  'multi-output': {
+    type: 'multi-output',
+    category: 'analysis',
+    label: 'Multi-Output Prediction',
+    description: 'Predict multiple target variables simultaneously',
+    icon: 'GitFork',
+    defaultConfig: {
+      features: [],
+      targets: [],
+      modelType: 'random_forest',
+      taskType: 'auto',
+      testSize: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.multioutput import MultiOutputClassifier, MultiOutputRegressor
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, r2_score, mean_squared_error
+
+df = input_data.copy()
+features = config.get('features', [])
+targets = config.get('targets', [])
+model_type = config.get('modelType', 'random_forest')
+task_type = config.get('taskType', 'auto')
+test_size = float(config.get('testSize', 0.2))
+
+if not targets or len(targets) < 2:
+    raise ValueError("Multi-Output: Please specify at least 2 target columns")
+
+for t in targets:
+    if t not in df.columns:
+        raise ValueError(f"Multi-Output: Target column '{t}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c not in targets]
+
+if not features:
+    raise ValueError("Multi-Output: No numeric feature columns found")
+
+X = df[features].copy()
+Y = df[targets].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & Y.notna().all(axis=1)
+X_clean = X[valid_mask]
+Y_clean = Y[valid_mask]
+
+if len(X_clean) < 20:
+    raise ValueError("Multi-Output: Need at least 20 valid samples")
+
+is_classification = all(Y_clean[t].nunique() <= 20 for t in targets) if task_type == 'auto' else task_type == 'classification'
+
+label_encoders = {}
+if is_classification:
+    for t in targets:
+        if Y_clean[t].dtype == 'object':
+            le = LabelEncoder()
+            Y_clean[t] = le.fit_transform(Y_clean[t].astype(str))
+            label_encoders[t] = le
+
+X_train, X_test, Y_train, Y_test = train_test_split(X_clean, Y_clean, test_size=test_size, random_state=42)
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+if is_classification:
+    model = MultiOutputClassifier(RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1))
+else:
+    model = MultiOutputRegressor(RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1))
+
+model.fit(X_train_scaled, Y_train)
+predictions = model.predict(X_test_scaled)
+
+metrics = {}
+for i, t in enumerate(targets):
+    if is_classification:
+        metrics[t] = {'accuracy': float(accuracy_score(Y_test.iloc[:, i], predictions[:, i]))}
+    else:
+        metrics[t] = {'r2_score': float(r2_score(Y_test.iloc[:, i], predictions[:, i])),
+                      'rmse': float(np.sqrt(mean_squared_error(Y_test.iloc[:, i], predictions[:, i])))}
+
+X_all_scaled = scaler.transform(X_clean)
+all_predictions = model.predict(X_all_scaled)
+
+for i, t in enumerate(targets):
+    pred_col = f'{t}_predicted'
+    df[pred_col] = np.nan
+    df.loc[valid_mask, pred_col] = all_predictions[:, i]
+
+df.attrs['multi_output_metrics'] = metrics
+df.attrs['multi_output_task'] = 'classification' if is_classification else 'regression'
+output = df
+`,
+  },
+
+  'probability-calibration': {
+    type: 'probability-calibration',
+    category: 'analysis',
+    label: 'Probability Calibration',
+    description: 'Calibrate classifier probabilities using Platt scaling or isotonic regression',
+    icon: 'Gauge',
+    defaultConfig: {
+      probabilityColumn: '',
+      actualColumn: '',
+      method: 'isotonic',
+      nBins: 10,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.calibration import calibration_curve
+from sklearn.isotonic import IsotonicRegression
+from sklearn.linear_model import LogisticRegression
+
+df = input_data.copy()
+prob_col = config.get('probabilityColumn', '')
+actual_col = config.get('actualColumn', '')
+method = config.get('method', 'isotonic')
+n_bins = int(config.get('nBins', 10))
+
+if not prob_col or not actual_col:
+    raise ValueError("Probability Calibration: Please specify probability and actual columns")
+
+if prob_col not in df.columns or actual_col not in df.columns:
+    raise ValueError("Probability Calibration: Specified columns not found")
+
+probs = pd.to_numeric(df[prob_col], errors='coerce')
+actuals = pd.to_numeric(df[actual_col], errors='coerce')
+
+valid_mask = probs.notna() & actuals.notna() & (probs >= 0) & (probs <= 1)
+probs_clean = probs[valid_mask].values
+actuals_clean = actuals[valid_mask].values
+
+if len(probs_clean) < 20:
+    raise ValueError("Probability Calibration: Need at least 20 valid samples")
+
+fraction_pos_before, mean_pred_before = calibration_curve(actuals_clean, probs_clean, n_bins=n_bins, strategy='uniform')
+
+if method == 'isotonic':
+    calibrator = IsotonicRegression(y_min=0, y_max=1, out_of_bounds='clip')
+    calibrator.fit(probs_clean, actuals_clean)
+    calibrated_probs = calibrator.predict(probs_clean)
+elif method == 'platt':
+    calibrator = LogisticRegression()
+    calibrator.fit(probs_clean.reshape(-1, 1), actuals_clean)
+    calibrated_probs = calibrator.predict_proba(probs_clean.reshape(-1, 1))[:, 1]
+else:
+    raise ValueError(f"Probability Calibration: Unknown method '{method}'")
+
+fraction_pos_after, mean_pred_after = calibration_curve(actuals_clean, calibrated_probs, n_bins=n_bins, strategy='uniform')
+brier_before = np.mean((probs_clean - actuals_clean) ** 2)
+brier_after = np.mean((calibrated_probs - actuals_clean) ** 2)
+
+df['calibrated_probability'] = np.nan
+df.loc[valid_mask, 'calibrated_probability'] = calibrated_probs
+
+df.attrs['calibration_results'] = {
+    'brier_score_before': float(brier_before), 'brier_score_after': float(brier_after),
+    'improvement_pct': float((brier_before - brier_after) / brier_before * 100)
+}
+output = df
+`,
+  },
+
+  'tsne-reduction': {
+    type: 'tsne-reduction',
+    category: 'analysis',
+    label: 't-SNE Reduction',
+    description: 'Reduce high-dimensional data to 2D/3D using t-SNE for visualization',
+    icon: 'Minimize2',
+    defaultConfig: {
+      features: [],
+      nComponents: 2,
+      perplexity: 30,
+      learningRate: 200,
+      nIter: 1000,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+n_components = int(config.get('nComponents', 2))
+perplexity = float(config.get('perplexity', 30))
+learning_rate = float(config.get('learningRate', 200))
+n_iter = int(config.get('nIter', 1000))
+
+if n_components not in [2, 3]:
+    raise ValueError("t-SNE: nComponents must be 2 or 3")
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features or len(features) < n_components:
+    raise ValueError(f"t-SNE: Need at least {n_components} numeric features")
+
+missing = [c for c in features if c not in df.columns]
+if missing:
+    raise ValueError(f"t-SNE: Column(s) not found: {', '.join(missing)}")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1)
+X_clean = X[valid_mask]
+
+if len(X_clean) < 5:
+    raise ValueError("t-SNE: Need at least 5 valid samples")
+
+perplexity = min(max(perplexity, 5), len(X_clean) - 1)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+tsne = TSNE(n_components=n_components, perplexity=perplexity, learning_rate=learning_rate, n_iter=n_iter, random_state=42, init='pca')
+X_embedded = tsne.fit_transform(X_scaled)
+
+component_names = [f'tsne_{i+1}' for i in range(n_components)]
+for i, name in enumerate(component_names):
+    df[name] = np.nan
+    df.loc[valid_mask, name] = X_embedded[:, i]
+
+df.attrs['tsne_info'] = {'n_components': n_components, 'perplexity': perplexity, 'kl_divergence': float(tsne.kl_divergence_)}
+output = df
+`,
+  },
+
+  'statistical-tests': {
+    type: 'statistical-tests',
+    category: 'analysis',
+    label: 'Statistical Tests Suite',
+    description: 'Perform various statistical tests: Mann-Whitney, Wilcoxon, Kruskal-Wallis, Levene',
+    icon: 'FlaskConical',
+    defaultConfig: {
+      testType: 'mann_whitney',
+      column1: '',
+      column2: '',
+      groupColumn: '',
+      valueColumn: '',
+      alpha: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+test_type = config.get('testType', 'mann_whitney')
+column1 = config.get('column1', '')
+column2 = config.get('column2', '')
+group_col = config.get('groupColumn', '')
+value_col = config.get('valueColumn', '')
+alpha = float(config.get('alpha', 0.05))
+
+results = {'test_type': test_type, 'alpha': alpha}
+
+if test_type == 'mann_whitney':
+    if not column1 or not column2:
+        raise ValueError("Mann-Whitney: Please specify two columns to compare")
+    data1 = pd.to_numeric(df[column1], errors='coerce').dropna()
+    data2 = pd.to_numeric(df[column2], errors='coerce').dropna()
+    stat, pval = stats.mannwhitneyu(data1, data2, alternative='two-sided')
+    n1, n2 = len(data1), len(data2)
+    r = 1 - (2 * stat) / (n1 * n2)
+    results.update({'statistic': float(stat), 'p_value': float(pval), 'significant': pval < alpha,
+                    'effect_size_r': float(r), 'medians': {'group1': float(data1.median()), 'group2': float(data2.median())}})
+elif test_type == 'wilcoxon':
+    if not column1 or not column2:
+        raise ValueError("Wilcoxon: Please specify two paired columns")
+    data1 = pd.to_numeric(df[column1], errors='coerce')
+    data2 = pd.to_numeric(df[column2], errors='coerce')
+    valid = data1.notna() & data2.notna()
+    stat, pval = stats.wilcoxon(data1[valid], data2[valid])
+    results.update({'statistic': float(stat), 'p_value': float(pval), 'significant': pval < alpha,
+                    'n_pairs': int(valid.sum()), 'median_difference': float((data1[valid] - data2[valid]).median())})
+elif test_type == 'kruskal_wallis':
+    if not group_col or not value_col:
+        raise ValueError("Kruskal-Wallis: Please specify group and value columns")
+    groups = df.groupby(group_col)[value_col].apply(lambda x: pd.to_numeric(x, errors='coerce').dropna().tolist()).tolist()
+    groups = [g for g in groups if len(g) > 0]
+    if len(groups) < 2:
+        raise ValueError("Kruskal-Wallis: Need at least 2 groups with data")
+    stat, pval = stats.kruskal(*groups)
+    n_total = sum(len(g) for g in groups)
+    eta_squared = (stat - len(groups) + 1) / (n_total - len(groups))
+    results.update({'statistic': float(stat), 'p_value': float(pval), 'significant': pval < alpha,
+                    'effect_size_eta_squared': float(eta_squared), 'n_groups': len(groups)})
+elif test_type == 'levene':
+    if not group_col or not value_col:
+        raise ValueError("Levene: Please specify group and value columns")
+    groups = df.groupby(group_col)[value_col].apply(lambda x: pd.to_numeric(x, errors='coerce').dropna().tolist()).tolist()
+    groups = [g for g in groups if len(g) > 0]
+    stat, pval = stats.levene(*groups, center='median')
+    results.update({'statistic': float(stat), 'p_value': float(pval), 'significant': pval < alpha,
+                    'homogeneous_variance': pval >= alpha, 'n_groups': len(groups)})
+else:
+    raise ValueError(f"Statistical Tests: Unknown test type '{test_type}'")
+
+output = pd.DataFrame([results])
+`,
+  },
+
+  'optimal-binning': {
+    type: 'optimal-binning',
+    category: 'analysis',
+    label: 'Optimal Binning',
+    description: 'Create optimal bins using decision tree or quantile-based methods with WoE/IV',
+    icon: 'BarChart',
+    defaultConfig: {
+      column: '',
+      target: '',
+      method: 'quantile',
+      nBins: 10,
+      minBinSize: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier
+
+df = input_data.copy()
+column = config.get('column', '')
+target = config.get('target', '')
+method = config.get('method', 'quantile')
+n_bins = int(config.get('nBins', 10))
+min_bin_size = float(config.get('minBinSize', 0.05))
+
+if not column:
+    raise ValueError("Optimal Binning: Please specify a column to bin")
+
+if column not in df.columns:
+    raise ValueError(f"Optimal Binning: Column '{column}' not found")
+
+values = pd.to_numeric(df[column], errors='coerce')
+valid_mask = values.notna()
+
+if target and target in df.columns:
+    target_vals = pd.to_numeric(df[target], errors='coerce')
+    valid_mask = valid_mask & target_vals.notna()
+    if target_vals[valid_mask].nunique() != 2:
+        target = ''
+
+values_clean = values[valid_mask]
+
+if method == 'quantile':
+    try:
+        bin_edges = pd.qcut(values_clean, q=n_bins, duplicates='drop', retbins=True)[1]
+    except ValueError:
+        bin_edges = np.percentile(values_clean, np.linspace(0, 100, n_bins + 1))
+        bin_edges = np.unique(bin_edges)
+elif method == 'equal_width':
+    bin_edges = np.linspace(values_clean.min(), values_clean.max(), n_bins + 1)
+elif method == 'tree' and target:
+    target_clean = target_vals[valid_mask]
+    tree = DecisionTreeClassifier(max_leaf_nodes=n_bins, min_samples_leaf=int(len(values_clean) * min_bin_size), random_state=42)
+    tree.fit(values_clean.values.reshape(-1, 1), target_clean)
+    thresholds = tree.tree_.threshold[tree.tree_.threshold != -2]
+    bin_edges = np.sort(np.unique(np.concatenate([[values_clean.min()], thresholds, [values_clean.max()]])))
+else:
+    bin_edges = np.linspace(values_clean.min(), values_clean.max(), n_bins + 1)
+
+bin_edges = np.array(bin_edges)
+bin_edges[0] = -np.inf
+bin_edges[-1] = np.inf
+
+binned_col = f'{column}_binned'
+df[binned_col] = pd.cut(values, bins=bin_edges, labels=False, include_lowest=True)
+
+bin_stats = []
+for i in range(len(bin_edges) - 1):
+    mask = df[binned_col] == i
+    bin_data = {'bin': i, 'count': int(mask.sum()), 'pct': float(mask.sum() / len(df) * 100)}
+    if target and target in df.columns:
+        target_vals_bin = target_vals[mask & valid_mask]
+        if len(target_vals_bin) > 0:
+            bin_data['event_rate'] = float(target_vals_bin.mean())
+    bin_stats.append(bin_data)
+
+df.attrs['bin_stats'] = bin_stats
+output = df
+`,
+  },
+
+  'correlation-finder': {
+    type: 'correlation-finder',
+    category: 'analysis',
+    label: 'Correlation Finder',
+    description: 'Find highly correlated pairs and identify multicollinearity issues',
+    icon: 'Link',
+    defaultConfig: {
+      columns: [],
+      method: 'pearson',
+      threshold: 0.7,
+      showTopN: 20,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+columns = config.get('columns', [])
+method = config.get('method', 'pearson')
+threshold = float(config.get('threshold', 0.7))
+show_top_n = int(config.get('showTopN', 20))
+
+if not columns:
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if len(columns) < 2:
+    raise ValueError("Correlation Finder: Need at least 2 numeric columns")
+
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Correlation Finder: Column(s) not found: {', '.join(missing)}")
+
+X = df[columns].copy()
+for col in columns:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+corr_matrix = X.corr(method=method)
+
+pairs = []
+for i in range(len(columns)):
+    for j in range(i + 1, len(columns)):
+        col1, col2 = columns[i], columns[j]
+        corr = corr_matrix.loc[col1, col2]
+        if pd.notna(corr):
+            valid_data = X[[col1, col2]].dropna()
+            n = len(valid_data)
+            if n > 2:
+                if method == 'pearson':
+                    _, pval = stats.pearsonr(valid_data[col1], valid_data[col2])
+                elif method == 'spearman':
+                    _, pval = stats.spearmanr(valid_data[col1], valid_data[col2])
+                else:
+                    _, pval = stats.kendalltau(valid_data[col1], valid_data[col2])
+            else:
+                pval = 1.0
+            pairs.append({'column1': col1, 'column2': col2, 'correlation': float(corr),
+                          'abs_correlation': float(abs(corr)), 'p_value': float(pval),
+                          'is_significant': pval < 0.05, 'is_high_correlation': abs(corr) >= threshold})
+
+pairs_df = pd.DataFrame(pairs)
+pairs_df = pairs_df.sort_values('abs_correlation', ascending=False).head(show_top_n)
+pairs_df.attrs['threshold'] = threshold
+pairs_df.attrs['n_high_correlation_pairs'] = len(pairs_df[pairs_df['abs_correlation'] >= threshold])
+output = pairs_df
+`,
+  },
+
+  'ab-test-calculator': {
+    type: 'ab-test-calculator',
+    category: 'analysis',
+    label: 'A/B Test Calculator',
+    description: 'Calculate statistical significance for A/B tests with confidence intervals',
+    icon: 'FlaskConical',
+    defaultConfig: {
+      testType: 'conversion',
+      groupColumn: '',
+      valueColumn: '',
+      confidenceLevel: 0.95,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+test_type = config.get('testType', 'conversion')
+group_col = config.get('groupColumn', '')
+value_col = config.get('valueColumn', '')
+conf_level = float(config.get('confidenceLevel', 0.95))
+
+alpha = 1 - conf_level
+z_score = stats.norm.ppf(1 - alpha / 2)
+
+if not group_col or not value_col:
+    raise ValueError("A/B Test: Please specify group and value columns")
+
+groups = df.groupby(group_col)
+group_names = list(groups.groups.keys())
+
+if len(group_names) < 2:
+    raise ValueError("A/B Test: Need at least 2 groups (control and treatment)")
+
+control_name = group_names[0]
+treatment_name = group_names[1]
+
+control_data = pd.to_numeric(groups.get_group(control_name)[value_col], errors='coerce').dropna()
+treatment_data = pd.to_numeric(groups.get_group(treatment_name)[value_col], errors='coerce').dropna()
+
+n_c, n_t = len(control_data), len(treatment_data)
+results = {'test_type': test_type, 'confidence_level': conf_level,
+           'control_group': str(control_name), 'treatment_group': str(treatment_name),
+           'control_n': int(n_c), 'treatment_n': int(n_t)}
+
+if test_type == 'conversion':
+    conv_c, conv_t = control_data.mean(), treatment_data.mean()
+    se_c = np.sqrt(conv_c * (1 - conv_c) / n_c) if 0 < conv_c < 1 else 0.01
+    se_t = np.sqrt(conv_t * (1 - conv_t) / n_t) if 0 < conv_t < 1 else 0.01
+    se_diff = np.sqrt(se_c**2 + se_t**2)
+    lift = (conv_t - conv_c) / conv_c * 100 if conv_c > 0 else 0
+    z_stat = (conv_t - conv_c) / se_diff if se_diff > 0 else 0
+    p_value = 2 * (1 - stats.norm.cdf(abs(z_stat)))
+    ci_lower = (conv_t - conv_c) - z_score * se_diff
+    ci_upper = (conv_t - conv_c) + z_score * se_diff
+    results.update({'control_rate': float(conv_c), 'treatment_rate': float(conv_t),
+                    'absolute_difference': float(conv_t - conv_c), 'relative_lift_pct': float(lift),
+                    'z_statistic': float(z_stat), 'p_value': float(p_value), 'is_significant': p_value < alpha,
+                    'ci_lower': float(ci_lower), 'ci_upper': float(ci_upper),
+                    'winner': str(treatment_name) if p_value < alpha and conv_t > conv_c else (str(control_name) if p_value < alpha else 'No significant difference')})
+else:
+    mean_c, mean_t = control_data.mean(), treatment_data.mean()
+    std_c, std_t = control_data.std(), treatment_data.std()
+    se_diff = np.sqrt(std_c**2/n_c + std_t**2/n_t)
+    t_stat, p_value = stats.ttest_ind(control_data, treatment_data)
+    lift = (mean_t - mean_c) / mean_c * 100 if mean_c != 0 else 0
+    pooled_std = np.sqrt(((n_c-1)*std_c**2 + (n_t-1)*std_t**2) / (n_c + n_t - 2))
+    cohens_d = (mean_t - mean_c) / pooled_std if pooled_std > 0 else 0
+    ci_lower = (mean_t - mean_c) - z_score * se_diff
+    ci_upper = (mean_t - mean_c) + z_score * se_diff
+    results.update({'control_mean': float(mean_c), 'treatment_mean': float(mean_t),
+                    'absolute_difference': float(mean_t - mean_c), 'relative_lift_pct': float(lift),
+                    't_statistic': float(t_stat), 'p_value': float(p_value), 'is_significant': p_value < alpha,
+                    'cohens_d': float(cohens_d), 'ci_lower': float(ci_lower), 'ci_upper': float(ci_upper),
+                    'winner': str(treatment_name) if p_value < alpha and mean_t > mean_c else (str(control_name) if p_value < alpha else 'No significant difference')})
+
+output = pd.DataFrame([results])
+`,
+  },
+
+  'target-encoding': {
+    type: 'target-encoding',
+    category: 'analysis',
+    label: 'Target Encoding',
+    description: 'Encode categorical variables using target mean with smoothing',
+    icon: 'Binary',
+    defaultConfig: {
+      columns: [],
+      target: '',
+      smoothing: 10,
+      minSamples: 1,
+      handleUnknown: 'global_mean',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+target = config.get('target', '')
+smoothing = float(config.get('smoothing', 10))
+min_samples = int(config.get('minSamples', 1))
+handle_unknown = config.get('handleUnknown', 'global_mean')
+
+if not target:
+    raise ValueError("Target Encoding: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Target Encoding: Target column '{target}' not found")
+
+if not columns:
+    columns = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    columns = [c for c in columns if c != target]
+
+if not columns:
+    raise ValueError("Target Encoding: No categorical columns found or specified")
+
+target_values = pd.to_numeric(df[target], errors='coerce')
+global_mean = target_values.mean()
+
+encoding_maps = {}
+for col in columns:
+    agg_stats = df.groupby(col).agg(
+        count=(target, 'size'),
+        sum_val=(target, lambda x: pd.to_numeric(x, errors='coerce').sum())
+    ).reset_index()
+    agg_stats['smoothed_mean'] = (agg_stats['sum_val'] + smoothing * global_mean) / (agg_stats['count'] + smoothing)
+    agg_stats.loc[agg_stats['count'] < min_samples, 'smoothed_mean'] = global_mean
+    encoding_map = dict(zip(agg_stats[col], agg_stats['smoothed_mean']))
+    encoding_maps[col] = encoding_map
+    encoded_col = f'{col}_encoded'
+    df[encoded_col] = df[col].map(encoding_map)
+    if handle_unknown == 'global_mean':
+        df[encoded_col] = df[encoded_col].fillna(global_mean)
+    elif handle_unknown == 'zero':
+        df[encoded_col] = df[encoded_col].fillna(0)
+
+df.attrs['target_encoding'] = {'global_mean': float(global_mean), 'smoothing': smoothing, 'columns_encoded': columns}
+output = df
+`,
+  },
+
+  'learning-curves': {
+    type: 'learning-curves',
+    category: 'analysis',
+    label: 'Learning Curves',
+    description: 'Analyze model performance vs training set size to diagnose bias/variance',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      cvFolds: 5,
+      trainSizes: [0.1, 0.2, 0.4, 0.6, 0.8, 1.0],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import learning_curve
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+model_type = config.get('modelType', 'random_forest')
+task_type = config.get('taskType', 'auto')
+cv_folds = int(config.get('cvFolds', 5))
+train_sizes = config.get('trainSizes', [0.1, 0.2, 0.4, 0.6, 0.8, 1.0])
+
+if not target:
+    raise ValueError("Learning Curves: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Learning Curves: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Learning Curves: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 50:
+    raise ValueError("Learning Curves: Need at least 50 valid samples")
+
+is_classification = y_clean.nunique() <= 20 if task_type == 'auto' else task_type == 'classification'
+
+if is_classification and y_clean.dtype == 'object':
+    le = LabelEncoder()
+    y_clean = pd.Series(le.fit_transform(y_clean.astype(str)), index=y_clean.index)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+if model_type == 'random_forest':
+    model = RandomForestClassifier(n_estimators=50, random_state=42, n_jobs=-1) if is_classification else RandomForestRegressor(n_estimators=50, random_state=42, n_jobs=-1)
+else:
+    model = LogisticRegression(random_state=42, max_iter=500) if is_classification else Ridge(random_state=42)
+
+cv_folds = min(max(cv_folds, 2), len(X_clean) // 10)
+
+train_sizes_abs, train_scores, test_scores = learning_curve(
+    model, X_scaled, y_clean, train_sizes=train_sizes, cv=cv_folds,
+    scoring='accuracy' if is_classification else 'r2', n_jobs=-1, random_state=42
+)
+
+train_mean = train_scores.mean(axis=1)
+train_std = train_scores.std(axis=1)
+test_mean = test_scores.mean(axis=1)
+test_std = test_scores.std(axis=1)
+
+gap = train_mean[-1] - test_mean[-1]
+if gap > 0.1:
+    diagnosis = 'high_variance'
+    recommendation = 'Model is overfitting. Consider: more data, regularization, simpler model.'
+elif test_mean[-1] < 0.6:
+    diagnosis = 'high_bias'
+    recommendation = 'Model is underfitting. Consider: more features, complex model.'
+else:
+    diagnosis = 'good_fit'
+    recommendation = 'Model appears well-fitted with acceptable generalization.'
+
+results = pd.DataFrame({
+    'train_size': train_sizes_abs, 'train_score_mean': train_mean, 'train_score_std': train_std,
+    'test_score_mean': test_mean, 'test_score_std': test_std, 'gap': train_mean - test_mean
+})
+
+results.attrs['learning_curve_analysis'] = {
+    'task_type': 'classification' if is_classification else 'regression',
+    'scoring_metric': 'accuracy' if is_classification else 'r2',
+    'final_train_score': float(train_mean[-1]), 'final_test_score': float(test_mean[-1]),
+    'diagnosis': diagnosis, 'recommendation': recommendation
+}
+output = results
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
@@ -10168,6 +12417,1554 @@ output = {
 `,
   },
 
+  'box-plot': {
+    type: 'box-plot',
+    category: 'visualization',
+    label: 'Box Plot',
+    description: 'Statistical distribution showing median, quartiles, and outliers',
+    icon: 'BoxSelect',
+    defaultConfig: {
+      column: '',
+      groupColumn: '',
+      title: '',
+      showOutliers: true,
+      notched: false,
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+group_col = config.get('groupColumn', '')
+show_outliers = config.get('showOutliers', True)
+notched = config.get('notched', False)
+
+if not column:
+    # Auto-select first numeric column
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if not numeric_cols:
+        raise ValueError("Box Plot: No numeric columns found in data")
+    column = numeric_cols[0]
+
+if column not in df.columns:
+    raise ValueError(f"Box Plot: Column '{column}' not found")
+
+# Prepare data for box plot
+data = []
+if group_col and group_col in df.columns:
+    for group in df[group_col].unique():
+        group_data = df[df[group_col] == group][column].dropna().tolist()
+        data.append({
+            'y': group_data,
+            'name': str(group),
+            'type': 'box',
+            'boxpoints': 'outliers' if show_outliers else False,
+            'notched': notched,
+        })
+else:
+    data.append({
+        'y': df[column].dropna().tolist(),
+        'name': column,
+        'type': 'box',
+        'boxpoints': 'outliers' if show_outliers else False,
+        'notched': notched,
+    })
+
+output = {
+    'chartType': 'box',
+    'data': data,
+    'xLabel': group_col if group_col else '',
+    'yLabel': column,
+    'title': config.get('title', '') or f'Box Plot of {column}',
+}
+`,
+  },
+
+  'heatmap': {
+    type: 'heatmap',
+    category: 'visualization',
+    label: 'Heatmap',
+    description: 'Matrix visualization with color intensity representing values',
+    icon: 'Grid',
+    defaultConfig: {
+      xColumn: '',
+      yColumn: '',
+      valueColumn: '',
+      colorScale: 'Blues',
+      showValues: true,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('xColumn', '')
+y_col = config.get('yColumn', '')
+value_col = config.get('valueColumn', '')
+color_scale = config.get('colorScale', 'Blues')
+show_values = config.get('showValues', True)
+
+if not x_col or not y_col or not value_col:
+    raise ValueError("Heatmap: Please specify X column, Y column, and Value column in Config tab")
+
+if x_col not in df.columns or y_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Heatmap: One or more columns not found in data")
+
+# Create pivot table for heatmap
+pivot = df.pivot_table(index=y_col, columns=x_col, values=value_col, aggfunc='mean')
+
+output = {
+    'chartType': 'heatmap',
+    'z': pivot.values.tolist(),
+    'x': pivot.columns.tolist(),
+    'y': pivot.index.tolist(),
+    'colorScale': color_scale,
+    'showValues': show_values,
+    'title': config.get('title', '') or f'Heatmap of {value_col}',
+}
+`,
+  },
+
+  'scatter-map': {
+    type: 'scatter-map',
+    category: 'visualization',
+    label: 'Scatter Map',
+    description: 'Geographic points plotted on a map using latitude/longitude',
+    icon: 'MapPin',
+    defaultConfig: {
+      latColumn: '',
+      lonColumn: '',
+      sizeColumn: '',
+      colorColumn: '',
+      title: '',
+      mapStyle: 'open-street-map',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+lat_col = config.get('latColumn', '')
+lon_col = config.get('lonColumn', '')
+size_col = config.get('sizeColumn', '')
+color_col = config.get('colorColumn', '')
+map_style = config.get('mapStyle', 'open-street-map')
+
+if not lat_col or not lon_col:
+    raise ValueError("Scatter Map: Please specify Latitude and Longitude columns in Config tab")
+
+if lat_col not in df.columns or lon_col not in df.columns:
+    raise ValueError(f"Scatter Map: Latitude or Longitude column not found")
+
+# Prepare data
+lat = df[lat_col].tolist()
+lon = df[lon_col].tolist()
+sizes = df[size_col].tolist() if size_col and size_col in df.columns else [10] * len(df)
+colors = df[color_col].tolist() if color_col and color_col in df.columns else None
+text = df.apply(lambda row: '<br>'.join([f'{c}: {row[c]}' for c in df.columns[:5]]), axis=1).tolist()
+
+output = {
+    'chartType': 'scattermap',
+    'lat': lat,
+    'lon': lon,
+    'sizes': sizes,
+    'colors': colors,
+    'text': text,
+    'mapStyle': map_style,
+    'title': config.get('title', '') or 'Scatter Map',
+}
+`,
+  },
+
+  'grouped-histogram': {
+    type: 'grouped-histogram',
+    category: 'visualization',
+    label: 'Grouped Histogram',
+    description: 'Compare distributions across categories with overlapping histograms',
+    icon: 'Layers3',
+    defaultConfig: {
+      column: '',
+      groupColumn: '',
+      bins: 20,
+      barMode: 'overlay',
+      opacity: 0.7,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+group_col = config.get('groupColumn', '')
+bins = config.get('bins', 20)
+bar_mode = config.get('barMode', 'overlay')
+opacity = config.get('opacity', 0.7)
+
+if not column:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if not numeric_cols:
+        raise ValueError("Grouped Histogram: No numeric columns found")
+    column = numeric_cols[0]
+
+if column not in df.columns:
+    raise ValueError(f"Grouped Histogram: Column '{column}' not found")
+
+data = []
+if group_col and group_col in df.columns:
+    for group in df[group_col].unique():
+        group_data = df[df[group_col] == group][column].dropna().tolist()
+        data.append({
+            'x': group_data,
+            'name': str(group),
+            'type': 'histogram',
+            'opacity': opacity,
+            'nbinsx': bins,
+        })
+else:
+    data.append({
+        'x': df[column].dropna().tolist(),
+        'name': column,
+        'type': 'histogram',
+        'nbinsx': bins,
+    })
+
+output = {
+    'chartType': 'grouped_histogram',
+    'data': data,
+    'barMode': bar_mode,
+    'xLabel': column,
+    'yLabel': 'Count',
+    'title': config.get('title', '') or f'Histogram of {column}',
+}
+`,
+  },
+
+  'network-graph': {
+    type: 'network-graph',
+    category: 'visualization',
+    label: 'Network Graph',
+    description: 'Force-directed graph showing relationships between nodes',
+    icon: 'Share2',
+    defaultConfig: {
+      sourceColumn: '',
+      targetColumn: '',
+      weightColumn: '',
+      layout: 'force',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+import networkx as nx
+
+df = input_data.copy()
+source_col = config.get('sourceColumn', '')
+target_col = config.get('targetColumn', '')
+weight_col = config.get('weightColumn', '')
+
+if not source_col or not target_col:
+    raise ValueError("Network Graph: Please specify Source and Target columns in Config tab")
+
+if source_col not in df.columns or target_col not in df.columns:
+    raise ValueError(f"Network Graph: Source or Target column not found")
+
+# Create graph
+G = nx.Graph()
+for _, row in df.iterrows():
+    weight = row[weight_col] if weight_col and weight_col in df.columns else 1
+    G.add_edge(str(row[source_col]), str(row[target_col]), weight=weight)
+
+# Get layout positions
+pos = nx.spring_layout(G, k=2, iterations=50)
+
+# Prepare node data
+nodes = []
+for node in G.nodes():
+    x, y = pos[node]
+    nodes.append({
+        'id': node,
+        'x': float(x),
+        'y': float(y),
+        'degree': G.degree(node),
+    })
+
+# Prepare edge data
+edges = []
+for source, target, data in G.edges(data=True):
+    x0, y0 = pos[source]
+    x1, y1 = pos[target]
+    edges.append({
+        'source': source,
+        'target': target,
+        'x0': float(x0),
+        'y0': float(y0),
+        'x1': float(x1),
+        'y1': float(y1),
+        'weight': data.get('weight', 1),
+    })
+
+output = {
+    'chartType': 'network',
+    'nodes': nodes,
+    'edges': edges,
+    'title': config.get('title', '') or 'Network Graph',
+}
+`,
+  },
+
+  'calendar-heatmap': {
+    type: 'calendar-heatmap',
+    category: 'visualization',
+    label: 'Calendar Heatmap',
+    description: 'Daily values displayed in a calendar grid format',
+    icon: 'CalendarDays',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      colorScale: 'Greens',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+color_scale = config.get('colorScale', 'Greens')
+
+if not date_col or not value_col:
+    raise ValueError("Calendar Heatmap: Please specify Date and Value columns in Config tab")
+
+if date_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Calendar Heatmap: Date or Value column not found")
+
+# Convert to datetime
+df[date_col] = pd.to_datetime(df[date_col])
+df = df.groupby(date_col)[value_col].sum().reset_index()
+
+# Extract date components
+df['year'] = df[date_col].dt.year
+df['week'] = df[date_col].dt.isocalendar().week
+df['dayofweek'] = df[date_col].dt.dayofweek
+df['date_str'] = df[date_col].dt.strftime('%Y-%m-%d')
+
+output = {
+    'chartType': 'calendar_heatmap',
+    'dates': df['date_str'].tolist(),
+    'values': df[value_col].tolist(),
+    'weeks': df['week'].tolist(),
+    'dayofweek': df['dayofweek'].tolist(),
+    'years': df['year'].unique().tolist(),
+    'colorScale': color_scale,
+    'title': config.get('title', '') or f'Calendar Heatmap of {value_col}',
+}
+`,
+  },
+
+  'faceted-chart': {
+    type: 'faceted-chart',
+    category: 'visualization',
+    label: 'Faceted Chart',
+    description: 'Same chart repeated across different categories for comparison',
+    icon: 'LayoutPanelLeft',
+    defaultConfig: {
+      x: '',
+      y: '',
+      facetColumn: '',
+      chartType: 'scatter',
+      columns: 3,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+facet_col = config.get('facetColumn', '')
+chart_type = config.get('chartType', 'scatter')
+n_columns = config.get('columns', 3)
+
+if not x_col or not y_col or not facet_col:
+    raise ValueError("Faceted Chart: Please specify X, Y, and Facet columns in Config tab")
+
+if x_col not in df.columns or y_col not in df.columns or facet_col not in df.columns:
+    raise ValueError(f"Faceted Chart: One or more columns not found")
+
+# Prepare faceted data
+facets = df[facet_col].unique().tolist()
+data = []
+for facet in facets:
+    facet_df = df[df[facet_col] == facet]
+    data.append({
+        'facet': str(facet),
+        'x': facet_df[x_col].tolist(),
+        'y': facet_df[y_col].tolist(),
+    })
+
+output = {
+    'chartType': 'faceted',
+    'subChartType': chart_type,
+    'data': data,
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'facetColumn': facet_col,
+    'columns': n_columns,
+    'title': config.get('title', '') or f'Faceted {chart_type.title()} by {facet_col}',
+}
+`,
+  },
+
+  'density-plot': {
+    type: 'density-plot',
+    category: 'visualization',
+    label: 'Density Plot',
+    description: 'Smooth probability density curve using kernel density estimation',
+    icon: 'Waves',
+    defaultConfig: {
+      column: '',
+      groupColumn: '',
+      title: '',
+      fillOpacity: 0.3,
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+column = config.get('column', '')
+group_col = config.get('groupColumn', '')
+fill_opacity = config.get('fillOpacity', 0.3)
+
+if not column:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if not numeric_cols:
+        raise ValueError("Density Plot: No numeric columns found")
+    column = numeric_cols[0]
+
+if column not in df.columns:
+    raise ValueError(f"Density Plot: Column '{column}' not found")
+
+data = []
+if group_col and group_col in df.columns:
+    for group in df[group_col].unique():
+        values = df[df[group_col] == group][column].dropna()
+        if len(values) > 1:
+            kde = stats.gaussian_kde(values)
+            x_range = np.linspace(values.min(), values.max(), 200)
+            y_range = kde(x_range)
+            data.append({
+                'x': x_range.tolist(),
+                'y': y_range.tolist(),
+                'name': str(group),
+                'fill': 'tozeroy',
+                'opacity': fill_opacity,
+            })
+else:
+    values = df[column].dropna()
+    if len(values) > 1:
+        kde = stats.gaussian_kde(values)
+        x_range = np.linspace(values.min(), values.max(), 200)
+        y_range = kde(x_range)
+        data.append({
+            'x': x_range.tolist(),
+            'y': y_range.tolist(),
+            'name': column,
+            'fill': 'tozeroy',
+            'opacity': fill_opacity,
+        })
+
+output = {
+    'chartType': 'density',
+    'data': data,
+    'xLabel': column,
+    'yLabel': 'Density',
+    'title': config.get('title', '') or f'Density Plot of {column}',
+}
+`,
+  },
+
+  'error-bar-chart': {
+    type: 'error-bar-chart',
+    category: 'visualization',
+    label: 'Error Bar Chart',
+    description: 'Bar or line chart with confidence intervals or error bars',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      errorColumn: '',
+      errorType: 'data',
+      chartType: 'bar',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+error_col = config.get('errorColumn', '')
+error_type = config.get('errorType', 'data')
+chart_type = config.get('chartType', 'bar')
+
+if not cat_col or not value_col:
+    raise ValueError("Error Bar Chart: Please specify Category and Value columns in Config tab")
+
+if cat_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Error Bar Chart: Category or Value column not found")
+
+categories = df[cat_col].tolist()
+values = df[value_col].tolist()
+
+# Handle error values
+if error_col and error_col in df.columns:
+    errors = df[error_col].tolist()
+elif error_type == 'std':
+    # Calculate standard deviation per group
+    grouped = df.groupby(cat_col)[value_col]
+    errors = grouped.std().reindex(df[cat_col]).tolist()
+else:
+    errors = [0] * len(values)
+
+output = {
+    'chartType': 'error_bar',
+    'subChartType': chart_type,
+    'categories': categories,
+    'values': values,
+    'errors': errors,
+    'xLabel': cat_col,
+    'yLabel': value_col,
+    'title': config.get('title', '') or f'{value_col} with Error Bars',
+}
+`,
+  },
+
+  'dot-plot': {
+    type: 'dot-plot',
+    category: 'visualization',
+    label: 'Dot Plot',
+    description: 'Cleveland dot plot for clean categorical value comparison',
+    icon: 'CircleDot',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      colorColumn: '',
+      orientation: 'horizontal',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+color_col = config.get('colorColumn', '')
+orientation = config.get('orientation', 'horizontal')
+
+if not cat_col or not value_col:
+    raise ValueError("Dot Plot: Please specify Category and Value columns in Config tab")
+
+if cat_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Dot Plot: Category or Value column not found")
+
+# Sort by value for better visualization
+df = df.sort_values(value_col, ascending=True)
+
+categories = df[cat_col].tolist()
+values = df[value_col].tolist()
+colors = df[color_col].tolist() if color_col and color_col in df.columns else None
+
+output = {
+    'chartType': 'dot_plot',
+    'categories': categories,
+    'values': values,
+    'colors': colors,
+    'orientation': orientation,
+    'xLabel': value_col if orientation == 'horizontal' else cat_col,
+    'yLabel': cat_col if orientation == 'horizontal' else value_col,
+    'title': config.get('title', '') or f'{value_col} by {cat_col}',
+}
+`,
+  },
+
+  'slope-chart': {
+    type: 'slope-chart',
+    category: 'visualization',
+    label: 'Slope Chart',
+    description: 'Before/after comparison showing changes between two points',
+    icon: 'ArrowRightLeft',
+    defaultConfig: {
+      entityColumn: '',
+      startColumn: '',
+      endColumn: '',
+      startLabel: 'Before',
+      endLabel: 'After',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+entity_col = config.get('entityColumn', '')
+start_col = config.get('startColumn', '')
+end_col = config.get('endColumn', '')
+start_label = config.get('startLabel', 'Before')
+end_label = config.get('endLabel', 'After')
+
+if not entity_col or not start_col or not end_col:
+    raise ValueError("Slope Chart: Please specify Entity, Start Value, and End Value columns in Config tab")
+
+if entity_col not in df.columns or start_col not in df.columns or end_col not in df.columns:
+    raise ValueError(f"Slope Chart: One or more columns not found")
+
+# Prepare data for slope chart
+lines = []
+for _, row in df.iterrows():
+    lines.append({
+        'entity': str(row[entity_col]),
+        'start': float(row[start_col]),
+        'end': float(row[end_col]),
+        'change': float(row[end_col]) - float(row[start_col]),
+    })
+
+output = {
+    'chartType': 'slope',
+    'lines': lines,
+    'startLabel': start_label,
+    'endLabel': end_label,
+    'title': config.get('title', '') or 'Slope Chart',
+}
+`,
+  },
+
+  'grouped-bar-chart': {
+    type: 'grouped-bar-chart',
+    category: 'visualization',
+    label: 'Grouped Bar Chart',
+    description: 'Side-by-side bars comparing subcategories within groups',
+    icon: 'BarChart4',
+    defaultConfig: {
+      categoryColumn: '',
+      groupColumn: '',
+      valueColumn: '',
+      orientation: 'vertical',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cat_col = config.get('categoryColumn', '')
+group_col = config.get('groupColumn', '')
+value_col = config.get('valueColumn', '')
+orientation = config.get('orientation', 'vertical')
+
+if not cat_col or not group_col or not value_col:
+    raise ValueError("Grouped Bar Chart: Please specify Category, Group, and Value columns in Config tab")
+
+if cat_col not in df.columns or group_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Grouped Bar Chart: One or more columns not found")
+
+# Pivot data for grouped bars
+pivot = df.pivot_table(index=cat_col, columns=group_col, values=value_col, aggfunc='sum').fillna(0)
+
+data = []
+for col in pivot.columns:
+    data.append({
+        'name': str(col),
+        'x': pivot.index.tolist() if orientation == 'vertical' else pivot[col].tolist(),
+        'y': pivot[col].tolist() if orientation == 'vertical' else pivot.index.tolist(),
+        'orientation': 'v' if orientation == 'vertical' else 'h',
+    })
+
+output = {
+    'chartType': 'grouped_bar',
+    'data': data,
+    'categories': pivot.index.tolist(),
+    'xLabel': cat_col if orientation == 'vertical' else value_col,
+    'yLabel': value_col if orientation == 'vertical' else cat_col,
+    'title': config.get('title', '') or f'{value_col} by {cat_col} and {group_col}',
+}
+`,
+  },
+
+  'bump-chart': {
+    type: 'bump-chart',
+    category: 'visualization',
+    label: 'Bump Chart',
+    description: 'Ranking changes over time with connected lines',
+    icon: 'LineChart',
+    defaultConfig: {
+      entityColumn: '',
+      timeColumn: '',
+      rankColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+entity_col = config.get('entityColumn', '')
+time_col = config.get('timeColumn', '')
+rank_col = config.get('rankColumn', '')
+
+if not entity_col or not time_col or not rank_col:
+    raise ValueError("Bump Chart: Please specify Entity, Time, and Rank columns in Config tab")
+
+if entity_col not in df.columns or time_col not in df.columns or rank_col not in df.columns:
+    raise ValueError(f"Bump Chart: One or more columns not found")
+
+# Sort by time
+df = df.sort_values(time_col)
+
+# Get unique time points and entities
+time_points = df[time_col].unique().tolist()
+entities = df[entity_col].unique().tolist()
+
+# Prepare lines for each entity
+lines = []
+for entity in entities:
+    entity_data = df[df[entity_col] == entity]
+    times = entity_data[time_col].tolist()
+    ranks = entity_data[rank_col].tolist()
+    lines.append({
+        'entity': str(entity),
+        'x': times,
+        'y': ranks,
+    })
+
+output = {
+    'chartType': 'bump',
+    'lines': lines,
+    'timePoints': time_points,
+    'xLabel': time_col,
+    'yLabel': 'Rank',
+    'title': config.get('title', '') or 'Bump Chart - Ranking Over Time',
+}
+`,
+  },
+
+  'donut-chart': {
+    type: 'donut-chart',
+    category: 'visualization',
+    label: 'Donut Chart',
+    description: 'Pie chart with hollow center for proportions and center KPI display',
+    icon: 'PieChart',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      title: '',
+      holeSize: 0.4,
+      showLabels: true,
+      showPercent: true,
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+category_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+
+if not category_col or not value_col:
+    raise ValueError("Donut Chart: Please specify Category and Value columns in Config tab")
+
+if category_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Donut Chart: Column not found in data")
+
+# Aggregate by category
+agg_df = df.groupby(category_col)[value_col].sum().reset_index()
+agg_df = agg_df.sort_values(value_col, ascending=False)
+
+total = agg_df[value_col].sum()
+labels = agg_df[category_col].tolist()
+values = agg_df[value_col].tolist()
+percentages = [(v / total * 100) if total > 0 else 0 for v in values]
+
+output = {
+    'chartType': 'donut',
+    'labels': labels,
+    'values': values,
+    'percentages': [round(p, 1) for p in percentages],
+    'total': float(total),
+    'holeSize': config.get('holeSize', 0.4),
+    'showLabels': config.get('showLabels', True),
+    'showPercent': config.get('showPercent', True),
+    'title': config.get('title', '') or f'Donut Chart: {value_col} by {category_col}',
+}
+`,
+  },
+
+  'horizontal-bar-chart': {
+    type: 'horizontal-bar-chart',
+    category: 'visualization',
+    label: 'Horizontal Bar Chart',
+    description: 'Horizontal bars for categorical comparisons with long labels',
+    icon: 'BarChart',
+    defaultConfig: {
+      categoryColumn: '',
+      valueColumn: '',
+      colorColumn: '',
+      sortBy: 'value',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+category_col = config.get('categoryColumn', '')
+value_col = config.get('valueColumn', '')
+color_col = config.get('colorColumn', '')
+sort_by = config.get('sortBy', 'value')
+
+if not category_col or not value_col:
+    raise ValueError("Horizontal Bar Chart: Please specify Category and Value columns in Config tab")
+
+if category_col not in df.columns or value_col not in df.columns:
+    raise ValueError(f"Horizontal Bar Chart: Column not found in data")
+
+# Aggregate by category
+agg_df = df.groupby(category_col)[value_col].sum().reset_index()
+
+# Sort
+if sort_by == 'value':
+    agg_df = agg_df.sort_values(value_col, ascending=True)
+elif sort_by == 'category':
+    agg_df = agg_df.sort_values(category_col)
+
+categories = agg_df[category_col].tolist()
+values = agg_df[value_col].tolist()
+
+# Handle color column
+colors = None
+if color_col and color_col in df.columns:
+    color_agg = df.groupby(category_col)[color_col].first().reset_index()
+    color_agg = color_agg.set_index(category_col).loc[categories]
+    colors = color_agg[color_col].tolist()
+
+output = {
+    'chartType': 'horizontal_bar',
+    'categories': categories,
+    'values': values,
+    'colors': colors,
+    'xLabel': value_col,
+    'yLabel': category_col,
+    'title': config.get('title', '') or f'Horizontal Bar: {value_col} by {category_col}',
+}
+`,
+  },
+
+  'scatter-3d': {
+    type: 'scatter-3d',
+    category: 'visualization',
+    label: '3D Scatter Plot',
+    description: 'Interactive 3D scatter visualization with rotation and zoom',
+    icon: 'ScatterChart',
+    defaultConfig: {
+      x: '',
+      y: '',
+      z: '',
+      color: '',
+      size: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+z_col = config.get('z', '')
+color_col = config.get('color', '')
+size_col = config.get('size', '')
+
+if not x_col or not y_col or not z_col:
+    raise ValueError("3D Scatter: Please specify X, Y, and Z columns in Config tab")
+
+for col in [x_col, y_col, z_col]:
+    if col not in df.columns:
+        raise ValueError(f"3D Scatter: Column '{col}' not found in data")
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+# Remove rows with NaN in required columns
+df = df.dropna(subset=[x_col, y_col, z_col])
+
+data_points = []
+for _, row in df.iterrows():
+    point = {
+        'x': float(row[x_col]),
+        'y': float(row[y_col]),
+        'z': float(row[z_col]),
+    }
+    if color_col and color_col in df.columns:
+        point['color'] = row[color_col]
+    if size_col and size_col in df.columns:
+        point['size'] = float(row[size_col]) if pd.notna(row[size_col]) else 5
+    data_points.append(point)
+
+output = {
+    'chartType': 'scatter3d',
+    'data': data_points,
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'zLabel': z_col,
+    'colorColumn': color_col,
+    'sizeColumn': size_col,
+    'title': config.get('title', '') or f'3D Scatter: {x_col} vs {y_col} vs {z_col}',
+}
+`,
+  },
+
+  'contour-plot': {
+    type: 'contour-plot',
+    category: 'visualization',
+    label: 'Contour Plot',
+    description: '2D density visualization showing concentration areas with contour lines',
+    icon: 'Waves',
+    defaultConfig: {
+      x: '',
+      y: '',
+      colorScale: 'Blues',
+      showLines: true,
+      fillContours: true,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+
+if not x_col or not y_col:
+    raise ValueError("Contour Plot: Please specify X and Y columns in Config tab")
+
+if x_col not in df.columns or y_col not in df.columns:
+    raise ValueError(f"Contour Plot: Column not found in data")
+
+df[x_col] = pd.to_numeric(df[x_col], errors='coerce')
+df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
+df = df.dropna(subset=[x_col, y_col])
+
+x_vals = df[x_col].values
+y_vals = df[y_col].values
+
+# Create histogram2d for density
+bins = 30
+hist, x_edges, y_edges = np.histogram2d(x_vals, y_vals, bins=bins)
+x_centers = (x_edges[:-1] + x_edges[1:]) / 2
+y_centers = (y_edges[:-1] + y_edges[1:]) / 2
+
+output = {
+    'chartType': 'contour',
+    'z': hist.T.tolist(),
+    'x': x_centers.tolist(),
+    'y': y_centers.tolist(),
+    'colorScale': config.get('colorScale', 'Blues'),
+    'showLines': config.get('showLines', True),
+    'fillContours': config.get('fillContours', True),
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'title': config.get('title', '') or f'Contour: Density of {x_col} vs {y_col}',
+}
+`,
+  },
+
+  'hexbin-plot': {
+    type: 'hexbin-plot',
+    category: 'visualization',
+    label: 'Hexbin Plot',
+    description: 'Hexagonal binning for large scatter datasets to prevent overplotting',
+    icon: 'Grid3x3',
+    defaultConfig: {
+      x: '',
+      y: '',
+      gridSize: 20,
+      colorScale: 'Blues',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+grid_size = config.get('gridSize', 20)
+
+if not x_col or not y_col:
+    raise ValueError("Hexbin Plot: Please specify X and Y columns in Config tab")
+
+if x_col not in df.columns or y_col not in df.columns:
+    raise ValueError(f"Hexbin Plot: Column not found in data")
+
+df[x_col] = pd.to_numeric(df[x_col], errors='coerce')
+df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
+df = df.dropna(subset=[x_col, y_col])
+
+x_vals = df[x_col].tolist()
+y_vals = df[y_col].tolist()
+
+output = {
+    'chartType': 'hexbin',
+    'x': x_vals,
+    'y': y_vals,
+    'gridSize': grid_size,
+    'colorScale': config.get('colorScale', 'Blues'),
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'title': config.get('title', '') or f'Hexbin: {x_col} vs {y_col}',
+}
+`,
+  },
+
+  'ridge-plot': {
+    type: 'ridge-plot',
+    category: 'visualization',
+    label: 'Ridge Plot',
+    description: 'Stacked density curves comparing distributions across categories',
+    icon: 'Layers',
+    defaultConfig: {
+      valueColumn: '',
+      categoryColumn: '',
+      colorScale: 'Viridis',
+      overlap: 0.5,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+category_col = config.get('categoryColumn', '')
+
+if not value_col or not category_col:
+    raise ValueError("Ridge Plot: Please specify Value and Category columns in Config tab")
+
+if value_col not in df.columns or category_col not in df.columns:
+    raise ValueError(f"Ridge Plot: Column not found in data")
+
+df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
+df = df.dropna(subset=[value_col])
+
+categories = df[category_col].unique().tolist()
+ridges = []
+
+# Common x range
+x_min = df[value_col].min()
+x_max = df[value_col].max()
+x_range = np.linspace(x_min, x_max, 100)
+
+for cat in categories:
+    cat_data = df[df[category_col] == cat][value_col].values
+    if len(cat_data) > 1:
+        kde = stats.gaussian_kde(cat_data)
+        density = kde(x_range)
+        ridges.append({
+            'category': str(cat),
+            'x': x_range.tolist(),
+            'y': density.tolist(),
+        })
+
+output = {
+    'chartType': 'ridge',
+    'ridges': ridges,
+    'overlap': config.get('overlap', 0.5),
+    'colorScale': config.get('colorScale', 'Viridis'),
+    'xLabel': value_col,
+    'title': config.get('title', '') or f'Ridge Plot: {value_col} by {category_col}',
+}
+`,
+  },
+
+  'strip-plot': {
+    type: 'strip-plot',
+    category: 'visualization',
+    label: 'Strip Plot',
+    description: 'Individual data points with jitter along categorical axis',
+    icon: 'CircleDot',
+    defaultConfig: {
+      valueColumn: '',
+      categoryColumn: '',
+      jitter: 0.3,
+      pointSize: 8,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+category_col = config.get('categoryColumn', '')
+jitter = config.get('jitter', 0.3)
+
+if not value_col or not category_col:
+    raise ValueError("Strip Plot: Please specify Value and Category columns in Config tab")
+
+if value_col not in df.columns or category_col not in df.columns:
+    raise ValueError(f"Strip Plot: Column not found in data")
+
+df[value_col] = pd.to_numeric(df[value_col], errors='coerce')
+df = df.dropna(subset=[value_col])
+
+categories = df[category_col].unique().tolist()
+strips = []
+
+for i, cat in enumerate(categories):
+    cat_data = df[df[category_col] == cat][value_col].values
+    # Add jitter
+    jittered_x = np.random.uniform(-jitter/2, jitter/2, len(cat_data)) + i
+    strips.append({
+        'category': str(cat),
+        'x': jittered_x.tolist(),
+        'y': cat_data.tolist(),
+        'categoryIndex': i,
+    })
+
+output = {
+    'chartType': 'strip',
+    'strips': strips,
+    'categories': categories,
+    'pointSize': config.get('pointSize', 8),
+    'yLabel': value_col,
+    'title': config.get('title', '') or f'Strip Plot: {value_col} by {category_col}',
+}
+`,
+  },
+
+  'bullet-chart': {
+    type: 'bullet-chart',
+    category: 'visualization',
+    label: 'Bullet Chart',
+    description: 'Compact KPI visualization showing actual vs target with qualitative ranges',
+    icon: 'Target',
+    defaultConfig: {
+      actualColumn: '',
+      targetColumn: '',
+      categoryColumn: '',
+      ranges: [30, 70, 100],
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+actual_col = config.get('actualColumn', '')
+target_col = config.get('targetColumn', '')
+category_col = config.get('categoryColumn', '')
+ranges = config.get('ranges', [30, 70, 100])
+
+if not actual_col:
+    raise ValueError("Bullet Chart: Please specify Actual column in Config tab")
+
+if actual_col not in df.columns:
+    raise ValueError(f"Bullet Chart: Actual column not found in data")
+
+bullets = []
+
+if category_col and category_col in df.columns:
+    # Multiple bullets by category
+    for _, row in df.iterrows():
+        bullet = {
+            'category': str(row[category_col]),
+            'actual': float(row[actual_col]) if pd.notna(row[actual_col]) else 0,
+            'ranges': ranges,
+        }
+        if target_col and target_col in df.columns and pd.notna(row[target_col]):
+            bullet['target'] = float(row[target_col])
+        bullets.append(bullet)
+else:
+    # Single bullet with first row
+    row = df.iloc[0]
+    bullet = {
+        'category': 'Value',
+        'actual': float(row[actual_col]) if pd.notna(row[actual_col]) else 0,
+        'ranges': ranges,
+    }
+    if target_col and target_col in df.columns and pd.notna(row[target_col]):
+        bullet['target'] = float(row[target_col])
+    bullets.append(bullet)
+
+output = {
+    'chartType': 'bullet',
+    'bullets': bullets,
+    'title': config.get('title', '') or 'Bullet Chart',
+}
+`,
+  },
+
+  'pyramid-chart': {
+    type: 'pyramid-chart',
+    category: 'visualization',
+    label: 'Pyramid Chart',
+    description: 'Back-to-back horizontal bars for two-sided population comparisons',
+    icon: 'BarChart3',
+    defaultConfig: {
+      categoryColumn: '',
+      leftColumn: '',
+      rightColumn: '',
+      leftLabel: 'Left',
+      rightLabel: 'Right',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+category_col = config.get('categoryColumn', '')
+left_col = config.get('leftColumn', '')
+right_col = config.get('rightColumn', '')
+
+if not category_col or not left_col or not right_col:
+    raise ValueError("Pyramid Chart: Please specify Category, Left, and Right columns in Config tab")
+
+for col in [category_col, left_col, right_col]:
+    if col not in df.columns:
+        raise ValueError(f"Pyramid Chart: Column '{col}' not found in data")
+
+df[left_col] = pd.to_numeric(df[left_col], errors='coerce')
+df[right_col] = pd.to_numeric(df[right_col], errors='coerce')
+
+categories = df[category_col].tolist()
+left_values = df[left_col].tolist()
+right_values = df[right_col].tolist()
+
+# Make left values negative for pyramid effect
+left_values_neg = [-v if pd.notna(v) else 0 for v in left_values]
+right_values_clean = [v if pd.notna(v) else 0 for v in right_values]
+
+output = {
+    'chartType': 'pyramid',
+    'categories': categories,
+    'leftValues': left_values_neg,
+    'rightValues': right_values_clean,
+    'leftLabel': config.get('leftLabel', 'Left'),
+    'rightLabel': config.get('rightLabel', 'Right'),
+    'title': config.get('title', '') or f'Population Pyramid: {left_col} vs {right_col}',
+}
+`,
+  },
+
+  'timeline-chart': {
+    type: 'timeline-chart',
+    category: 'visualization',
+    label: 'Timeline Chart',
+    description: 'Events and tasks displayed along a time axis with duration bars',
+    icon: 'Calendar',
+    defaultConfig: {
+      taskColumn: '',
+      startColumn: '',
+      endColumn: '',
+      categoryColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+task_col = config.get('taskColumn', '')
+start_col = config.get('startColumn', '')
+end_col = config.get('endColumn', '')
+category_col = config.get('categoryColumn', '')
+
+if not task_col or not start_col or not end_col:
+    raise ValueError("Timeline Chart: Please specify Task, Start, and End columns in Config tab")
+
+for col in [task_col, start_col, end_col]:
+    if col not in df.columns:
+        raise ValueError(f"Timeline Chart: Column '{col}' not found in data")
+
+# Parse dates
+df[start_col] = pd.to_datetime(df[start_col], errors='coerce')
+df[end_col] = pd.to_datetime(df[end_col], errors='coerce')
+df = df.dropna(subset=[start_col, end_col])
+
+tasks = []
+for _, row in df.iterrows():
+    task = {
+        'task': str(row[task_col]),
+        'start': row[start_col].isoformat(),
+        'end': row[end_col].isoformat(),
+    }
+    if category_col and category_col in df.columns:
+        task['category'] = str(row[category_col])
+    tasks.append(task)
+
+# Sort by start date
+tasks.sort(key=lambda x: x['start'])
+
+output = {
+    'chartType': 'timeline',
+    'tasks': tasks,
+    'title': config.get('title', '') or 'Timeline Chart',
+}
+`,
+  },
+
+  'surface-3d': {
+    type: 'surface-3d',
+    category: 'visualization',
+    label: '3D Surface Plot',
+    description: 'Interactive 3D surface showing Z values across X-Y grid',
+    icon: 'Grid',
+    defaultConfig: {
+      x: '',
+      y: '',
+      z: '',
+      colorScale: 'Viridis',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+z_col = config.get('z', '')
+
+if not x_col or not y_col or not z_col:
+    raise ValueError("3D Surface: Please specify X, Y, and Z columns in Config tab")
+
+for col in [x_col, y_col, z_col]:
+    if col not in df.columns:
+        raise ValueError(f"3D Surface: Column '{col}' not found in data")
+    df[col] = pd.to_numeric(df[col], errors='coerce')
+
+df = df.dropna(subset=[x_col, y_col, z_col])
+
+# Create pivot table for surface
+try:
+    pivot = df.pivot_table(index=y_col, columns=x_col, values=z_col, aggfunc='mean')
+    z_grid = pivot.values.tolist()
+    x_vals = pivot.columns.tolist()
+    y_vals = pivot.index.tolist()
+except Exception:
+    # Fallback: create grid from scattered points
+    x_unique = sorted(df[x_col].unique())
+    y_unique = sorted(df[y_col].unique())
+    z_grid = []
+    for y_val in y_unique:
+        row = []
+        for x_val in x_unique:
+            z_val = df[(df[x_col] == x_val) & (df[y_col] == y_val)][z_col].mean()
+            row.append(float(z_val) if pd.notna(z_val) else None)
+        z_grid.append(row)
+    x_vals = [float(x) for x in x_unique]
+    y_vals = [float(y) for y in y_unique]
+
+output = {
+    'chartType': 'surface3d',
+    'z': z_grid,
+    'x': x_vals,
+    'y': y_vals,
+    'colorScale': config.get('colorScale', 'Viridis'),
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'zLabel': z_col,
+    'title': config.get('title', '') or f'3D Surface: {z_col}',
+}
+`,
+  },
+
+  'marginal-histogram': {
+    type: 'marginal-histogram',
+    category: 'visualization',
+    label: 'Marginal Histogram',
+    description: 'Scatter plot with histograms on margins showing variable distributions',
+    icon: 'LayoutGrid',
+    defaultConfig: {
+      x: '',
+      y: '',
+      color: '',
+      bins: 20,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('x', '')
+y_col = config.get('y', '')
+color_col = config.get('color', '')
+bins = config.get('bins', 20)
+
+if not x_col or not y_col:
+    raise ValueError("Marginal Histogram: Please specify X and Y columns in Config tab")
+
+if x_col not in df.columns or y_col not in df.columns:
+    raise ValueError(f"Marginal Histogram: Column not found in data")
+
+df[x_col] = pd.to_numeric(df[x_col], errors='coerce')
+df[y_col] = pd.to_numeric(df[y_col], errors='coerce')
+df = df.dropna(subset=[x_col, y_col])
+
+# Scatter data
+scatter_data = {
+    'x': df[x_col].tolist(),
+    'y': df[y_col].tolist(),
+}
+
+if color_col and color_col in df.columns:
+    scatter_data['color'] = df[color_col].tolist()
+
+# X histogram
+x_hist, x_edges = np.histogram(df[x_col], bins=bins)
+x_hist_data = {
+    'bins': ((x_edges[:-1] + x_edges[1:]) / 2).tolist(),
+    'counts': x_hist.tolist(),
+}
+
+# Y histogram
+y_hist, y_edges = np.histogram(df[y_col], bins=bins)
+y_hist_data = {
+    'bins': ((y_edges[:-1] + y_edges[1:]) / 2).tolist(),
+    'counts': y_hist.tolist(),
+}
+
+output = {
+    'chartType': 'marginal_histogram',
+    'scatter': scatter_data,
+    'xHist': x_hist_data,
+    'yHist': y_hist_data,
+    'xLabel': x_col,
+    'yLabel': y_col,
+    'colorColumn': color_col,
+    'title': config.get('title', '') or f'Marginal Histogram: {x_col} vs {y_col}',
+}
+`,
+  },
+
+  'dumbbell-chart': {
+    type: 'dumbbell-chart',
+    category: 'visualization',
+    label: 'Dumbbell Chart',
+    description: 'Connected dots showing change between two values per category',
+    icon: 'ArrowLeftRight',
+    defaultConfig: {
+      categoryColumn: '',
+      startColumn: '',
+      endColumn: '',
+      startLabel: 'Start',
+      endLabel: 'End',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+category_col = config.get('categoryColumn', '')
+start_col = config.get('startColumn', '')
+end_col = config.get('endColumn', '')
+
+if not category_col or not start_col or not end_col:
+    raise ValueError("Dumbbell Chart: Please specify Category, Start, and End columns in Config tab")
+
+for col in [category_col, start_col, end_col]:
+    if col not in df.columns:
+        raise ValueError(f"Dumbbell Chart: Column '{col}' not found in data")
+
+df[start_col] = pd.to_numeric(df[start_col], errors='coerce')
+df[end_col] = pd.to_numeric(df[end_col], errors='coerce')
+
+dumbbells = []
+for _, row in df.iterrows():
+    if pd.notna(row[start_col]) and pd.notna(row[end_col]):
+        dumbbells.append({
+            'category': str(row[category_col]),
+            'start': float(row[start_col]),
+            'end': float(row[end_col]),
+            'change': float(row[end_col]) - float(row[start_col]),
+        })
+
+# Sort by change
+dumbbells.sort(key=lambda x: x['change'], reverse=True)
+
+output = {
+    'chartType': 'dumbbell',
+    'data': dumbbells,
+    'startLabel': config.get('startLabel', 'Start'),
+    'endLabel': config.get('endLabel', 'End'),
+    'title': config.get('title', '') or f'Dumbbell Chart: {start_col} to {end_col}',
+}
+`,
+  },
+
   'export': {
     type: 'export',
     category: 'output',
@@ -10328,6 +14125,19 @@ export const blockCategories = [
       'bayesian-inference',
       'data-quality-score',
       'changepoint-detection',
+      'feature-selection',
+      'outlier-treatment',
+      'data-drift',
+      'polynomial-features',
+      'multi-output',
+      'probability-calibration',
+      'tsne-reduction',
+      'statistical-tests',
+      'optimal-binning',
+      'correlation-finder',
+      'ab-test-calculator',
+      'target-encoding',
+      'learning-curves',
     ] as BlockType[],
   },
   {
@@ -10358,6 +14168,19 @@ export const blockCategories = [
       'pareto-chart',
       'parallel-coordinates',
       'dendrogram',
+      'box-plot',
+      'heatmap',
+      'scatter-map',
+      'grouped-histogram',
+      'network-graph',
+      'calendar-heatmap',
+      'faceted-chart',
+      'density-plot',
+      'error-bar-chart',
+      'dot-plot',
+      'slope-chart',
+      'grouped-bar-chart',
+      'bump-chart',
     ] as BlockType[],
   },
   {
