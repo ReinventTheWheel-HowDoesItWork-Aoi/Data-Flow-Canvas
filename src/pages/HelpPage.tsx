@@ -86,6 +86,11 @@ import {
   BarChart2,
   CheckCircle,
   GitCommitHorizontal,
+  Replace,
+  PlusSquare,
+  Calculator,
+  CalendarCheck,
+  SplitSquareVertical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -102,7 +107,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (30 blocks)
+  // Transform (42 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -133,6 +138,18 @@ const blocks: BlockInfo[] = [
   { icon: FlipHorizontal, name: 'Transpose', description: 'Flip rows and columns', category: 'Transform' },
   { icon: AlignJustify, name: 'String Pad', description: 'Pad strings to a fixed length with specified character', category: 'Transform' },
   { icon: TrendingUp, name: 'Cumulative Operations', description: 'Calculate running totals, cumulative counts, and percentages', category: 'Transform' },
+  { icon: Replace, name: 'Replace Values', description: 'Map and replace specific values with new values', category: 'Transform' },
+  { icon: TrendingUp, name: 'Percent Change', description: 'Calculate percentage change between consecutive rows', category: 'Transform' },
+  { icon: Hash, name: 'Round Numbers', description: 'Round, floor, or ceiling numeric values', category: 'Transform' },
+  { icon: PieChart, name: 'Percent of Total', description: 'Calculate what percentage each row represents of the total', category: 'Transform' },
+  { icon: PlusSquare, name: 'Absolute Value', description: 'Convert negative values to positive', category: 'Transform' },
+  { icon: Calculator, name: 'Column Math', description: 'Perform arithmetic operations between two columns', category: 'Transform' },
+  { icon: Scissors, name: 'Extract Substring', description: 'Extract portion of text from a string column', category: 'Transform' },
+  { icon: CalendarCheck, name: 'Parse Date', description: 'Convert text strings to proper date format', category: 'Transform' },
+  { icon: SplitSquareVertical, name: 'Split to Rows', description: 'Expand delimited values in a cell into separate rows', category: 'Transform' },
+  { icon: Minimize2, name: 'Clip Values', description: 'Cap values at minimum and/or maximum thresholds', category: 'Transform' },
+  { icon: Type, name: 'Standardize Text', description: 'Comprehensive text cleaning and normalization', category: 'Transform' },
+  { icon: GitBranch, name: 'Case When', description: 'Create column based on multiple if-then conditions', category: 'Transform' },
 
   // Analysis (58 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
@@ -300,6 +317,18 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Transpose': { name: 'blocks.transpose', description: 'blockDescriptions.transpose' },
   'String Pad': { name: 'blocks.stringPad', description: 'blockDescriptions.stringPad' },
   'Cumulative Operations': { name: 'blocks.cumulativeOperations', description: 'blockDescriptions.cumulativeOperations' },
+  'Replace Values': { name: 'blocks.replaceValues', description: 'blockDescriptions.replaceValues' },
+  'Percent Change': { name: 'blocks.percentChange', description: 'blockDescriptions.percentChange' },
+  'Round Numbers': { name: 'blocks.roundNumbers', description: 'blockDescriptions.roundNumbers' },
+  'Percent of Total': { name: 'blocks.percentOfTotal', description: 'blockDescriptions.percentOfTotal' },
+  'Absolute Value': { name: 'blocks.absoluteValue', description: 'blockDescriptions.absoluteValue' },
+  'Column Math': { name: 'blocks.columnMath', description: 'blockDescriptions.columnMath' },
+  'Extract Substring': { name: 'blocks.extractSubstring', description: 'blockDescriptions.extractSubstring' },
+  'Parse Date': { name: 'blocks.parseDate', description: 'blockDescriptions.parseDate' },
+  'Split to Rows': { name: 'blocks.splitToRows', description: 'blockDescriptions.splitToRows' },
+  'Clip Values': { name: 'blocks.clipValues', description: 'blockDescriptions.clipValues' },
+  'Standardize Text': { name: 'blocks.standardizeText', description: 'blockDescriptions.standardizeText' },
+  'Case When': { name: 'blocks.caseWhen', description: 'blockDescriptions.caseWhen' },
   'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
   'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
   'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
@@ -476,7 +505,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">103</p>
+                <p className="text-h2 font-bold text-text-primary">115</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
