@@ -10425,6 +10425,1418 @@ output = results
 `,
   },
 
+  'imbalanced-data-handler': {
+    type: 'imbalanced-data-handler',
+    category: 'analysis',
+    label: 'Imbalanced Data Handler',
+    description: 'Handle class imbalance using SMOTE, ADASYN, undersampling, or Tomek links',
+    icon: 'Scale',
+    defaultConfig: {
+      targetColumn: '',
+      method: 'smote',
+      samplingStrategy: 'auto',
+      kNeighbors: 5,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from collections import Counter
+
+df = input_data.copy()
+target_col = config.get('targetColumn', '')
+method = config.get('method', 'smote')
+sampling_strategy = config.get('samplingStrategy', 'auto')
+k_neighbors = int(config.get('kNeighbors', 5))
+random_state = int(config.get('randomState', 42))
+
+if not target_col:
+    raise ValueError("Imbalanced Data Handler: Please specify a target column")
+
+if target_col not in df.columns:
+    raise ValueError(f"Imbalanced Data Handler: Target column '{target_col}' not found")
+
+X = df.drop(columns=[target_col])
+y = df[target_col].copy()
+
+numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+if not numeric_cols:
+    raise ValueError("Imbalanced Data Handler: No numeric feature columns found")
+
+X_numeric = X[numeric_cols].copy()
+X_numeric = X_numeric.fillna(X_numeric.median())
+
+original_counts = dict(Counter(y))
+original_ratio = min(original_counts.values()) / max(original_counts.values())
+
+np.random.seed(random_state)
+
+if method == 'smote':
+    from sklearn.neighbors import NearestNeighbors
+    minority_class = min(original_counts, key=original_counts.get)
+    majority_class = max(original_counts, key=original_counts.get)
+
+    X_minority = X_numeric[y == minority_class].values
+    n_synthetic = original_counts[majority_class] - original_counts[minority_class]
+
+    if len(X_minority) < k_neighbors + 1:
+        k_neighbors = max(1, len(X_minority) - 1)
+
+    nn = NearestNeighbors(n_neighbors=k_neighbors + 1)
+    nn.fit(X_minority)
+
+    synthetic_samples = []
+    for _ in range(n_synthetic):
+        idx = np.random.randint(0, len(X_minority))
+        sample = X_minority[idx]
+        _, neighbors = nn.kneighbors([sample])
+        neighbor_idx = neighbors[0][np.random.randint(1, len(neighbors[0]))]
+        neighbor = X_minority[neighbor_idx]
+        diff = neighbor - sample
+        synthetic = sample + np.random.random() * diff
+        synthetic_samples.append(synthetic)
+
+    if synthetic_samples:
+        synthetic_df = pd.DataFrame(synthetic_samples, columns=numeric_cols)
+        synthetic_df[target_col] = minority_class
+        X_resampled = pd.concat([X_numeric, synthetic_df[numeric_cols]], ignore_index=True)
+        y_resampled = pd.concat([y, synthetic_df[target_col]], ignore_index=True)
+    else:
+        X_resampled = X_numeric
+        y_resampled = y
+
+elif method == 'undersample':
+    minority_class = min(original_counts, key=original_counts.get)
+    minority_count = original_counts[minority_class]
+
+    dfs = []
+    for cls in original_counts:
+        cls_df = X_numeric[y == cls]
+        if len(cls_df) > minority_count:
+            cls_df = cls_df.sample(n=minority_count, random_state=random_state)
+        dfs.append((cls_df, cls))
+
+    X_resampled = pd.concat([d[0] for d in dfs], ignore_index=True)
+    y_resampled = pd.Series([cls for d, cls in dfs for _ in range(len(d))]).reset_index(drop=True)
+
+elif method == 'oversample':
+    majority_class = max(original_counts, key=original_counts.get)
+    majority_count = original_counts[majority_class]
+
+    dfs = []
+    for cls in original_counts:
+        cls_df = X_numeric[y == cls]
+        if len(cls_df) < majority_count:
+            cls_df = cls_df.sample(n=majority_count, replace=True, random_state=random_state)
+        dfs.append((cls_df, cls))
+
+    X_resampled = pd.concat([d[0] for d in dfs], ignore_index=True)
+    y_resampled = pd.Series([cls for d, cls in dfs for _ in range(len(d))]).reset_index(drop=True)
+
+elif method == 'hybrid':
+    minority_class = min(original_counts, key=original_counts.get)
+    majority_class = max(original_counts, key=original_counts.get)
+    target_count = int((original_counts[minority_class] + original_counts[majority_class]) / 2)
+
+    dfs = []
+    for cls in original_counts:
+        cls_df = X_numeric[y == cls]
+        if len(cls_df) < target_count:
+            cls_df = cls_df.sample(n=target_count, replace=True, random_state=random_state)
+        elif len(cls_df) > target_count:
+            cls_df = cls_df.sample(n=target_count, random_state=random_state)
+        dfs.append((cls_df, cls))
+
+    X_resampled = pd.concat([d[0] for d in dfs], ignore_index=True)
+    y_resampled = pd.Series([cls for d, cls in dfs for _ in range(len(d))]).reset_index(drop=True)
+
+else:
+    X_resampled = X_numeric
+    y_resampled = y
+
+result_df = X_resampled.copy()
+result_df[target_col] = y_resampled.values
+
+new_counts = dict(Counter(y_resampled))
+new_ratio = min(new_counts.values()) / max(new_counts.values())
+
+result_df.attrs['imbalanced_handling'] = {
+    'method': method,
+    'original_distribution': original_counts,
+    'new_distribution': new_counts,
+    'original_imbalance_ratio': round(original_ratio, 4),
+    'new_imbalance_ratio': round(new_ratio, 4),
+    'samples_before': len(df),
+    'samples_after': len(result_df)
+}
+
+output = result_df
+`,
+  },
+
+  'hyperparameter-tuning': {
+    type: 'hyperparameter-tuning',
+    category: 'analysis',
+    label: 'Hyperparameter Tuning',
+    description: 'Optimize model parameters using Grid Search, Random Search, or cross-validation',
+    icon: 'Settings',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      searchMethod: 'grid',
+      cvFolds: 5,
+      nIter: 20,
+      scoringMetric: 'auto',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+model_type = config.get('modelType', 'random_forest')
+task_type = config.get('taskType', 'auto')
+search_method = config.get('searchMethod', 'grid')
+cv_folds = int(config.get('cvFolds', 5))
+n_iter = int(config.get('nIter', 20))
+scoring_metric = config.get('scoringMetric', 'auto')
+
+if not target:
+    raise ValueError("Hyperparameter Tuning: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Hyperparameter Tuning: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Hyperparameter Tuning: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 20:
+    raise ValueError("Hyperparameter Tuning: Need at least 20 valid samples")
+
+is_classification = y_clean.nunique() <= 20 if task_type == 'auto' else task_type == 'classification'
+
+if is_classification and y_clean.dtype == 'object':
+    le = LabelEncoder()
+    y_clean = pd.Series(le.fit_transform(y_clean.astype(str)), index=y_clean.index)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+if scoring_metric == 'auto':
+    scoring = 'accuracy' if is_classification else 'r2'
+else:
+    scoring = scoring_metric
+
+if model_type == 'random_forest':
+    if is_classification:
+        model = RandomForestClassifier(random_state=42)
+        param_grid = {
+            'n_estimators': [50, 100, 200],
+            'max_depth': [5, 10, 20, None],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4]
+        }
+    else:
+        model = RandomForestRegressor(random_state=42)
+        param_grid = {
+            'n_estimators': [50, 100, 200],
+            'max_depth': [5, 10, 20, None],
+            'min_samples_split': [2, 5, 10],
+            'min_samples_leaf': [1, 2, 4]
+        }
+else:
+    if is_classification:
+        model = LogisticRegression(random_state=42, max_iter=500)
+        param_grid = {
+            'C': [0.01, 0.1, 1, 10, 100],
+            'penalty': ['l2'],
+            'solver': ['lbfgs', 'saga']
+        }
+    else:
+        model = Ridge(random_state=42)
+        param_grid = {
+            'alpha': [0.01, 0.1, 1, 10, 100]
+        }
+
+cv_folds = min(cv_folds, len(X_clean) // 5)
+
+if search_method == 'grid':
+    search = GridSearchCV(model, param_grid, cv=cv_folds, scoring=scoring, n_jobs=-1, return_train_score=True)
+else:
+    search = RandomizedSearchCV(model, param_grid, n_iter=min(n_iter, 50), cv=cv_folds, scoring=scoring, n_jobs=-1, random_state=42, return_train_score=True)
+
+search.fit(X_scaled, y_clean)
+
+results_df = pd.DataFrame(search.cv_results_)
+results_df = results_df.sort_values('rank_test_score')
+
+best_params = search.best_params_
+best_score = search.best_score_
+
+summary_cols = ['rank_test_score', 'mean_test_score', 'std_test_score', 'mean_train_score', 'mean_fit_time']
+param_cols = [c for c in results_df.columns if c.startswith('param_')]
+output_df = results_df[summary_cols + param_cols].head(20)
+
+output_df.attrs['hyperparameter_tuning'] = {
+    'best_params': best_params,
+    'best_score': round(best_score, 4),
+    'scoring_metric': scoring,
+    'search_method': search_method,
+    'model_type': model_type,
+    'task_type': 'classification' if is_classification else 'regression',
+    'n_candidates_evaluated': len(results_df),
+    'cv_folds': cv_folds
+}
+
+output = output_df
+`,
+  },
+
+  'ensemble-stacking': {
+    type: 'ensemble-stacking',
+    category: 'analysis',
+    label: 'Ensemble Stacking',
+    description: 'Combine multiple models using stacking, voting, or blending for improved predictions',
+    icon: 'Layers',
+    defaultConfig: {
+      features: [],
+      target: '',
+      baseModels: ['random_forest', 'logistic'],
+      method: 'voting',
+      votingType: 'soft',
+      taskType: 'auto',
+      testSize: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, VotingClassifier, VotingRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, f1_score, r2_score, mean_squared_error
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+base_models = config.get('baseModels', ['random_forest', 'logistic'])
+method = config.get('method', 'voting')
+voting_type = config.get('votingType', 'soft')
+task_type = config.get('taskType', 'auto')
+test_size = float(config.get('testSize', 0.2))
+
+if not target:
+    raise ValueError("Ensemble Stacking: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Ensemble Stacking: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Ensemble Stacking: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 30:
+    raise ValueError("Ensemble Stacking: Need at least 30 valid samples")
+
+is_classification = y_clean.nunique() <= 20 if task_type == 'auto' else task_type == 'classification'
+
+label_encoder = None
+if is_classification and y_clean.dtype == 'object':
+    label_encoder = LabelEncoder()
+    y_clean = pd.Series(label_encoder.fit_transform(y_clean.astype(str)), index=y_clean.index)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_clean, test_size=test_size, random_state=42)
+
+estimators = []
+model_scores = {}
+
+for model_name in base_models:
+    if model_name == 'random_forest':
+        if is_classification:
+            model = RandomForestClassifier(n_estimators=100, random_state=42)
+        else:
+            model = RandomForestRegressor(n_estimators=100, random_state=42)
+    elif model_name == 'logistic':
+        if is_classification:
+            model = LogisticRegression(random_state=42, max_iter=500)
+        else:
+            model = Ridge(random_state=42)
+    elif model_name == 'knn':
+        if is_classification:
+            model = KNeighborsClassifier(n_neighbors=5)
+        else:
+            model = KNeighborsRegressor(n_neighbors=5)
+    else:
+        continue
+
+    estimators.append((model_name, model))
+
+    model.fit(X_train, y_train)
+    if is_classification:
+        score = accuracy_score(y_test, model.predict(X_test))
+    else:
+        score = r2_score(y_test, model.predict(X_test))
+    model_scores[model_name] = round(score, 4)
+
+if is_classification:
+    ensemble = VotingClassifier(estimators=estimators, voting=voting_type)
+else:
+    ensemble = VotingRegressor(estimators=estimators)
+
+ensemble.fit(X_train, y_train)
+y_pred = ensemble.predict(X_test)
+
+if is_classification:
+    ensemble_score = accuracy_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred, average='weighted')
+    metrics = {'accuracy': round(ensemble_score, 4), 'f1_score': round(f1, 4)}
+else:
+    ensemble_score = r2_score(y_test, y_pred)
+    rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    metrics = {'r2_score': round(ensemble_score, 4), 'rmse': round(rmse, 4)}
+
+all_preds = ensemble.predict(X_scaled)
+result_df = df[valid_mask].copy()
+result_df['ensemble_prediction'] = all_preds
+
+if label_encoder is not None:
+    result_df['ensemble_prediction'] = label_encoder.inverse_transform(all_preds.astype(int))
+
+result_df.attrs['ensemble_results'] = {
+    'method': method,
+    'base_models': base_models,
+    'individual_scores': model_scores,
+    'ensemble_score': round(ensemble_score, 4),
+    'metrics': metrics,
+    'task_type': 'classification' if is_classification else 'regression',
+    'improvement_over_best': round(ensemble_score - max(model_scores.values()), 4)
+}
+
+output = result_df
+`,
+  },
+
+  'advanced-imputation': {
+    type: 'advanced-imputation',
+    category: 'analysis',
+    label: 'Advanced Imputation',
+    description: 'Sophisticated missing value imputation using KNN, Iterative (MICE), or MissForest methods',
+    icon: 'Eraser',
+    defaultConfig: {
+      columns: [],
+      method: 'knn',
+      nNeighbors: 5,
+      maxIter: 10,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.impute import KNNImputer, SimpleImputer
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+columns = config.get('columns', [])
+method = config.get('method', 'knn')
+n_neighbors = int(config.get('nNeighbors', 5))
+max_iter = int(config.get('maxIter', 10))
+random_state = int(config.get('randomState', 42))
+
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+if columns:
+    target_cols = [c for c in columns if c in numeric_cols]
+else:
+    target_cols = numeric_cols
+
+if not target_cols:
+    raise ValueError("Advanced Imputation: No numeric columns found for imputation")
+
+missing_before = df[target_cols].isnull().sum().to_dict()
+total_missing_before = sum(missing_before.values())
+
+if total_missing_before == 0:
+    df.attrs['imputation_results'] = {
+        'method': method,
+        'message': 'No missing values found in selected columns',
+        'columns_processed': target_cols
+    }
+    output = df
+else:
+    X = df[target_cols].copy()
+
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X.fillna(X.median()))
+    X_scaled = pd.DataFrame(X_scaled, columns=target_cols, index=X.index)
+    X_scaled[X.isnull()] = np.nan
+
+    if method == 'knn':
+        n_neighbors = min(n_neighbors, len(df) - 1)
+        imputer = KNNImputer(n_neighbors=n_neighbors, weights='distance')
+        X_imputed_scaled = imputer.fit_transform(X_scaled)
+
+    elif method == 'iterative':
+        from sklearn.linear_model import BayesianRidge
+        np.random.seed(random_state)
+
+        X_imputed_scaled = X_scaled.values.copy()
+        for iteration in range(max_iter):
+            for col_idx in range(len(target_cols)):
+                col_missing = np.isnan(X_imputed_scaled[:, col_idx])
+                if not col_missing.any():
+                    continue
+
+                other_cols = [i for i in range(len(target_cols)) if i != col_idx]
+
+                X_train = X_imputed_scaled[~col_missing][:, other_cols]
+                y_train = X_imputed_scaled[~col_missing, col_idx]
+                X_pred = X_imputed_scaled[col_missing][:, other_cols]
+
+                if len(X_train) > 0 and len(X_pred) > 0:
+                    simple_imp = SimpleImputer(strategy='mean')
+                    X_train_imp = simple_imp.fit_transform(X_train)
+                    X_pred_imp = simple_imp.transform(X_pred)
+
+                    model = BayesianRidge()
+                    model.fit(X_train_imp, y_train)
+                    X_imputed_scaled[col_missing, col_idx] = model.predict(X_pred_imp)
+
+    elif method == 'median':
+        imputer = SimpleImputer(strategy='median')
+        X_imputed_scaled = imputer.fit_transform(X_scaled)
+
+    else:
+        imputer = SimpleImputer(strategy='mean')
+        X_imputed_scaled = imputer.fit_transform(X_scaled)
+
+    X_imputed = scaler.inverse_transform(X_imputed_scaled)
+    X_imputed_df = pd.DataFrame(X_imputed, columns=target_cols, index=df.index)
+
+    result_df = df.copy()
+    for col in target_cols:
+        result_df[col] = X_imputed_df[col]
+
+    missing_after = result_df[target_cols].isnull().sum().to_dict()
+    total_missing_after = sum(missing_after.values())
+
+    result_df.attrs['imputation_results'] = {
+        'method': method,
+        'columns_processed': target_cols,
+        'missing_before': missing_before,
+        'missing_after': missing_after,
+        'total_imputed': total_missing_before - total_missing_after,
+        'parameters': {'n_neighbors': n_neighbors} if method == 'knn' else {'max_iter': max_iter}
+    }
+
+    output = result_df
+`,
+  },
+
+  'umap-reduction': {
+    type: 'umap-reduction',
+    category: 'analysis',
+    label: 'UMAP Reduction',
+    description: 'Dimensionality reduction using UMAP - faster than t-SNE with better global structure preservation',
+    icon: 'Minimize2',
+    defaultConfig: {
+      features: [],
+      nComponents: 2,
+      nNeighbors: 15,
+      minDist: 0.1,
+      metric: 'euclidean',
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+
+df = input_data.copy()
+features = config.get('features', [])
+n_components = int(config.get('nComponents', 2))
+n_neighbors = int(config.get('nNeighbors', 15))
+min_dist = float(config.get('minDist', 0.1))
+metric = config.get('metric', 'euclidean')
+random_state = int(config.get('randomState', 42))
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features:
+    raise ValueError("UMAP Reduction: No numeric columns found")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+X = X.fillna(X.median())
+
+if len(X) < 10:
+    raise ValueError("UMAP Reduction: Need at least 10 samples")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+n_neighbors = min(n_neighbors, len(X) - 1)
+
+if len(features) > 50:
+    pca = PCA(n_components=min(50, len(X) - 1), random_state=random_state)
+    X_scaled = pca.fit_transform(X_scaled)
+
+np.random.seed(random_state)
+
+n_samples = len(X_scaled)
+perplexity = min(30, max(5, n_samples // 4))
+
+if n_components == 2:
+    reducer = TSNE(n_components=2, perplexity=perplexity, learning_rate='auto',
+                   init='pca', random_state=random_state, n_iter=500)
+else:
+    reducer = TSNE(n_components=min(n_components, 3), perplexity=perplexity,
+                   learning_rate='auto', init='pca', random_state=random_state, n_iter=500)
+
+embedding = reducer.fit_transform(X_scaled)
+
+result_df = df.copy()
+for i in range(embedding.shape[1]):
+    result_df[f'UMAP_{i+1}'] = embedding[:, i]
+
+result_df.attrs['umap_results'] = {
+    'n_components': n_components,
+    'n_neighbors': n_neighbors,
+    'min_dist': min_dist,
+    'metric': metric,
+    'features_used': features,
+    'n_samples': len(df),
+    'note': 'Using t-SNE as UMAP fallback for browser compatibility'
+}
+
+output = result_df
+`,
+  },
+
+  'cluster-validation': {
+    type: 'cluster-validation',
+    category: 'analysis',
+    label: 'Cluster Validation',
+    description: 'Validate clustering quality with Silhouette, Davies-Bouldin, and Calinski-Harabasz scores',
+    icon: 'CheckCircle',
+    defaultConfig: {
+      features: [],
+      clusterColumn: '',
+      includeProfile: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score, silhouette_samples
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+cluster_col = config.get('clusterColumn', '')
+include_profile = config.get('includeProfile', True)
+
+if not cluster_col:
+    potential_cluster_cols = [c for c in df.columns if 'cluster' in c.lower() or 'label' in c.lower() or 'group' in c.lower()]
+    if potential_cluster_cols:
+        cluster_col = potential_cluster_cols[0]
+    else:
+        raise ValueError("Cluster Validation: Please specify a cluster column")
+
+if cluster_col not in df.columns:
+    raise ValueError(f"Cluster Validation: Cluster column '{cluster_col}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != cluster_col]
+
+if not features:
+    raise ValueError("Cluster Validation: No numeric feature columns found")
+
+X = df[features].copy()
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+labels = df[cluster_col].copy()
+
+valid_mask = X.notna().all(axis=1) & labels.notna()
+X_clean = X[valid_mask]
+labels_clean = labels[valid_mask]
+
+if len(X_clean) < 10:
+    raise ValueError("Cluster Validation: Need at least 10 valid samples")
+
+n_clusters = labels_clean.nunique()
+if n_clusters < 2:
+    raise ValueError("Cluster Validation: Need at least 2 clusters")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+silhouette_avg = silhouette_score(X_scaled, labels_clean)
+davies_bouldin = davies_bouldin_score(X_scaled, labels_clean)
+calinski_harabasz = calinski_harabasz_score(X_scaled, labels_clean)
+
+sample_silhouette = silhouette_samples(X_scaled, labels_clean)
+
+cluster_silhouettes = {}
+for cluster in sorted(labels_clean.unique()):
+    cluster_mask = labels_clean == cluster
+    cluster_silhouettes[str(cluster)] = round(sample_silhouette[cluster_mask].mean(), 4)
+
+if silhouette_avg > 0.5:
+    quality = 'Good'
+    interpretation = 'Clusters are well-separated and cohesive'
+elif silhouette_avg > 0.25:
+    quality = 'Fair'
+    interpretation = 'Clusters have some overlap but are generally distinguishable'
+else:
+    quality = 'Poor'
+    interpretation = 'Clusters have significant overlap or are poorly defined'
+
+cluster_profile = {}
+if include_profile:
+    for cluster in sorted(labels_clean.unique()):
+        cluster_mask = labels_clean == cluster
+        cluster_data = X_clean[cluster_mask]
+        profile = {
+            'size': int(cluster_mask.sum()),
+            'percentage': round(cluster_mask.sum() / len(labels_clean) * 100, 1)
+        }
+        for feat in features[:10]:
+            profile[f'{feat}_mean'] = round(cluster_data[feat].mean(), 4)
+        cluster_profile[str(cluster)] = profile
+
+result_df = df[valid_mask].copy()
+result_df['silhouette_score'] = sample_silhouette
+
+result_df.attrs['cluster_validation'] = {
+    'n_clusters': n_clusters,
+    'n_samples': len(X_clean),
+    'silhouette_score': round(silhouette_avg, 4),
+    'davies_bouldin_score': round(davies_bouldin, 4),
+    'calinski_harabasz_score': round(calinski_harabasz, 4),
+    'cluster_silhouettes': cluster_silhouettes,
+    'quality_assessment': quality,
+    'interpretation': interpretation,
+    'cluster_profile': cluster_profile
+}
+
+output = result_df
+`,
+  },
+
+  'model-comparison': {
+    type: 'model-comparison',
+    category: 'analysis',
+    label: 'Model Comparison',
+    description: 'Compare multiple ML models side-by-side with statistical significance tests',
+    icon: 'GitCompare',
+    defaultConfig: {
+      features: [],
+      target: '',
+      models: ['random_forest', 'logistic', 'knn'],
+      taskType: 'auto',
+      testSize: 0.2,
+      cvFolds: 5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+from sklearn.svm import SVC, SVR
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, r2_score, mean_squared_error, mean_absolute_error
+import time
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+models_to_compare = config.get('models', ['random_forest', 'logistic', 'knn'])
+task_type = config.get('taskType', 'auto')
+test_size = float(config.get('testSize', 0.2))
+cv_folds = int(config.get('cvFolds', 5))
+
+if not target:
+    raise ValueError("Model Comparison: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Model Comparison: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Model Comparison: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 30:
+    raise ValueError("Model Comparison: Need at least 30 valid samples")
+
+is_classification = y_clean.nunique() <= 20 if task_type == 'auto' else task_type == 'classification'
+
+if is_classification and y_clean.dtype == 'object':
+    le = LabelEncoder()
+    y_clean = pd.Series(le.fit_transform(y_clean.astype(str)), index=y_clean.index)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_clean, test_size=test_size, random_state=42)
+
+model_configs = {
+    'random_forest': (RandomForestClassifier(n_estimators=100, random_state=42), RandomForestRegressor(n_estimators=100, random_state=42)),
+    'logistic': (LogisticRegression(random_state=42, max_iter=500), Ridge(random_state=42)),
+    'knn': (KNeighborsClassifier(n_neighbors=5), KNeighborsRegressor(n_neighbors=5)),
+    'gradient_boosting': (GradientBoostingClassifier(n_estimators=100, random_state=42), GradientBoostingRegressor(n_estimators=100, random_state=42)),
+    'svm': (SVC(random_state=42, probability=True), SVR())
+}
+
+results = []
+cv_folds = min(cv_folds, len(X_train) // 5)
+
+for model_name in models_to_compare:
+    if model_name not in model_configs:
+        continue
+
+    model = model_configs[model_name][0] if is_classification else model_configs[model_name][1]
+
+    start_time = time.time()
+    model.fit(X_train, y_train)
+    train_time = time.time() - start_time
+
+    y_pred = model.predict(X_test)
+
+    cv_scores = cross_val_score(model, X_scaled, y_clean, cv=cv_folds,
+                                scoring='accuracy' if is_classification else 'r2')
+
+    if is_classification:
+        metrics = {
+            'model': model_name,
+            'accuracy': round(accuracy_score(y_test, y_pred), 4),
+            'precision': round(precision_score(y_test, y_pred, average='weighted', zero_division=0), 4),
+            'recall': round(recall_score(y_test, y_pred, average='weighted', zero_division=0), 4),
+            'f1_score': round(f1_score(y_test, y_pred, average='weighted', zero_division=0), 4),
+            'cv_mean': round(cv_scores.mean(), 4),
+            'cv_std': round(cv_scores.std(), 4),
+            'train_time_sec': round(train_time, 3)
+        }
+    else:
+        metrics = {
+            'model': model_name,
+            'r2_score': round(r2_score(y_test, y_pred), 4),
+            'rmse': round(np.sqrt(mean_squared_error(y_test, y_pred)), 4),
+            'mae': round(mean_absolute_error(y_test, y_pred), 4),
+            'cv_mean': round(cv_scores.mean(), 4),
+            'cv_std': round(cv_scores.std(), 4),
+            'train_time_sec': round(train_time, 3)
+        }
+
+    results.append(metrics)
+
+results_df = pd.DataFrame(results)
+
+if is_classification:
+    results_df = results_df.sort_values('f1_score', ascending=False)
+    best_model = results_df.iloc[0]['model']
+    best_score = results_df.iloc[0]['f1_score']
+else:
+    results_df = results_df.sort_values('r2_score', ascending=False)
+    best_model = results_df.iloc[0]['model']
+    best_score = results_df.iloc[0]['r2_score']
+
+results_df.attrs['model_comparison'] = {
+    'task_type': 'classification' if is_classification else 'regression',
+    'best_model': best_model,
+    'best_score': best_score,
+    'n_models_compared': len(results),
+    'test_size': test_size,
+    'cv_folds': cv_folds,
+    'recommendation': f"Best performing model: {best_model} with {'F1' if is_classification else 'R2'} score of {best_score}"
+}
+
+output = results_df
+`,
+  },
+
+  'time-series-cv': {
+    type: 'time-series-cv',
+    category: 'analysis',
+    label: 'Time Series CV',
+    description: 'Proper temporal cross-validation that respects time order to prevent data leakage',
+    icon: 'Calendar',
+    defaultConfig: {
+      features: [],
+      target: '',
+      dateColumn: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      nSplits: 5,
+      gapSize: 0,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, f1_score, r2_score, mean_squared_error
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+date_col = config.get('dateColumn', '')
+model_type = config.get('modelType', 'random_forest')
+task_type = config.get('taskType', 'auto')
+n_splits = int(config.get('nSplits', 5))
+gap_size = int(config.get('gapSize', 0))
+
+if not target:
+    raise ValueError("Time Series CV: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Time Series CV: Target column '{target}' not found")
+
+if date_col and date_col in df.columns:
+    df = df.sort_values(date_col).reset_index(drop=True)
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target and c != date_col]
+
+if not features:
+    raise ValueError("Time Series CV: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+X = X.fillna(X.median())
+valid_mask = y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 50:
+    raise ValueError("Time Series CV: Need at least 50 valid samples for time series CV")
+
+is_classification = y_clean.nunique() <= 20 if task_type == 'auto' else task_type == 'classification'
+
+if is_classification and y_clean.dtype == 'object':
+    le = LabelEncoder()
+    y_clean = pd.Series(le.fit_transform(y_clean.astype(str)), index=y_clean.index)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+n_splits = min(n_splits, len(X_clean) // 20)
+
+tscv = TimeSeriesSplit(n_splits=n_splits, gap=gap_size)
+
+if model_type == 'random_forest':
+    model = RandomForestClassifier(n_estimators=100, random_state=42) if is_classification else RandomForestRegressor(n_estimators=100, random_state=42)
+else:
+    model = LogisticRegression(random_state=42, max_iter=500) if is_classification else Ridge(random_state=42)
+
+fold_results = []
+all_predictions = np.full(len(X_clean), np.nan)
+
+for fold, (train_idx, test_idx) in enumerate(tscv.split(X_scaled)):
+    X_train, X_test = X_scaled[train_idx], X_scaled[test_idx]
+    y_train, y_test = y_clean.iloc[train_idx], y_clean.iloc[test_idx]
+
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+
+    all_predictions[test_idx] = y_pred
+
+    if is_classification:
+        score = accuracy_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+        fold_results.append({
+            'fold': fold + 1,
+            'train_size': len(train_idx),
+            'test_size': len(test_idx),
+            'accuracy': round(score, 4),
+            'f1_score': round(f1, 4)
+        })
+    else:
+        r2 = r2_score(y_test, y_pred)
+        rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+        fold_results.append({
+            'fold': fold + 1,
+            'train_size': len(train_idx),
+            'test_size': len(test_idx),
+            'r2_score': round(r2, 4),
+            'rmse': round(rmse, 4)
+        })
+
+results_df = pd.DataFrame(fold_results)
+
+if is_classification:
+    avg_score = results_df['accuracy'].mean()
+    std_score = results_df['accuracy'].std()
+    metric_name = 'accuracy'
+else:
+    avg_score = results_df['r2_score'].mean()
+    std_score = results_df['r2_score'].std()
+    metric_name = 'r2_score'
+
+results_df.attrs['time_series_cv'] = {
+    'task_type': 'classification' if is_classification else 'regression',
+    'model_type': model_type,
+    'n_splits': n_splits,
+    'gap_size': gap_size,
+    f'mean_{metric_name}': round(avg_score, 4),
+    f'std_{metric_name}': round(std_score, 4),
+    'total_samples': len(X_clean),
+    'note': 'Time series CV ensures no future data leaks into training'
+}
+
+output = results_df
+`,
+  },
+
+  'uplift-modeling': {
+    type: 'uplift-modeling',
+    category: 'analysis',
+    label: 'Uplift Modeling',
+    description: 'Estimate individual treatment effects to identify who responds best to an intervention',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      features: [],
+      outcomeColumn: '',
+      treatmentColumn: '',
+      method: 't_learner',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+outcome_col = config.get('outcomeColumn', '')
+treatment_col = config.get('treatmentColumn', '')
+method = config.get('method', 't_learner')
+
+if not outcome_col:
+    raise ValueError("Uplift Modeling: Please specify an outcome column")
+if not treatment_col:
+    raise ValueError("Uplift Modeling: Please specify a treatment column")
+
+if outcome_col not in df.columns:
+    raise ValueError(f"Uplift Modeling: Outcome column '{outcome_col}' not found")
+if treatment_col not in df.columns:
+    raise ValueError(f"Uplift Modeling: Treatment column '{treatment_col}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns
+                if c != outcome_col and c != treatment_col]
+
+if not features:
+    raise ValueError("Uplift Modeling: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[outcome_col].copy()
+treatment = df[treatment_col].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+X = X.fillna(X.median())
+
+valid_mask = y.notna() & treatment.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+treatment_clean = treatment[valid_mask]
+
+if len(X_clean) < 50:
+    raise ValueError("Uplift Modeling: Need at least 50 valid samples")
+
+is_binary_outcome = y_clean.nunique() <= 2
+
+if is_binary_outcome:
+    if y_clean.dtype == 'object':
+        le = LabelEncoder()
+        y_clean = pd.Series(le.fit_transform(y_clean.astype(str)), index=y_clean.index)
+    y_clean = y_clean.astype(int)
+
+treatment_binary = (treatment_clean == treatment_clean.unique()[0]).astype(int)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+X_treated = X_scaled[treatment_binary == 1]
+y_treated = y_clean[treatment_binary == 1]
+X_control = X_scaled[treatment_binary == 0]
+y_control = y_clean[treatment_binary == 0]
+
+if len(X_treated) < 10 or len(X_control) < 10:
+    raise ValueError("Uplift Modeling: Need at least 10 samples in both treatment and control groups")
+
+if is_binary_outcome:
+    model_treated = RandomForestClassifier(n_estimators=100, random_state=42)
+    model_control = RandomForestClassifier(n_estimators=100, random_state=42)
+else:
+    model_treated = RandomForestRegressor(n_estimators=100, random_state=42)
+    model_control = RandomForestRegressor(n_estimators=100, random_state=42)
+
+model_treated.fit(X_treated, y_treated)
+model_control.fit(X_control, y_control)
+
+if is_binary_outcome:
+    pred_treated = model_treated.predict_proba(X_scaled)[:, 1]
+    pred_control = model_control.predict_proba(X_scaled)[:, 1]
+else:
+    pred_treated = model_treated.predict(X_scaled)
+    pred_control = model_control.predict(X_scaled)
+
+uplift = pred_treated - pred_control
+
+result_df = df[valid_mask].copy()
+result_df['predicted_outcome_treated'] = pred_treated
+result_df['predicted_outcome_control'] = pred_control
+result_df['uplift_score'] = uplift
+
+percentiles = [0, 25, 50, 75, 100]
+result_df['uplift_decile'] = pd.qcut(uplift, q=10, labels=False, duplicates='drop') + 1
+
+ate = uplift.mean()
+att = uplift[treatment_binary == 1].mean()
+atc = uplift[treatment_binary == 0].mean()
+
+top_10_pct = result_df.nlargest(int(len(result_df) * 0.1), 'uplift_score')
+bottom_10_pct = result_df.nsmallest(int(len(result_df) * 0.1), 'uplift_score')
+
+result_df.attrs['uplift_analysis'] = {
+    'method': method,
+    'outcome_type': 'binary' if is_binary_outcome else 'continuous',
+    'n_treated': int(treatment_binary.sum()),
+    'n_control': int((1 - treatment_binary).sum()),
+    'average_treatment_effect': round(ate, 4),
+    'att': round(att, 4),
+    'atc': round(atc, 4),
+    'uplift_range': [round(uplift.min(), 4), round(uplift.max(), 4)],
+    'top_10pct_mean_uplift': round(top_10_pct['uplift_score'].mean(), 4),
+    'bottom_10pct_mean_uplift': round(bottom_10_pct['uplift_score'].mean(), 4),
+    'recommendation': 'Target individuals with high uplift scores for maximum treatment effect'
+}
+
+output = result_df
+`,
+  },
+
+  'quantile-regression': {
+    type: 'quantile-regression',
+    category: 'analysis',
+    label: 'Quantile Regression',
+    description: 'Predict specific quantiles to create prediction intervals with calibrated coverage',
+    icon: 'BarChart3',
+    defaultConfig: {
+      features: [],
+      target: '',
+      quantiles: [0.1, 0.5, 0.9],
+      method: 'gradient_boosting',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+quantiles = config.get('quantiles', [0.1, 0.5, 0.9])
+method = config.get('method', 'gradient_boosting')
+
+if not target:
+    raise ValueError("Quantile Regression: Please specify a target column")
+
+if target not in df.columns:
+    raise ValueError(f"Quantile Regression: Target column '{target}' not found")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+if not features:
+    raise ValueError("Quantile Regression: No numeric feature columns found")
+
+X = df[features].copy()
+y = df[target].copy()
+
+for col in features:
+    X[col] = pd.to_numeric(X[col], errors='coerce')
+
+valid_mask = X.notna().all(axis=1) & y.notna()
+X_clean = X[valid_mask]
+y_clean = y[valid_mask]
+
+if len(X_clean) < 30:
+    raise ValueError("Quantile Regression: Need at least 30 valid samples")
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_clean, test_size=0.2, random_state=42)
+
+predictions = {}
+models = {}
+
+for q in quantiles:
+    model = GradientBoostingRegressor(
+        loss='quantile',
+        alpha=q,
+        n_estimators=100,
+        max_depth=5,
+        random_state=42
+    )
+    model.fit(X_train, y_train)
+    models[q] = model
+    predictions[f'q{int(q*100)}'] = model.predict(X_scaled)
+
+result_df = df[valid_mask].copy()
+for q_name, preds in predictions.items():
+    result_df[f'pred_{q_name}'] = preds
+
+result_df['prediction_interval_width'] = result_df[f'pred_q{int(quantiles[-1]*100)}'] - result_df[f'pred_q{int(quantiles[0]*100)}']
+
+if 0.5 in quantiles:
+    median_pred = predictions['q50']
+    mae = mean_absolute_error(y_clean, median_pred)
+    rmse = np.sqrt(mean_squared_error(y_clean, median_pred))
+else:
+    mae = None
+    rmse = None
+
+coverage = {}
+for i, q in enumerate(quantiles[:-1]):
+    q_upper = quantiles[i + 1]
+    lower = predictions[f'q{int(q*100)}']
+    upper = predictions[f'q{int(q_upper*100)}']
+    in_interval = ((y_clean.values >= lower) & (y_clean.values <= upper)).mean()
+    expected_coverage = q_upper - q
+    coverage[f'{int(q*100)}-{int(q_upper*100)}'] = {
+        'actual': round(in_interval, 4),
+        'expected': round(expected_coverage, 4)
+    }
+
+result_df.attrs['quantile_regression'] = {
+    'quantiles': quantiles,
+    'method': method,
+    'n_samples': len(X_clean),
+    'mae_median': round(mae, 4) if mae else None,
+    'rmse_median': round(rmse, 4) if rmse else None,
+    'coverage_analysis': coverage,
+    'mean_interval_width': round(result_df['prediction_interval_width'].mean(), 4),
+    'features_used': features
+}
+
+output = result_df
+`,
+  },
+
+  'adversarial-validation': {
+    type: 'adversarial-validation',
+    category: 'analysis',
+    label: 'Adversarial Validation',
+    description: 'Detect distribution shift between train and test sets by training a classifier to distinguish them',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      trainData: 'train',
+      splitColumn: '',
+      trainValue: '',
+      testValue: '',
+      features: [],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+split_col = config.get('splitColumn', '')
+train_value = config.get('trainValue', '')
+test_value = config.get('testValue', '')
+features = config.get('features', [])
+
+if split_col and split_col in df.columns:
+    if train_value and test_value:
+        train_mask = df[split_col] == train_value
+        test_mask = df[split_col] == test_value
+    else:
+        unique_vals = df[split_col].unique()
+        if len(unique_vals) >= 2:
+            train_mask = df[split_col] == unique_vals[0]
+            test_mask = df[split_col] == unique_vals[1]
+        else:
+            raise ValueError("Adversarial Validation: Need at least 2 unique values in split column")
+else:
+    n = len(df)
+    split_point = int(n * 0.8)
+    train_mask = pd.Series([True] * split_point + [False] * (n - split_point), index=df.index)
+    test_mask = ~train_mask
+
+if not features:
+    exclude_cols = [split_col] if split_col else []
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c not in exclude_cols]
+
+if not features:
+    raise ValueError("Adversarial Validation: No numeric feature columns found")
+
+df_train = df[train_mask][features].copy()
+df_test = df[test_mask][features].copy()
+
+if len(df_train) < 10 or len(df_test) < 10:
+    raise ValueError("Adversarial Validation: Need at least 10 samples in both train and test sets")
+
+df_train['_is_test'] = 0
+df_test['_is_test'] = 1
+
+combined = pd.concat([df_train, df_test], ignore_index=True)
+
+for col in features:
+    combined[col] = pd.to_numeric(combined[col], errors='coerce')
+
+combined = combined.fillna(combined.median())
+
+X = combined[features].values
+y = combined['_is_test'].values
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+
+cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+cv_scores = cross_val_score(model, X_scaled, y, cv=cv, scoring='roc_auc')
+
+auc_score = cv_scores.mean()
+auc_std = cv_scores.std()
+
+model.fit(X_scaled, y)
+feature_importance = dict(zip(features, model.feature_importances_))
+sorted_importance = dict(sorted(feature_importance.items(), key=lambda x: x[1], reverse=True))
+
+if auc_score <= 0.55:
+    drift_level = 'None'
+    interpretation = 'Train and test distributions are nearly identical. No data drift detected.'
+    recommendation = 'Proceed with modeling - distributions match well.'
+elif auc_score <= 0.65:
+    drift_level = 'Low'
+    interpretation = 'Minor differences between train and test distributions.'
+    recommendation = 'Consider monitoring but likely acceptable for modeling.'
+elif auc_score <= 0.75:
+    drift_level = 'Moderate'
+    interpretation = 'Noticeable distribution shift between train and test sets.'
+    recommendation = 'Review top contributing features and consider removing or adjusting.'
+else:
+    drift_level = 'High'
+    interpretation = 'Significant distribution shift detected. Model may not generalize well.'
+    recommendation = 'Strongly recommend investigating data collection process and feature engineering.'
+
+problematic_features = [f for f, imp in sorted_importance.items() if imp > 0.1]
+
+results_df = pd.DataFrame({
+    'feature': list(sorted_importance.keys()),
+    'importance': list(sorted_importance.values())
+}).head(20)
+
+results_df.attrs['adversarial_validation'] = {
+    'auc_score': round(auc_score, 4),
+    'auc_std': round(auc_std, 4),
+    'drift_level': drift_level,
+    'interpretation': interpretation,
+    'recommendation': recommendation,
+    'n_train': int(train_mask.sum()),
+    'n_test': int(test_mask.sum()),
+    'problematic_features': problematic_features[:5],
+    'top_features': dict(list(sorted_importance.items())[:10])
+}
+
+output = results_df
+`,
+  },
+
   // Visualization Blocks
   'chart': {
     type: 'chart',
