@@ -34,6 +34,7 @@ export {
   DropdownMenuRadioGroup,
 } from './Dropdown';
 export { Input } from './Input';
+export { MultiSelect } from './MultiSelect';
 export {
   Select,
   SelectContent,
