@@ -18,7 +18,7 @@
 
 ### 🎨 Visual Pipeline Builder
 - **Drag-and-drop interface** — Build pipelines visually with React Flow
-- **115 block types** — Data input, transformation, analysis, visualization, and export
+- **127 block types** — Data input (3), transformation (54), analysis (58), visualization (11), and export (1)
 - **Real-time preview** — See data changes as you build
 
 ### 🐍 Python Powered
