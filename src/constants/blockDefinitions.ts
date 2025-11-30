@@ -1508,6 +1508,778 @@ output = df
 `,
   },
 
+  'replace-values': {
+    type: 'replace-values',
+    category: 'transform',
+    label: 'Replace Values',
+    description: 'Map and replace specific values with new values',
+    icon: 'Replace',
+    defaultConfig: {
+      column: '',
+      replacements: [{ from: '', to: '' }],
+      matchCase: true,
+      replaceNull: false,
+      nullReplacement: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+replacements = config.get('replacements', [])
+match_case = config.get('matchCase', True)
+replace_null = config.get('replaceNull', False)
+null_replacement = config.get('nullReplacement', '')
+
+if not column:
+    raise ValueError("Replace Values: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Replace Values: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Handle null replacement first
+if replace_null:
+    df[column] = df[column].fillna(null_replacement)
+
+# Build replacement dictionary
+replace_dict = {}
+for r in replacements:
+    from_val = r.get('from', '')
+    to_val = r.get('to', '')
+    if from_val != '':
+        replace_dict[from_val] = to_val
+
+if replace_dict:
+    if match_case:
+        df[column] = df[column].replace(replace_dict)
+    else:
+        # Case-insensitive replacement for strings
+        if df[column].dtype == 'object':
+            for from_val, to_val in replace_dict.items():
+                mask = df[column].astype(str).str.lower() == str(from_val).lower()
+                df.loc[mask, column] = to_val
+        else:
+            df[column] = df[column].replace(replace_dict)
+
+output = df
+`,
+  },
+
+  'percent-change': {
+    type: 'percent-change',
+    category: 'transform',
+    label: 'Percent Change',
+    description: 'Calculate percentage change between consecutive rows',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      periods: 1,
+      groupBy: [],
+      outputColumn: '',
+      fillMethod: 'null',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+periods = config.get('periods', 1)
+group_by = config.get('groupBy', [])
+output_col = config.get('outputColumn', '')
+fill_method = config.get('fillMethod', 'null')
+
+if not column:
+    raise ValueError("Percent Change: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Percent Change: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"{column}_pct_change"
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if group_by:
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Percent Change: Group column(s) not found: {', '.join(missing)}")
+    pct_change = df.groupby(group_by)[column].transform(
+        lambda x: pd.to_numeric(x, errors='coerce').pct_change(periods=periods) * 100
+    )
+else:
+    pct_change = numeric_col.pct_change(periods=periods) * 100
+
+# Handle fill method
+if fill_method == 'zero':
+    pct_change = pct_change.fillna(0)
+elif fill_method == 'forward':
+    pct_change = pct_change.ffill()
+
+df[output_col] = pct_change.round(2)
+
+output = df
+`,
+  },
+
+  'round-numbers': {
+    type: 'round-numbers',
+    category: 'transform',
+    label: 'Round Numbers',
+    description: 'Round, floor, or ceiling numeric values',
+    icon: 'Hash',
+    defaultConfig: {
+      column: '',
+      method: 'round',
+      decimals: 2,
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'round')
+decimals = config.get('decimals', 2)
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Round Numbers: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Round Numbers: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if method == 'round':
+    df[output_col] = numeric_col.round(decimals)
+elif method == 'floor':
+    if decimals == 0:
+        df[output_col] = np.floor(numeric_col)
+    else:
+        factor = 10 ** decimals
+        df[output_col] = np.floor(numeric_col * factor) / factor
+elif method == 'ceil':
+    if decimals == 0:
+        df[output_col] = np.ceil(numeric_col)
+    else:
+        factor = 10 ** decimals
+        df[output_col] = np.ceil(numeric_col * factor) / factor
+elif method == 'truncate':
+    if decimals == 0:
+        df[output_col] = np.trunc(numeric_col)
+    else:
+        factor = 10 ** decimals
+        df[output_col] = np.trunc(numeric_col * factor) / factor
+
+output = df
+`,
+  },
+
+  'percent-of-total': {
+    type: 'percent-of-total',
+    category: 'transform',
+    label: 'Percent of Total',
+    description: 'Calculate what percentage each row represents of the total',
+    icon: 'PieChart',
+    defaultConfig: {
+      column: '',
+      groupBy: [],
+      outputColumn: '',
+      decimals: 2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+group_by = config.get('groupBy', [])
+output_col = config.get('outputColumn', '')
+decimals = config.get('decimals', 2)
+
+if not column:
+    raise ValueError("Percent of Total: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Percent of Total: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"{column}_pct_of_total"
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if group_by:
+    missing = [c for c in group_by if c not in df.columns]
+    if missing:
+        raise ValueError(f"Percent of Total: Group column(s) not found: {', '.join(missing)}")
+    group_total = df.groupby(group_by)[column].transform(
+        lambda x: pd.to_numeric(x, errors='coerce').sum()
+    )
+    df[output_col] = (numeric_col / group_total * 100).round(decimals)
+else:
+    total = numeric_col.sum()
+    if total == 0:
+        df[output_col] = 0
+    else:
+        df[output_col] = (numeric_col / total * 100).round(decimals)
+
+output = df
+`,
+  },
+
+  'absolute-value': {
+    type: 'absolute-value',
+    category: 'transform',
+    label: 'Absolute Value',
+    description: 'Convert negative values to positive',
+    icon: 'PlusSquare',
+    defaultConfig: {
+      column: '',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Absolute Value: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Absolute Value: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+# Convert to numeric and apply absolute value
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+df[output_col] = numeric_col.abs()
+
+output = df
+`,
+  },
+
+  'column-math': {
+    type: 'column-math',
+    category: 'transform',
+    label: 'Column Math',
+    description: 'Perform arithmetic operations between two columns',
+    icon: 'Calculator',
+    defaultConfig: {
+      column1: '',
+      operation: 'add',
+      column2: '',
+      constant: '',
+      useConstant: false,
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column1 = config.get('column1', '')
+operation = config.get('operation', 'add')
+column2 = config.get('column2', '')
+constant = config.get('constant', '')
+use_constant = config.get('useConstant', False)
+output_col = config.get('outputColumn', '')
+
+if not column1:
+    raise ValueError("Column Math: Please specify the first column in the Config tab")
+
+if column1 not in df.columns:
+    raise ValueError(f"Column Math: Column '{column1}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not use_constant and not column2:
+    raise ValueError("Column Math: Please specify a second column or enable 'Use Constant'")
+
+if not use_constant and column2 not in df.columns:
+    raise ValueError(f"Column Math: Column '{column2}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert to numeric
+col1_numeric = pd.to_numeric(df[column1], errors='coerce')
+
+if use_constant:
+    try:
+        operand = float(constant)
+    except (ValueError, TypeError):
+        raise ValueError(f"Column Math: Invalid constant value '{constant}'")
+    op_label = str(constant)
+else:
+    operand = pd.to_numeric(df[column2], errors='coerce')
+    op_label = column2
+
+if not output_col:
+    op_symbols = {'add': '+', 'subtract': '-', 'multiply': '*', 'divide': '/'}
+    output_col = f"{column1}_{op_symbols.get(operation, operation)}_{op_label}"
+
+if operation == 'add':
+    df[output_col] = col1_numeric + operand
+elif operation == 'subtract':
+    df[output_col] = col1_numeric - operand
+elif operation == 'multiply':
+    df[output_col] = col1_numeric * operand
+elif operation == 'divide':
+    with np.errstate(divide='ignore', invalid='ignore'):
+        df[output_col] = col1_numeric / operand
+        df[output_col] = df[output_col].replace([np.inf, -np.inf], np.nan)
+
+output = df
+`,
+  },
+
+  'extract-substring': {
+    type: 'extract-substring',
+    category: 'transform',
+    label: 'Extract Substring',
+    description: 'Extract portion of text from a string column',
+    icon: 'Scissors',
+    defaultConfig: {
+      column: '',
+      method: 'left',
+      length: 5,
+      start: 0,
+      delimiter: '',
+      position: 'first',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'left')
+length = config.get('length', 5)
+start = config.get('start', 0)
+delimiter = config.get('delimiter', '')
+position = config.get('position', 'first')
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Extract Substring: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Extract Substring: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = f"{column}_extracted"
+
+str_col = df[column].astype(str)
+
+if method == 'left':
+    df[output_col] = str_col.str[:length]
+elif method == 'right':
+    df[output_col] = str_col.str[-length:]
+elif method == 'mid':
+    df[output_col] = str_col.str[start:start + length]
+elif method == 'before_delimiter':
+    if not delimiter:
+        raise ValueError("Extract Substring: Please specify a delimiter")
+    if position == 'first':
+        df[output_col] = str_col.str.split(delimiter, n=1).str[0]
+    else:
+        df[output_col] = str_col.str.rsplit(delimiter, n=1).str[0]
+elif method == 'after_delimiter':
+    if not delimiter:
+        raise ValueError("Extract Substring: Please specify a delimiter")
+    if position == 'first':
+        parts = str_col.str.split(delimiter, n=1)
+        df[output_col] = parts.apply(lambda x: x[1] if len(x) > 1 else '')
+    else:
+        parts = str_col.str.rsplit(delimiter, n=1)
+        df[output_col] = parts.apply(lambda x: x[1] if len(x) > 1 else '')
+elif method == 'between_delimiters':
+    start_delim = delimiter
+    end_delim = config.get('endDelimiter', delimiter)
+    df[output_col] = str_col.str.extract(f'{start_delim}(.*?){end_delim}', expand=False)
+
+output = df
+`,
+  },
+
+  'parse-date': {
+    type: 'parse-date',
+    category: 'transform',
+    label: 'Parse Date',
+    description: 'Convert text strings to proper date format',
+    icon: 'CalendarCheck',
+    defaultConfig: {
+      column: '',
+      format: 'auto',
+      customFormat: '',
+      outputColumn: '',
+      errors: 'coerce',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+date_format = config.get('format', 'auto')
+custom_format = config.get('customFormat', '')
+output_col = config.get('outputColumn', '')
+errors = config.get('errors', 'coerce')
+
+if not column:
+    raise ValueError("Parse Date: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Parse Date: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+# Define common date formats
+formats = {
+    'auto': None,
+    'YYYY-MM-DD': '%Y-%m-%d',
+    'MM/DD/YYYY': '%m/%d/%Y',
+    'DD/MM/YYYY': '%d/%m/%Y',
+    'YYYY/MM/DD': '%Y/%m/%d',
+    'MM-DD-YYYY': '%m-%d-%Y',
+    'DD-MM-YYYY': '%d-%m-%Y',
+    'YYYYMMDD': '%Y%m%d',
+    'Mon DD, YYYY': '%b %d, %Y',
+    'Month DD, YYYY': '%B %d, %Y',
+    'DD Mon YYYY': '%d %b %Y',
+    'custom': custom_format,
+}
+
+fmt = formats.get(date_format, None)
+
+if date_format == 'auto':
+    df[output_col] = pd.to_datetime(df[column], errors=errors, infer_datetime_format=True)
+elif fmt:
+    df[output_col] = pd.to_datetime(df[column], format=fmt, errors=errors)
+else:
+    df[output_col] = pd.to_datetime(df[column], errors=errors)
+
+output = df
+`,
+  },
+
+  'split-to-rows': {
+    type: 'split-to-rows',
+    category: 'transform',
+    label: 'Split to Rows',
+    description: 'Expand delimited values in a cell into separate rows',
+    icon: 'SplitSquareVertical',
+    defaultConfig: {
+      column: '',
+      delimiter: ',',
+      trimWhitespace: true,
+      dropEmpty: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+column = config.get('column', '')
+delimiter = config.get('delimiter', ',')
+trim_whitespace = config.get('trimWhitespace', True)
+drop_empty = config.get('dropEmpty', True)
+
+if not column:
+    raise ValueError("Split to Rows: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Split to Rows: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert column to string and split
+df[column] = df[column].astype(str)
+
+# Split the column and explode into rows
+df[column] = df[column].str.split(delimiter)
+df = df.explode(column)
+
+# Trim whitespace if requested
+if trim_whitespace:
+    df[column] = df[column].str.strip()
+
+# Drop empty values if requested
+if drop_empty:
+    df = df[df[column] != '']
+    df = df[df[column].notna()]
+
+# Reset index
+df = df.reset_index(drop=True)
+
+output = df
+`,
+  },
+
+  'clip-values': {
+    type: 'clip-values',
+    category: 'transform',
+    label: 'Clip Values',
+    description: 'Cap values at minimum and/or maximum thresholds',
+    icon: 'Minimize2',
+    defaultConfig: {
+      column: '',
+      minValue: '',
+      maxValue: '',
+      usePercentile: false,
+      lowerPercentile: 5,
+      upperPercentile: 95,
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+min_value = config.get('minValue', '')
+max_value = config.get('maxValue', '')
+use_percentile = config.get('usePercentile', False)
+lower_pct = config.get('lowerPercentile', 5)
+upper_pct = config.get('upperPercentile', 95)
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Clip Values: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Clip Values: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+# Convert to numeric
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+if use_percentile:
+    lower_bound = numeric_col.quantile(lower_pct / 100)
+    upper_bound = numeric_col.quantile(upper_pct / 100)
+    df[output_col] = numeric_col.clip(lower=lower_bound, upper=upper_bound)
+else:
+    lower_bound = float(min_value) if min_value != '' else None
+    upper_bound = float(max_value) if max_value != '' else None
+    df[output_col] = numeric_col.clip(lower=lower_bound, upper=upper_bound)
+
+output = df
+`,
+  },
+
+  'standardize-text': {
+    type: 'standardize-text',
+    category: 'transform',
+    label: 'Standardize Text',
+    description: 'Comprehensive text cleaning and normalization',
+    icon: 'Type',
+    defaultConfig: {
+      column: '',
+      removeAccents: true,
+      normalizeUnicode: true,
+      removeSpecialChars: false,
+      collapseSpaces: true,
+      trimWhitespace: true,
+      caseConversion: 'none',
+      outputColumn: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import unicodedata
+import re
+
+df = input_data.copy()
+column = config.get('column', '')
+remove_accents = config.get('removeAccents', True)
+normalize_unicode = config.get('normalizeUnicode', True)
+remove_special = config.get('removeSpecialChars', False)
+collapse_spaces = config.get('collapseSpaces', True)
+trim_ws = config.get('trimWhitespace', True)
+case_conv = config.get('caseConversion', 'none')
+output_col = config.get('outputColumn', '')
+
+if not column:
+    raise ValueError("Standardize Text: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Standardize Text: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = column
+
+def standardize(text):
+    if pd.isna(text):
+        return text
+
+    s = str(text)
+
+    # Normalize unicode
+    if normalize_unicode:
+        s = unicodedata.normalize('NFKC', s)
+
+    # Remove accents
+    if remove_accents:
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+
+    # Remove special characters (keep alphanumeric and spaces)
+    if remove_special:
+        s = re.sub(r'[^a-zA-Z0-9\\s]', '', s)
+
+    # Collapse multiple spaces
+    if collapse_spaces:
+        s = re.sub(r'\\s+', ' ', s)
+
+    # Trim whitespace
+    if trim_ws:
+        s = s.strip()
+
+    # Case conversion
+    if case_conv == 'lower':
+        s = s.lower()
+    elif case_conv == 'upper':
+        s = s.upper()
+    elif case_conv == 'title':
+        s = s.title()
+    elif case_conv == 'sentence':
+        s = s.capitalize()
+
+    return s
+
+df[output_col] = df[column].apply(standardize)
+
+output = df
+`,
+  },
+
+  'case-when': {
+    type: 'case-when',
+    category: 'transform',
+    label: 'Case When',
+    description: 'Create column based on multiple if-then conditions',
+    icon: 'GitBranch',
+    defaultConfig: {
+      conditions: [{ column: '', operator: 'equals', value: '', result: '' }],
+      elseValue: '',
+      outputColumn: 'result',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+conditions = config.get('conditions', [])
+else_value = config.get('elseValue', '')
+output_col = config.get('outputColumn', 'result')
+
+if not conditions:
+    raise ValueError("Case When: Please add at least one condition in the Config tab")
+
+if not output_col:
+    output_col = 'result'
+
+# Start with else value
+df[output_col] = else_value
+
+# Apply conditions in reverse order (last condition has lowest priority)
+for cond in reversed(conditions):
+    col = cond.get('column', '')
+    operator = cond.get('operator', 'equals')
+    value = cond.get('value', '')
+    result = cond.get('result', '')
+
+    if not col:
+        continue
+
+    if col not in df.columns:
+        raise ValueError(f"Case When: Column '{col}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+    # Create mask based on operator
+    if operator == 'equals':
+        try:
+            numeric_val = float(value)
+            numeric_col = pd.to_numeric(df[col], errors='coerce')
+            mask = numeric_col == numeric_val
+            if mask.sum() == 0:
+                mask = df[col].astype(str) == str(value)
+        except (ValueError, TypeError):
+            mask = df[col].astype(str) == str(value)
+    elif operator == 'not_equals':
+        try:
+            numeric_val = float(value)
+            numeric_col = pd.to_numeric(df[col], errors='coerce')
+            mask = numeric_col != numeric_val
+        except (ValueError, TypeError):
+            mask = df[col].astype(str) != str(value)
+    elif operator == 'greater_than':
+        numeric_col = pd.to_numeric(df[col], errors='coerce')
+        mask = numeric_col > float(value)
+    elif operator == 'less_than':
+        numeric_col = pd.to_numeric(df[col], errors='coerce')
+        mask = numeric_col < float(value)
+    elif operator == 'greater_or_equal':
+        numeric_col = pd.to_numeric(df[col], errors='coerce')
+        mask = numeric_col >= float(value)
+    elif operator == 'less_or_equal':
+        numeric_col = pd.to_numeric(df[col], errors='coerce')
+        mask = numeric_col <= float(value)
+    elif operator == 'contains':
+        mask = df[col].astype(str).str.contains(str(value), na=False)
+    elif operator == 'starts_with':
+        mask = df[col].astype(str).str.startswith(str(value), na=False)
+    elif operator == 'ends_with':
+        mask = df[col].astype(str).str.endswith(str(value), na=False)
+    elif operator == 'is_null':
+        mask = df[col].isnull()
+    elif operator == 'is_not_null':
+        mask = df[col].notnull()
+    elif operator == 'between':
+        parts = str(value).split(',')
+        if len(parts) == 2:
+            numeric_col = pd.to_numeric(df[col], errors='coerce')
+            mask = (numeric_col >= float(parts[0].strip())) & (numeric_col <= float(parts[1].strip()))
+        else:
+            mask = pd.Series([False] * len(df))
+    else:
+        mask = pd.Series([False] * len(df))
+
+    df.loc[mask, output_col] = result
+
+output = df
+`,
+  },
+
   // Analysis Blocks
   'statistics': {
     type: 'statistics',
@@ -7388,6 +8160,18 @@ export const blockCategories = [
       'transpose',
       'string-pad',
       'cumulative-operations',
+      'replace-values',
+      'percent-change',
+      'round-numbers',
+      'percent-of-total',
+      'absolute-value',
+      'column-math',
+      'extract-substring',
+      'parse-date',
+      'split-to-rows',
+      'clip-values',
+      'standardize-text',
+      'case-when',
     ] as BlockType[],
   },
   {
