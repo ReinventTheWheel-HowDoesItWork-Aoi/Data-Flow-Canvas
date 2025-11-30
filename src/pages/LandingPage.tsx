@@ -594,9 +594,9 @@ export default function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="relative container mx-auto px-6 py-6 flex items-center justify-between">
+      <header className="relative container mx-auto px-4 sm:px-6 py-4 sm:py-6 flex items-center justify-between">
         <motion.div
-          className="flex items-center gap-3"
+          className="flex items-center gap-2 sm:gap-3 flex-shrink-0"
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -606,14 +606,14 @@ export default function LandingPage() {
             whileHover={{ scale: 1.05 }}
             transition={{ type: 'spring', stiffness: 400 }}
           >
-            <img src="/logo.svg" alt="Data Flow Canvas" className="w-11 h-11 rounded-xl shadow-glow" />
+            <img src="/logo.svg" alt="Data Flow Canvas" className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl shadow-glow" />
             <div className="absolute -inset-1 rounded-xl bg-gradient-to-br from-electric-indigo to-soft-violet blur-lg opacity-40" />
           </motion.div>
-          <span className="text-xl font-bold tracking-tight">Data Flow Canvas</span>
+          <span className="text-base sm:text-xl font-bold tracking-tight hidden xs:block">Data Flow Canvas</span>
         </motion.div>
 
         <motion.nav
-          className="flex items-center gap-3"
+          className="flex items-center gap-1.5 sm:gap-3"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, ease: 'easeOut' }}
@@ -622,7 +622,7 @@ export default function LandingPage() {
           <motion.button
             onClick={toggleDarkMode}
             className={cn(
-              'p-2.5 rounded-xl transition-all duration-300',
+              'p-2 sm:p-2.5 rounded-xl transition-all duration-300',
               isDarkMode
                 ? 'text-slate-300 hover:text-white hover:bg-slate-800/80 backdrop-blur-sm'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md backdrop-blur-sm'
@@ -636,7 +636,7 @@ export default function LandingPage() {
               animate={{ rotate: isDarkMode ? 180 : 0 }}
               transition={{ duration: 0.3 }}
             >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              {isDarkMode ? <Sun size={18} className="sm:w-5 sm:h-5" /> : <Moon size={18} className="sm:w-5 sm:h-5" />}
             </motion.div>
           </motion.button>
 
@@ -645,7 +645,7 @@ export default function LandingPage() {
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300',
+              'hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300',
               isDarkMode
                 ? 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/80 hover:shadow-md'
@@ -654,16 +654,23 @@ export default function LandingPage() {
             whileTap={{ scale: 0.98 }}
           >
             <Github size={20} />
-            <span className="hidden sm:inline font-medium">GitHub</span>
+            <span className="hidden md:inline font-medium">GitHub</span>
           </motion.a>
 
-          <LanguageSelector variant="full" />
+          {/* Language selector - icon on mobile, full on desktop */}
+          <div className="hidden sm:block">
+            <LanguageSelector variant="full" />
+          </div>
+          <div className="block sm:hidden">
+            <LanguageSelector variant="icon" />
+          </div>
 
           <Link to="/editor">
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button variant="primary" size="sm" className="shadow-glow">
-                <Play size={16} className="mr-1.5" />
-                {t('header.launchApp')}
+              <Button variant="primary" size="sm" className="shadow-glow text-xs sm:text-sm px-2.5 sm:px-4">
+                <Play size={14} className="sm:w-4 sm:h-4 mr-1 sm:mr-1.5" />
+                <span className="hidden xs:inline">{t('header.launchApp')}</span>
+                <span className="xs:hidden">Launch</span>
               </Button>
             </motion.div>
           </Link>
@@ -671,7 +678,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section ref={heroRef} className="relative container mx-auto px-6 pt-20 pb-32">
+      <section ref={heroRef} className="relative container mx-auto px-4 sm:px-6 pt-12 sm:pt-20 pb-16 sm:pb-32">
         <motion.div
           style={{ opacity: heroOpacity, scale: heroScale }}
           className="grid lg:grid-cols-2 gap-16 items-center"
@@ -705,7 +712,7 @@ export default function LandingPage() {
             </ShimmerBadge>
 
             <motion.h1
-              className="text-5xl lg:text-7xl font-bold leading-[1.1] mt-8 mb-6 tracking-tight"
+              className="text-3xl xs:text-4xl sm:text-5xl lg:text-7xl font-bold leading-[1.1] mt-6 sm:mt-8 mb-4 sm:mb-6 tracking-tight"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -719,7 +726,7 @@ export default function LandingPage() {
 
             <motion.p
               className={cn(
-                'text-xl lg:text-2xl mb-8 leading-relaxed max-w-xl',
+                'text-base sm:text-xl lg:text-2xl mb-6 sm:mb-8 leading-relaxed max-w-xl',
                 isDarkMode ? 'text-slate-300' : 'text-slate-600'
               )}
               initial={{ opacity: 0, y: 20 }}
@@ -964,16 +971,16 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section - Bento Grid Style */}
-      <section className="relative container mx-auto px-6 py-32">
+      <section className="relative container mx-auto px-4 sm:px-6 py-16 sm:py-32">
         <motion.div
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-20"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
         >
           <motion.h2
-            className="text-4xl lg:text-5xl font-bold mb-6 tracking-tight"
+            className="text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 tracking-tight"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -984,7 +991,7 @@ export default function LandingPage() {
           </motion.h2>
           <motion.p
             className={cn(
-              'text-lg lg:text-xl max-w-2xl mx-auto',
+              'text-base sm:text-lg lg:text-xl max-w-2xl mx-auto',
               isDarkMode ? 'text-slate-400' : 'text-slate-600'
             )}
             initial={{ opacity: 0, y: 20 }}
@@ -1012,20 +1019,20 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works Section */}
-      <section className="relative container mx-auto px-6 py-32">
+      <section className="relative container mx-auto px-4 sm:px-6 py-16 sm:py-32">
         <motion.div
-          className="text-center mb-20"
+          className="text-center mb-10 sm:mb-20"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
         >
-          <h2 className="text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 tracking-tight">
             {t('landing.howItWorks.title')} <span className="gradient-text">{t('landing.howItWorks.titleHighlight')}</span>
           </h2>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 sm:gap-12 max-w-5xl mx-auto">
           {steps.map((step, index) => (
             <StepCard
               key={step.titleKey}
@@ -1040,7 +1047,7 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section with animated gradient border */}
-      <section className="relative container mx-auto px-6 py-32">
+      <section className="relative container mx-auto px-4 sm:px-6 py-16 sm:py-32">
         <motion.div
           className="relative rounded-3xl overflow-hidden"
           initial={{ opacity: 0, y: 40 }}
@@ -1064,7 +1071,7 @@ export default function LandingPage() {
 
           <div
             className={cn(
-              'relative p-16 text-center rounded-3xl',
+              'relative p-8 sm:p-16 text-center rounded-3xl',
               isDarkMode
                 ? 'bg-gradient-to-br from-slate-900 via-slate-900/95 to-slate-800'
                 : 'bg-gradient-to-br from-white via-white to-slate-50'
@@ -1081,7 +1088,7 @@ export default function LandingPage() {
             <div className="relative">
               <motion.h2
                 className={cn(
-                  'text-4xl lg:text-5xl font-bold mb-6 tracking-tight',
+                  'text-2xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6 tracking-tight',
                   isDarkMode ? 'text-white' : 'text-slate-900'
                 )}
                 initial={{ opacity: 0, y: 20 }}
@@ -1093,7 +1100,7 @@ export default function LandingPage() {
               </motion.h2>
               <motion.p
                 className={cn(
-                  'text-lg lg:text-xl max-w-xl mx-auto mb-10',
+                  'text-base sm:text-lg lg:text-xl max-w-xl mx-auto mb-8 sm:mb-10',
                   isDarkMode ? 'text-slate-300' : 'text-slate-600'
                 )}
                 initial={{ opacity: 0, y: 20 }}
@@ -1134,11 +1141,11 @@ export default function LandingPage() {
       {/* Footer */}
       <footer
         className={cn(
-          'relative container mx-auto px-6 py-12 border-t',
+          'relative container mx-auto px-4 sm:px-6 py-8 sm:py-12 border-t',
           isDarkMode ? 'border-slate-800/60' : 'border-slate-200'
         )}
       >
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6">
           <motion.div
             className="flex items-center gap-3"
             initial={{ opacity: 0, y: 10 }}
@@ -1152,7 +1159,7 @@ export default function LandingPage() {
             </span>
           </motion.div>
           <motion.div
-            className={cn('flex items-center gap-8', isDarkMode ? 'text-slate-400' : 'text-slate-500')}
+            className={cn('flex flex-wrap items-center justify-center gap-4 sm:gap-8', isDarkMode ? 'text-slate-400' : 'text-slate-500')}
             initial={{ opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
