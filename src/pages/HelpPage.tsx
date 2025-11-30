@@ -91,6 +91,12 @@ import {
   Calculator,
   CalendarCheck,
   SplitSquareVertical,
+  Expand,
+  Trash2,
+  Merge,
+  Search,
+  Code,
+  Regex,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -107,7 +113,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (42 blocks)
+  // Transform (54 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -150,6 +156,18 @@ const blocks: BlockInfo[] = [
   { icon: Minimize2, name: 'Clip Values', description: 'Cap values at minimum and/or maximum thresholds', category: 'Transform' },
   { icon: Type, name: 'Standardize Text', description: 'Comprehensive text cleaning and normalization', category: 'Transform' },
   { icon: GitBranch, name: 'Case When', description: 'Create column based on multiple if-then conditions', category: 'Transform' },
+  { icon: Expand, name: 'Explode Column', description: 'Expand list/array values in a column into separate rows', category: 'Transform' },
+  { icon: PlusSquare, name: 'Add Constant Column', description: 'Add a new column with a fixed value for all rows', category: 'Transform' },
+  { icon: Trash2, name: 'Drop Columns', description: 'Remove specific columns from the dataset', category: 'Transform' },
+  { icon: Layers, name: 'Flatten JSON', description: 'Expand nested dict/JSON columns into separate columns', category: 'Transform' },
+  { icon: Merge, name: 'Coalesce Columns', description: 'Get the first non-null value from multiple columns', category: 'Transform' },
+  { icon: ArrowUpDown, name: 'Reorder Columns', description: 'Rearrange column order in the dataset', category: 'Transform' },
+  { icon: Eraser, name: 'Trim & Clean Text', description: 'Remove whitespace and clean text formatting', category: 'Transform' },
+  { icon: Search, name: 'Lookup (VLOOKUP)', description: 'Match and retrieve values from another dataset like Excel VLOOKUP', category: 'Transform' },
+  { icon: Grid3x3, name: 'Cross Join', description: 'Create Cartesian product of two datasets (all combinations)', category: 'Transform' },
+  { icon: Code, name: 'Filter by Expression', description: 'Filter rows using a Python expression for advanced conditions', category: 'Transform' },
+  { icon: Hash, name: 'Number Format', description: 'Format numbers with thousands separators, decimals, currency, or percentage', category: 'Transform' },
+  { icon: Regex, name: 'Extract Pattern', description: 'Extract text matching a regex pattern into a new column', category: 'Transform' },
 
   // Analysis (58 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
@@ -329,6 +347,18 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Clip Values': { name: 'blocks.clipValues', description: 'blockDescriptions.clipValues' },
   'Standardize Text': { name: 'blocks.standardizeText', description: 'blockDescriptions.standardizeText' },
   'Case When': { name: 'blocks.caseWhen', description: 'blockDescriptions.caseWhen' },
+  'Explode Column': { name: 'blocks.explodeColumn', description: 'blockDescriptions.explodeColumn' },
+  'Add Constant Column': { name: 'blocks.addConstantColumn', description: 'blockDescriptions.addConstantColumn' },
+  'Drop Columns': { name: 'blocks.dropColumns', description: 'blockDescriptions.dropColumns' },
+  'Flatten JSON': { name: 'blocks.flattenJson', description: 'blockDescriptions.flattenJson' },
+  'Coalesce Columns': { name: 'blocks.coalesceColumns', description: 'blockDescriptions.coalesceColumns' },
+  'Reorder Columns': { name: 'blocks.reorderColumns', description: 'blockDescriptions.reorderColumns' },
+  'Trim & Clean Text': { name: 'blocks.trimText', description: 'blockDescriptions.trimText' },
+  'Lookup (VLOOKUP)': { name: 'blocks.lookupVlookup', description: 'blockDescriptions.lookupVlookup' },
+  'Cross Join': { name: 'blocks.crossJoin', description: 'blockDescriptions.crossJoin' },
+  'Filter by Expression': { name: 'blocks.filterExpression', description: 'blockDescriptions.filterExpression' },
+  'Number Format': { name: 'blocks.numberFormat', description: 'blockDescriptions.numberFormat' },
+  'Extract Pattern': { name: 'blocks.extractPattern', description: 'blockDescriptions.extractPattern' },
   'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
   'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
   'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
@@ -505,7 +535,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">115</p>
+                <p className="text-h2 font-bold text-text-primary">127</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
