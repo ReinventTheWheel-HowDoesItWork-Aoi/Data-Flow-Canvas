@@ -9,9 +9,6 @@
 ![React](https://img.shields.io/badge/react-18.3-61DAFB)
 ![TypeScript](https://img.shields.io/badge/typescript-5.6-3178C6)
 
-<!-- Add your cleansed screenshot here -->
-![Data Flow Canvas Demo](public/demo-screenshot.png)
-
 ## ✨ Features
 
 ### 🔒 Privacy First
