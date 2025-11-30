@@ -85,6 +85,16 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'filter-expression': 'blocks.filterExpression',
   'number-format': 'blocks.numberFormat',
   'extract-pattern': 'blocks.extractPattern',
+  'log-transform': 'blocks.logTransform',
+  'interpolate-missing': 'blocks.interpolateMissing',
+  'date-truncate': 'blocks.dateTruncate',
+  'period-over-period': 'blocks.periodOverPeriod',
+  'hash-column': 'blocks.hashColumn',
+  'expand-date-range': 'blocks.expandDateRange',
+  'string-similarity': 'blocks.stringSimilarity',
+  'generate-sequence': 'blocks.generateSequence',
+  'top-n-per-group': 'blocks.topNPerGroup',
+  'first-last-per-group': 'blocks.firstLastPerGroup',
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
   'clustering': 'blocks.clustering',
@@ -216,6 +226,16 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'filter-expression': 'blockDescriptions.filterExpression',
   'number-format': 'blockDescriptions.numberFormat',
   'extract-pattern': 'blockDescriptions.extractPattern',
+  'log-transform': 'blockDescriptions.logTransform',
+  'interpolate-missing': 'blockDescriptions.interpolateMissing',
+  'date-truncate': 'blockDescriptions.dateTruncate',
+  'period-over-period': 'blockDescriptions.periodOverPeriod',
+  'hash-column': 'blockDescriptions.hashColumn',
+  'expand-date-range': 'blockDescriptions.expandDateRange',
+  'string-similarity': 'blockDescriptions.stringSimilarity',
+  'generate-sequence': 'blockDescriptions.generateSequence',
+  'top-n-per-group': 'blockDescriptions.topNPerGroup',
+  'first-last-per-group': 'blockDescriptions.firstLastPerGroup',
   'statistics': 'blockDescriptions.statistics',
   'regression': 'blockDescriptions.regression',
   'clustering': 'blockDescriptions.clustering',
@@ -7857,6 +7877,767 @@ function renderConfigFields(
           </div>
         </div>
       );
+
+    case 'log-transform':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Enter column name"
+            />
+          )}
+
+          <Select
+            value={(config.operation as string) || 'log'}
+            onValueChange={(v) => onChange('operation', v)}
+          >
+            <SelectTrigger label="Operation">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="log">Natural Log (ln)</SelectItem>
+              <SelectItem value="log10">Log Base 10</SelectItem>
+              <SelectItem value="log2">Log Base 2</SelectItem>
+              <SelectItem value="log1p">Log(1+x)</SelectItem>
+              <SelectItem value="exp">Exponential (e^x)</SelectItem>
+              <SelectItem value="sqrt">Square Root</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.handleZero as string) || 'add_one'}
+            onValueChange={(v) => onChange('handleZero', v)}
+          >
+            <SelectTrigger label="Handle Zero/Negative">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="add_one">Add 1 before transform</SelectItem>
+              <SelectItem value="replace_min">Replace with min positive/2</SelectItem>
+              <SelectItem value="skip">Skip (result in NaN)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-naming"
+          />
+        </div>
+      );
+
+    case 'interpolate-missing':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column as string) || ''}
+                onValueChange={(v) => onChange('column', v)}
+              >
+                <SelectTrigger label="Column to Interpolate">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.orderColumn as string) || ''}
+                onValueChange={(v) => onChange('orderColumn', v)}
+              >
+                <SelectTrigger label="Order By Column (optional)">
+                  <SelectValue placeholder="Select order column" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Column to Interpolate"
+                value={(config.column as string) || ''}
+                onChange={(e) => onChange('column', e.target.value)}
+                placeholder="Enter column name"
+              />
+              <Input
+                label="Order By Column (optional)"
+                value={(config.orderColumn as string) || ''}
+                onChange={(e) => onChange('orderColumn', e.target.value)}
+                placeholder="Enter order column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.method as string) || 'linear'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Interpolation Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="linear">Linear</SelectItem>
+              <SelectItem value="polynomial">Polynomial (order 2)</SelectItem>
+              <SelectItem value="spline">Spline (cubic)</SelectItem>
+              <SelectItem value="nearest">Nearest</SelectItem>
+              <SelectItem value="time">Time-based</SelectItem>
+              <SelectItem value="ffill">Forward Fill</SelectItem>
+              <SelectItem value="bfill">Backward Fill</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Limit (0 = no limit)"
+            type="number"
+            min={0}
+            value={(config.limit as number) || 0}
+            onChange={(e) => onChange('limit', parseInt(e.target.value) || 0)}
+          />
+        </div>
+      );
+
+    case 'date-truncate':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Date Column">
+                <SelectValue placeholder="Select date column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Date Column"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Enter date column name"
+            />
+          )}
+
+          <Select
+            value={(config.unit as string) || 'day'}
+            onValueChange={(v) => onChange('unit', v)}
+          >
+            <SelectTrigger label="Truncate To">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="minute">Minute Start</SelectItem>
+              <SelectItem value="hour">Hour Start</SelectItem>
+              <SelectItem value="day">Day Start</SelectItem>
+              <SelectItem value="week">Week Start</SelectItem>
+              <SelectItem value="month">Month Start</SelectItem>
+              <SelectItem value="quarter">Quarter Start</SelectItem>
+              <SelectItem value="year">Year Start</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-naming"
+          />
+        </div>
+      );
+
+    case 'period-over-period':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+                placeholder="Enter date column name"
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+                placeholder="Enter value column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.period as string) || 'mom'}
+            onValueChange={(v) => onChange('period', v)}
+          >
+            <SelectTrigger label="Period Comparison">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="dod">Day over Day (DoD)</SelectItem>
+              <SelectItem value="wow">Week over Week (WoW)</SelectItem>
+              <SelectItem value="mom">Month over Month (MoM)</SelectItem>
+              <SelectItem value="qoq">Quarter over Quarter (QoQ)</SelectItem>
+              <SelectItem value="yoy">Year over Year (YoY)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.changeType as string) || 'percent'}
+            onValueChange={(v) => onChange('changeType', v)}
+          >
+            <SelectTrigger label="Change Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percent">Percentage Change</SelectItem>
+              <SelectItem value="absolute">Absolute Change</SelectItem>
+              <SelectItem value="both">Both</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'hash-column':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column to Hash">
+                <SelectValue placeholder="Select column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Column to Hash"
+              value={(config.column as string) || ''}
+              onChange={(e) => onChange('column', e.target.value)}
+              placeholder="Enter column name"
+            />
+          )}
+
+          <Select
+            value={(config.algorithm as string) || 'sha256'}
+            onValueChange={(v) => onChange('algorithm', v)}
+          >
+            <SelectTrigger label="Hash Algorithm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sha256">SHA-256</SelectItem>
+              <SelectItem value="sha512">SHA-512</SelectItem>
+              <SelectItem value="sha1">SHA-1</SelectItem>
+              <SelectItem value="md5">MD5</SelectItem>
+              <SelectItem value="blake2">BLAKE2</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Truncate Length (0 = full)"
+            type="number"
+            min={0}
+            max={128}
+            value={(config.truncateLength as number) || 0}
+            onChange={(e) => onChange('truncateLength', parseInt(e.target.value) || 0)}
+          />
+
+          <Input
+            label="New Column Name (optional)"
+            value={(config.newColumn as string) || ''}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+            placeholder="Leave empty for auto-naming"
+          />
+        </div>
+      );
+
+    case 'expand-date-range':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.dateColumn as string) || ''}
+              onValueChange={(v) => onChange('dateColumn', v)}
+            >
+              <SelectTrigger label="Date Column">
+                <SelectValue placeholder="Select date column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              label="Date Column"
+              value={(config.dateColumn as string) || ''}
+              onChange={(e) => onChange('dateColumn', e.target.value)}
+              placeholder="Enter date column name"
+            />
+          )}
+
+          <Select
+            value={(config.freq as string) || 'D'}
+            onValueChange={(v) => onChange('freq', v)}
+          >
+            <SelectTrigger label="Frequency">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="H">Hourly</SelectItem>
+              <SelectItem value="D">Daily</SelectItem>
+              <SelectItem value="W">Weekly</SelectItem>
+              <SelectItem value="M">Monthly</SelectItem>
+              <SelectItem value="Q">Quarterly</SelectItem>
+              <SelectItem value="Y">Yearly</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.fillMethod as string) || 'ffill'}
+            onValueChange={(v) => onChange('fillMethod', v)}
+          >
+            <SelectTrigger label="Fill Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ffill">Forward Fill</SelectItem>
+              <SelectItem value="bfill">Backward Fill</SelectItem>
+              <SelectItem value="zero">Fill with Zero</SelectItem>
+              <SelectItem value="interpolate">Linear Interpolation</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'string-similarity':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column1 as string) || ''}
+                onValueChange={(v) => onChange('column1', v)}
+              >
+                <SelectTrigger label="First Column">
+                  <SelectValue placeholder="Select first column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.column2 as string) || ''}
+                onValueChange={(v) => onChange('column2', v)}
+              >
+                <SelectTrigger label="Second Column">
+                  <SelectValue placeholder="Select second column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="First Column"
+                value={(config.column1 as string) || ''}
+                onChange={(e) => onChange('column1', e.target.value)}
+                placeholder="Enter first column name"
+              />
+              <Input
+                label="Second Column"
+                value={(config.column2 as string) || ''}
+                onChange={(e) => onChange('column2', e.target.value)}
+                placeholder="Enter second column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.method as string) || 'levenshtein'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Similarity Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="levenshtein">Levenshtein</SelectItem>
+              <SelectItem value="jaro">Jaro</SelectItem>
+              <SelectItem value="jaro_winkler">Jaro-Winkler</SelectItem>
+              <SelectItem value="exact">Exact Match</SelectItem>
+              <SelectItem value="contains">Contains</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Match Threshold (0-1)"
+            type="number"
+            min={0}
+            max={1}
+            step={0.1}
+            value={(config.threshold as number) || 0.8}
+            onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 0.8)}
+          />
+
+          <Input
+            label="Output Column Name"
+            value={(config.newColumn as string) || 'similarity'}
+            onChange={(e) => onChange('newColumn', e.target.value)}
+          />
+        </div>
+      );
+
+    case 'generate-sequence':
+      return (
+        <div className="space-y-4">
+          <Select
+            value={(config.type as string) || 'number'}
+            onValueChange={(v) => onChange('type', v)}
+          >
+            <SelectTrigger label="Sequence Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="number">Number Range</SelectItem>
+              <SelectItem value="date">Date Range</SelectItem>
+              <SelectItem value="repeat">Repeat Value</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Column Name"
+            value={(config.columnName as string) || 'sequence'}
+            onChange={(e) => onChange('columnName', e.target.value)}
+          />
+
+          {(config.type as string) === 'number' && (
+            <>
+              <Input
+                label="Start"
+                type="number"
+                value={(config.start as number) || 1}
+                onChange={(e) => onChange('start', parseFloat(e.target.value) || 1)}
+              />
+              <Input
+                label="End"
+                type="number"
+                value={(config.end as number) || 10}
+                onChange={(e) => onChange('end', parseFloat(e.target.value) || 10)}
+              />
+              <Input
+                label="Step"
+                type="number"
+                value={(config.step as number) || 1}
+                onChange={(e) => onChange('step', parseFloat(e.target.value) || 1)}
+              />
+            </>
+          )}
+
+          {(config.type as string) === 'date' && (
+            <>
+              <Input
+                label="Start Date"
+                type="date"
+                value={(config.dateStart as string) || ''}
+                onChange={(e) => onChange('dateStart', e.target.value)}
+              />
+              <Input
+                label="End Date"
+                type="date"
+                value={(config.dateEnd as string) || ''}
+                onChange={(e) => onChange('dateEnd', e.target.value)}
+              />
+              <Select
+                value={(config.dateFreq as string) || 'D'}
+                onValueChange={(v) => onChange('dateFreq', v)}
+              >
+                <SelectTrigger label="Frequency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="H">Hourly</SelectItem>
+                  <SelectItem value="D">Daily</SelectItem>
+                  <SelectItem value="W">Weekly</SelectItem>
+                  <SelectItem value="M">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
+
+          {(config.type as string) === 'repeat' && (
+            <>
+              <Input
+                label="Value to Repeat"
+                value={(config.repeatValue as string) || ''}
+                onChange={(e) => onChange('repeatValue', e.target.value)}
+                placeholder="Enter value"
+              />
+              <Input
+                label="Repeat Count"
+                type="number"
+                min={1}
+                value={(config.repeatCount as number) || 10}
+                onChange={(e) => onChange('repeatCount', parseInt(e.target.value) || 10)}
+              />
+            </>
+          )}
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              This block generates a new dataset with no input required.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'top-n-per-group': {
+      const topNGroupCols = (config.groupColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                <label className="block text-small font-medium text-text-secondary">
+                  Group Columns (optional)
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                  {availableColumns.map((col) => (
+                    <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                      <input
+                        type="checkbox"
+                        checked={topNGroupCols.includes(col)}
+                        onChange={(e) => {
+                          const newCols = e.target.checked
+                            ? [...topNGroupCols, col]
+                            : topNGroupCols.filter((c) => c !== col);
+                          onChange('groupColumns', newCols);
+                        }}
+                        className="rounded border-border-default"
+                      />
+                      <span className="text-small text-text-primary">{col}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <Select
+                value={(config.orderColumn as string) || ''}
+                onValueChange={(v) => onChange('orderColumn', v)}
+              >
+                <SelectTrigger label="Order By Column">
+                  <SelectValue placeholder="Select column to order by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Group Columns (comma-separated)"
+                value={topNGroupCols.join(', ')}
+                onChange={(e) => onChange('groupColumns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                placeholder="e.g., category, region"
+              />
+              <Input
+                label="Order By Column"
+                value={(config.orderColumn as string) || ''}
+                onChange={(e) => onChange('orderColumn', e.target.value)}
+                placeholder="Enter column name"
+              />
+            </>
+          )}
+
+          <Input
+            label="Number of Rows (N)"
+            type="number"
+            min={1}
+            value={(config.n as number) || 5}
+            onChange={(e) => onChange('n', parseInt(e.target.value) || 5)}
+          />
+
+          <Select
+            value={String(config.ascending || false)}
+            onValueChange={(v) => onChange('ascending', v === 'true')}
+          >
+            <SelectTrigger label="Order Direction">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="false">Top N (Descending)</SelectItem>
+              <SelectItem value="true">Bottom N (Ascending)</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={(config.includeRank as boolean) !== false}
+              onChange={(e) => onChange('includeRank', e.target.checked)}
+              className="rounded border-border-default"
+            />
+            <span className="text-small text-text-primary">Include rank column</span>
+          </label>
+        </div>
+      );
+    }
+
+    case 'first-last-per-group': {
+      const flGroupCols = (config.groupColumns as string[]) || [];
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                <label className="block text-small font-medium text-text-secondary">
+                  Group Columns
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto bg-bg-tertiary rounded-lg p-3">
+                  {availableColumns.map((col) => (
+                    <label key={col} className="flex items-center gap-2 cursor-pointer hover:bg-bg-secondary p-1.5 rounded">
+                      <input
+                        type="checkbox"
+                        checked={flGroupCols.includes(col)}
+                        onChange={(e) => {
+                          const newCols = e.target.checked
+                            ? [...flGroupCols, col]
+                            : flGroupCols.filter((c) => c !== col);
+                          onChange('groupColumns', newCols);
+                        }}
+                        className="rounded border-border-default"
+                      />
+                      <span className="text-small text-text-primary">{col}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <Select
+                value={(config.orderColumn as string) || ''}
+                onValueChange={(v) => onChange('orderColumn', v)}
+              >
+                <SelectTrigger label="Order By Column (optional)">
+                  <SelectValue placeholder="Select column to order by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Group Columns (comma-separated)"
+                value={flGroupCols.join(', ')}
+                onChange={(e) => onChange('groupColumns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                placeholder="e.g., customer_id, product"
+              />
+              <Input
+                label="Order By Column (optional)"
+                value={(config.orderColumn as string) || ''}
+                onChange={(e) => onChange('orderColumn', e.target.value)}
+                placeholder="Enter column name"
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.position as string) || 'first'}
+            onValueChange={(v) => onChange('position', v)}
+          >
+            <SelectTrigger label="Position">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="first">First Row</SelectItem>
+              <SelectItem value="last">Last Row</SelectItem>
+              <SelectItem value="both">Both First and Last</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+    }
 
     default:
       return (
