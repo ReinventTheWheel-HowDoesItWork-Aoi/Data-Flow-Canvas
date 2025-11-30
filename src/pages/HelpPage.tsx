@@ -97,6 +97,9 @@ import {
   Search,
   Code,
   Regex,
+  GitCompare,
+  ListOrdered,
+  Trophy,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -113,7 +116,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (54 blocks)
+  // Transform (64 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -168,6 +171,16 @@ const blocks: BlockInfo[] = [
   { icon: Code, name: 'Filter by Expression', description: 'Filter rows using a Python expression for advanced conditions', category: 'Transform' },
   { icon: Hash, name: 'Number Format', description: 'Format numbers with thousands separators, decimals, currency, or percentage', category: 'Transform' },
   { icon: Regex, name: 'Extract Pattern', description: 'Extract text matching a regex pattern into a new column', category: 'Transform' },
+  { icon: TrendingUp, name: 'Log Transform', description: 'Apply log, log10, log2, log1p, exp, or sqrt with zero handling', category: 'Transform' },
+  { icon: TrendingUp, name: 'Interpolate Missing', description: 'Fill gaps using linear, polynomial, spline, nearest, or time-based interpolation', category: 'Transform' },
+  { icon: Calendar, name: 'Date Truncate', description: 'Round dates to day/week/month/quarter/year/hour/minute start', category: 'Transform' },
+  { icon: GitCompare, name: 'Period over Period', description: 'Calculate YoY, MoM, WoW, QoQ, DoD changes with absolute or percent values', category: 'Transform' },
+  { icon: Hash, name: 'Hash Column', description: 'Hash column values using SHA-256, SHA-512, MD5, SHA-1, or BLAKE2', category: 'Transform' },
+  { icon: CalendarRange, name: 'Expand Date Range', description: 'Fill missing dates in time series with configurable frequency and fill methods', category: 'Transform' },
+  { icon: GitCompare, name: 'String Similarity', description: 'Calculate string similarity using Levenshtein, Jaro, Jaro-Winkler for fuzzy matching', category: 'Transform' },
+  { icon: ListOrdered, name: 'Generate Sequence', description: 'Create helper tables with number ranges, date ranges, or repeated patterns', category: 'Transform' },
+  { icon: Trophy, name: 'Top N per Group', description: 'Get top or bottom N rows per group based on a ranking column', category: 'Transform' },
+  { icon: ListFilter, name: 'First/Last per Group', description: 'Get the first, last, or both rows per group based on sort order', category: 'Transform' },
 
   // Analysis (58 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
@@ -359,6 +372,16 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Filter by Expression': { name: 'blocks.filterExpression', description: 'blockDescriptions.filterExpression' },
   'Number Format': { name: 'blocks.numberFormat', description: 'blockDescriptions.numberFormat' },
   'Extract Pattern': { name: 'blocks.extractPattern', description: 'blockDescriptions.extractPattern' },
+  'Log Transform': { name: 'blocks.logTransform', description: 'blockDescriptions.logTransform' },
+  'Interpolate Missing': { name: 'blocks.interpolateMissing', description: 'blockDescriptions.interpolateMissing' },
+  'Date Truncate': { name: 'blocks.dateTruncate', description: 'blockDescriptions.dateTruncate' },
+  'Period over Period': { name: 'blocks.periodOverPeriod', description: 'blockDescriptions.periodOverPeriod' },
+  'Hash Column': { name: 'blocks.hashColumn', description: 'blockDescriptions.hashColumn' },
+  'Expand Date Range': { name: 'blocks.expandDateRange', description: 'blockDescriptions.expandDateRange' },
+  'String Similarity': { name: 'blocks.stringSimilarity', description: 'blockDescriptions.stringSimilarity' },
+  'Generate Sequence': { name: 'blocks.generateSequence', description: 'blockDescriptions.generateSequence' },
+  'Top N per Group': { name: 'blocks.topNPerGroup', description: 'blockDescriptions.topNPerGroup' },
+  'First/Last per Group': { name: 'blocks.firstLastPerGroup', description: 'blockDescriptions.firstLastPerGroup' },
   'Statistics': { name: 'blocks.statistics', description: 'blockDescriptions.statistics' },
   'Regression': { name: 'blocks.regression', description: 'blockDescriptions.regression' },
   'Clustering': { name: 'blocks.clustering', description: 'blockDescriptions.clustering' },
@@ -535,7 +558,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">127</p>
+                <p className="text-h2 font-bold text-text-primary">137</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
