@@ -16,6 +16,7 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/Select';
+import { MultiSelect } from '@/components/ui/MultiSelect';
 import { useUIStore } from '@/stores/uiStore';
 import { useCanvasStore } from '@/stores/canvasStore';
 import { useExecutionStore } from '@/stores/executionStore';
@@ -153,6 +154,32 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'bayesian-inference': 'blocks.bayesianInference',
   'data-quality-score': 'blocks.dataQualityScore',
   'changepoint-detection': 'blocks.changepointDetection',
+  'isolation-forest': 'blocks.isolationForest',
+  'arima-forecasting': 'blocks.arimaForecasting',
+  'seasonal-decomposition': 'blocks.seasonalDecomposition',
+  'monte-carlo-simulation': 'blocks.monteCarloSimulation',
+  'propensity-score-matching': 'blocks.propensityScoreMatching',
+  'difference-in-differences': 'blocks.differenceInDifferences',
+  'factor-analysis': 'blocks.factorAnalysis',
+  'dbscan-clustering': 'blocks.dbscanClustering',
+  'elastic-net': 'blocks.elasticNet',
+  'var-analysis': 'blocks.varAnalysis',
+  'interrupted-time-series': 'blocks.interruptedTimeSeries',
+  'granger-causality': 'blocks.grangerCausality',
+  'local-outlier-factor': 'blocks.localOutlierFactor',
+  'feature-selection': 'blocks.featureSelection',
+  'outlier-treatment': 'blocks.outlierTreatment',
+  'data-drift': 'blocks.dataDrift',
+  'polynomial-features': 'blocks.polynomialFeatures',
+  'multi-output': 'blocks.multiOutput',
+  'probability-calibration': 'blocks.probabilityCalibration',
+  'tsne-reduction': 'blocks.tsneReduction',
+  'statistical-tests': 'blocks.statisticalTests',
+  'optimal-binning': 'blocks.optimalBinning',
+  'correlation-finder': 'blocks.correlationFinder',
+  'ab-test-calculator': 'blocks.abTestCalculator',
+  'target-encoding': 'blocks.targetEncoding',
+  'learning-curves': 'blocks.learningCurves',
   'chart': 'blocks.chart',
   'table': 'blocks.table',
   'correlation-matrix': 'blocks.correlationMatrix',
@@ -177,6 +204,32 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'pareto-chart': 'blocks.paretoChart',
   'parallel-coordinates': 'blocks.parallelCoordinates',
   'dendrogram': 'blocks.dendrogram',
+  'box-plot': 'blocks.boxPlot',
+  'heatmap': 'blocks.heatmap',
+  'scatter-map': 'blocks.scatterMap',
+  'grouped-histogram': 'blocks.groupedHistogram',
+  'network-graph': 'blocks.networkGraph',
+  'calendar-heatmap': 'blocks.calendarHeatmap',
+  'faceted-chart': 'blocks.facetedChart',
+  'density-plot': 'blocks.densityPlot',
+  'error-bar-chart': 'blocks.errorBarChart',
+  'dot-plot': 'blocks.dotPlot',
+  'slope-chart': 'blocks.slopeChart',
+  'grouped-bar-chart': 'blocks.groupedBarChart',
+  'bump-chart': 'blocks.bumpChart',
+  'donut-chart': 'blocks.donutChart',
+  'horizontal-bar-chart': 'blocks.horizontalBarChart',
+  'scatter-3d': 'blocks.scatter3d',
+  'contour-plot': 'blocks.contourPlot',
+  'hexbin-plot': 'blocks.hexbinPlot',
+  'ridge-plot': 'blocks.ridgePlot',
+  'strip-plot': 'blocks.stripPlot',
+  'bullet-chart': 'blocks.bulletChart',
+  'pyramid-chart': 'blocks.pyramidChart',
+  'timeline-chart': 'blocks.timelineChart',
+  'surface-3d': 'blocks.surface3d',
+  'marginal-histogram': 'blocks.marginalHistogram',
+  'dumbbell-chart': 'blocks.dumbbellChart',
   'export': 'blocks.export',
 };
 
@@ -307,6 +360,32 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'bayesian-inference': 'blockDescriptions.bayesianInference',
   'data-quality-score': 'blockDescriptions.dataQualityScore',
   'changepoint-detection': 'blockDescriptions.changepointDetection',
+  'isolation-forest': 'blockDescriptions.isolationForest',
+  'arima-forecasting': 'blockDescriptions.arimaForecasting',
+  'seasonal-decomposition': 'blockDescriptions.seasonalDecomposition',
+  'monte-carlo-simulation': 'blockDescriptions.monteCarloSimulation',
+  'propensity-score-matching': 'blockDescriptions.propensityScoreMatching',
+  'difference-in-differences': 'blockDescriptions.differenceInDifferences',
+  'factor-analysis': 'blockDescriptions.factorAnalysis',
+  'dbscan-clustering': 'blockDescriptions.dbscanClustering',
+  'elastic-net': 'blockDescriptions.elasticNet',
+  'var-analysis': 'blockDescriptions.varAnalysis',
+  'interrupted-time-series': 'blockDescriptions.interruptedTimeSeries',
+  'granger-causality': 'blockDescriptions.grangerCausality',
+  'local-outlier-factor': 'blockDescriptions.localOutlierFactor',
+  'feature-selection': 'blockDescriptions.featureSelection',
+  'outlier-treatment': 'blockDescriptions.outlierTreatment',
+  'data-drift': 'blockDescriptions.dataDrift',
+  'polynomial-features': 'blockDescriptions.polynomialFeatures',
+  'multi-output': 'blockDescriptions.multiOutput',
+  'probability-calibration': 'blockDescriptions.probabilityCalibration',
+  'tsne-reduction': 'blockDescriptions.tsneReduction',
+  'statistical-tests': 'blockDescriptions.statisticalTests',
+  'optimal-binning': 'blockDescriptions.optimalBinning',
+  'correlation-finder': 'blockDescriptions.correlationFinder',
+  'ab-test-calculator': 'blockDescriptions.abTestCalculator',
+  'target-encoding': 'blockDescriptions.targetEncoding',
+  'learning-curves': 'blockDescriptions.learningCurves',
   'chart': 'blockDescriptions.chart',
   'table': 'blockDescriptions.table',
   'correlation-matrix': 'blockDescriptions.correlationMatrix',
@@ -331,6 +410,32 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'pareto-chart': 'blockDescriptions.paretoChart',
   'parallel-coordinates': 'blockDescriptions.parallelCoordinates',
   'dendrogram': 'blockDescriptions.dendrogram',
+  'box-plot': 'blockDescriptions.boxPlot',
+  'heatmap': 'blockDescriptions.heatmap',
+  'scatter-map': 'blockDescriptions.scatterMap',
+  'grouped-histogram': 'blockDescriptions.groupedHistogram',
+  'network-graph': 'blockDescriptions.networkGraph',
+  'calendar-heatmap': 'blockDescriptions.calendarHeatmap',
+  'faceted-chart': 'blockDescriptions.facetedChart',
+  'density-plot': 'blockDescriptions.densityPlot',
+  'error-bar-chart': 'blockDescriptions.errorBarChart',
+  'dot-plot': 'blockDescriptions.dotPlot',
+  'slope-chart': 'blockDescriptions.slopeChart',
+  'grouped-bar-chart': 'blockDescriptions.groupedBarChart',
+  'bump-chart': 'blockDescriptions.bumpChart',
+  'donut-chart': 'blockDescriptions.donutChart',
+  'horizontal-bar-chart': 'blockDescriptions.horizontalBarChart',
+  'scatter-3d': 'blockDescriptions.scatter3d',
+  'contour-plot': 'blockDescriptions.contourPlot',
+  'hexbin-plot': 'blockDescriptions.hexbinPlot',
+  'ridge-plot': 'blockDescriptions.ridgePlot',
+  'strip-plot': 'blockDescriptions.stripPlot',
+  'bullet-chart': 'blockDescriptions.bulletChart',
+  'pyramid-chart': 'blockDescriptions.pyramidChart',
+  'timeline-chart': 'blockDescriptions.timelineChart',
+  'surface-3d': 'blockDescriptions.surface3d',
+  'marginal-histogram': 'blockDescriptions.marginalHistogram',
+  'dumbbell-chart': 'blockDescriptions.dumbbellChart',
   'export': 'blockDescriptions.export',
 };
 
@@ -7899,6 +8004,1415 @@ function renderConfigFields(
           <div className="p-3 bg-bg-tertiary rounded-lg">
             <p className="text-small text-text-muted">
               <strong>Outputs:</strong> Change point locations, segment statistics before/after, confidence scores.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'isolation-forest':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns for anomaly detection"
+            />
+          ) : (
+            <Input
+              label="Columns (comma-separated)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              placeholder="col1, col2, col3"
+            />
+          )}
+
+          <Input
+            label="Contamination"
+            type="number"
+            min={0}
+            max={0.5}
+            step="0.01"
+            value={(config.contamination as number) || 0.1}
+            onChange={(e) => onChange('contamination', parseFloat(e.target.value) || 0.1)}
+          />
+
+          <Input
+            label="Number of Estimators"
+            type="number"
+            min={10}
+            max={500}
+            value={(config.nEstimators as number) || 100}
+            onChange={(e) => onChange('nEstimators', parseInt(e.target.value) || 100)}
+          />
+
+          <Input
+            label="Random State"
+            type="number"
+            value={(config.randomState as number) || 42}
+            onChange={(e) => onChange('randomState', parseInt(e.target.value) || 42)}
+          />
+
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'is_anomaly'}
+            onChange={(e) => onChange('outputColumn', e.target.value || 'is_anomaly')}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Anomaly labels (-1/1), anomaly scores, feature importances.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'arima-forecasting':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+                placeholder="Enter date column name"
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+                placeholder="Enter value column name"
+              />
+            </>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <Input
+              label="p (AR order)"
+              type="number"
+              min={0}
+              max={10}
+              value={((config.order as number[]) || [1, 1, 1])[0]}
+              onChange={(e) => {
+                const order = (config.order as number[]) || [1, 1, 1];
+                onChange('order', [parseInt(e.target.value) || 1, order[1], order[2]]);
+              }}
+            />
+            <Input
+              label="d (Differencing)"
+              type="number"
+              min={0}
+              max={3}
+              value={((config.order as number[]) || [1, 1, 1])[1]}
+              onChange={(e) => {
+                const order = (config.order as number[]) || [1, 1, 1];
+                onChange('order', [order[0], parseInt(e.target.value) || 1, order[2]]);
+              }}
+            />
+            <Input
+              label="q (MA order)"
+              type="number"
+              min={0}
+              max={10}
+              value={((config.order as number[]) || [1, 1, 1])[2]}
+              onChange={(e) => {
+                const order = (config.order as number[]) || [1, 1, 1];
+                onChange('order', [order[0], order[1], parseInt(e.target.value) || 1]);
+              }}
+            />
+          </div>
+
+          <Input
+            label="Forecast Periods"
+            type="number"
+            min={1}
+            max={365}
+            value={(config.forecastPeriods as number) || 10}
+            onChange={(e) => onChange('forecastPeriods', parseInt(e.target.value) || 10)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Forecasted values, confidence intervals, model diagnostics (AIC, BIC).
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'seasonal-decomposition':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.model as string) || 'additive'}
+            onValueChange={(v) => onChange('model', v)}
+          >
+            <SelectTrigger label="Model Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="additive">Additive</SelectItem>
+              <SelectItem value="multiplicative">Multiplicative</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Period"
+            type="number"
+            min={2}
+            max={365}
+            value={(config.period as number) || 12}
+            onChange={(e) => onChange('period', parseInt(e.target.value) || 12)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Trend, seasonal, and residual components.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'monte-carlo-simulation':
+      return (
+        <div className="space-y-4">
+          <Input
+            label="Expression"
+            value={(config.expression as string) || ''}
+            onChange={(e) => onChange('expression', e.target.value)}
+            placeholder="e.g., revenue * (1 + growth_rate)"
+          />
+
+          <div className="p-3 bg-bg-secondary rounded-lg">
+            <p className="text-small text-text-muted mb-2">
+              Define variables with distributions (JSON format):
+            </p>
+            <textarea
+              className="w-full p-2 text-small bg-bg-primary border border-border-default rounded"
+              rows={4}
+              value={JSON.stringify(config.variables || {}, null, 2)}
+              onChange={(e) => {
+                try {
+                  onChange('variables', JSON.parse(e.target.value));
+                } catch {
+                  // Invalid JSON, ignore
+                }
+              }}
+              placeholder='{"revenue": {"dist": "normal", "mean": 1000, "std": 100}}'
+            />
+          </div>
+
+          <Input
+            label="Number of Simulations"
+            type="number"
+            min={100}
+            max={100000}
+            value={(config.nSimulations as number) || 10000}
+            onChange={(e) => onChange('nSimulations', parseInt(e.target.value) || 10000)}
+          />
+
+          <Input
+            label="Random State"
+            type="number"
+            value={(config.randomState as number) || 42}
+            onChange={(e) => onChange('randomState', parseInt(e.target.value) || 42)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Simulation results, percentiles (5th, 25th, 50th, 75th, 95th), statistics.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'propensity-score-matching':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.treatmentColumn as string) || ''}
+                onValueChange={(v) => onChange('treatmentColumn', v)}
+              >
+                <SelectTrigger label="Treatment Column">
+                  <SelectValue placeholder="Select treatment indicator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <MultiSelect
+                label="Covariates"
+                options={availableColumns.map(col => ({ value: col, label: col }))}
+                selected={(config.covariates as string[]) || []}
+                onChange={(values) => onChange('covariates', values)}
+                placeholder="Select matching covariates"
+              />
+            </>
+          ) : (
+            <>
+              <Input
+                label="Treatment Column"
+                value={(config.treatmentColumn as string) || ''}
+                onChange={(e) => onChange('treatmentColumn', e.target.value)}
+              />
+              <Input
+                label="Covariates (comma-separated)"
+                value={((config.covariates as string[]) || []).join(', ')}
+                onChange={(e) => onChange('covariates', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              />
+            </>
+          )}
+
+          <Select
+            value={(config.method as string) || 'nearest'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Matching Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="nearest">Nearest Neighbor</SelectItem>
+              <SelectItem value="caliper">Caliper Matching</SelectItem>
+              <SelectItem value="radius">Radius Matching</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Caliper"
+            type="number"
+            min={0}
+            max={1}
+            step="0.05"
+            value={(config.caliper as number) || 0.2}
+            onChange={(e) => onChange('caliper', parseFloat(e.target.value) || 0.2)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Matched pairs, propensity scores, balance diagnostics.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'difference-in-differences':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.outcomeColumn as string) || ''}
+                onValueChange={(v) => onChange('outcomeColumn', v)}
+              >
+                <SelectTrigger label="Outcome Column">
+                  <SelectValue placeholder="Select outcome variable" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.treatmentColumn as string) || ''}
+                onValueChange={(v) => onChange('treatmentColumn', v)}
+              >
+                <SelectTrigger label="Treatment Column">
+                  <SelectValue placeholder="Select treatment indicator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.periodColumn as string) || ''}
+                onValueChange={(v) => onChange('periodColumn', v)}
+              >
+                <SelectTrigger label="Period Column">
+                  <SelectValue placeholder="Select pre/post indicator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.entityColumn as string) || ''}
+                onValueChange={(v) => onChange('entityColumn', v)}
+              >
+                <SelectTrigger label="Entity Column (optional)">
+                  <SelectValue placeholder="Select entity identifier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Outcome Column"
+                value={(config.outcomeColumn as string) || ''}
+                onChange={(e) => onChange('outcomeColumn', e.target.value)}
+              />
+              <Input
+                label="Treatment Column"
+                value={(config.treatmentColumn as string) || ''}
+                onChange={(e) => onChange('treatmentColumn', e.target.value)}
+              />
+              <Input
+                label="Period Column"
+                value={(config.periodColumn as string) || ''}
+                onChange={(e) => onChange('periodColumn', e.target.value)}
+              />
+              <Input
+                label="Entity Column (optional)"
+                value={(config.entityColumn as string) || ''}
+                onChange={(e) => onChange('entityColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> DiD estimate, standard error, p-value, parallel trends test.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'factor-analysis':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns for factor analysis"
+            />
+          ) : (
+            <Input
+              label="Columns (comma-separated)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          )}
+
+          <Input
+            label="Number of Factors"
+            type="number"
+            min={1}
+            max={20}
+            value={(config.nFactors as number) || 3}
+            onChange={(e) => onChange('nFactors', parseInt(e.target.value) || 3)}
+          />
+
+          <Select
+            value={(config.rotation as string) || 'varimax'}
+            onValueChange={(v) => onChange('rotation', v)}
+          >
+            <SelectTrigger label="Rotation">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="varimax">Varimax</SelectItem>
+              <SelectItem value="promax">Promax</SelectItem>
+              <SelectItem value="quartimax">Quartimax</SelectItem>
+              <SelectItem value="none">None</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={(config.method as string) || 'principal'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Extraction Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="principal">Principal Axis</SelectItem>
+              <SelectItem value="ml">Maximum Likelihood</SelectItem>
+              <SelectItem value="minres">Minimum Residual</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Factor loadings, communalities, variance explained, factor scores.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'dbscan-clustering':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns for clustering"
+            />
+          ) : (
+            <Input
+              label="Columns (comma-separated)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          )}
+
+          <Input
+            label="Epsilon (eps)"
+            type="number"
+            min={0.01}
+            max={10}
+            step="0.1"
+            value={(config.eps as number) || 0.5}
+            onChange={(e) => onChange('eps', parseFloat(e.target.value) || 0.5)}
+          />
+
+          <Input
+            label="Min Samples"
+            type="number"
+            min={1}
+            max={100}
+            value={(config.minSamples as number) || 5}
+            onChange={(e) => onChange('minSamples', parseInt(e.target.value) || 5)}
+          />
+
+          <Select
+            value={(config.metric as string) || 'euclidean'}
+            onValueChange={(v) => onChange('metric', v)}
+          >
+            <SelectTrigger label="Distance Metric">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="euclidean">Euclidean</SelectItem>
+              <SelectItem value="manhattan">Manhattan</SelectItem>
+              <SelectItem value="cosine">Cosine</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'cluster'}
+            onChange={(e) => onChange('outputColumn', e.target.value || 'cluster')}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Cluster labels (-1 for noise), cluster statistics, silhouette score.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'elastic-net':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <MultiSelect
+                label="Features"
+                options={availableColumns.map(col => ({ value: col, label: col }))}
+                selected={(config.features as string[]) || []}
+                onChange={(values) => onChange('features', values)}
+                placeholder="Select feature columns"
+              />
+
+              <Select
+                value={(config.target as string) || ''}
+                onValueChange={(v) => onChange('target', v)}
+              >
+                <SelectTrigger label="Target">
+                  <SelectValue placeholder="Select target column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Features (comma-separated)"
+                value={((config.features as string[]) || []).join(', ')}
+                onChange={(e) => onChange('features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+              />
+              <Input
+                label="Target"
+                value={(config.target as string) || ''}
+                onChange={(e) => onChange('target', e.target.value)}
+              />
+            </>
+          )}
+
+          <Input
+            label="Alpha (Regularization Strength)"
+            type="number"
+            min={0}
+            max={10}
+            step="0.1"
+            value={(config.alpha as number) || 1.0}
+            onChange={(e) => onChange('alpha', parseFloat(e.target.value) || 1.0)}
+          />
+
+          <Input
+            label="L1 Ratio (0=Ridge, 1=Lasso)"
+            type="number"
+            min={0}
+            max={1}
+            step="0.1"
+            value={(config.l1Ratio as number) || 0.5}
+            onChange={(e) => onChange('l1Ratio', parseFloat(e.target.value) || 0.5)}
+          />
+
+          <Input
+            label="Max Iterations"
+            type="number"
+            min={100}
+            max={10000}
+            value={(config.maxIter as number) || 1000}
+            onChange={(e) => onChange('maxIter', parseInt(e.target.value) || 1000)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Coefficients, R-squared, MSE, feature importance rankings.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'var-analysis':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select time series columns"
+            />
+          ) : (
+            <Input
+              label="Columns (comma-separated)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          )}
+
+          <Input
+            label="Max Lags"
+            type="number"
+            min={1}
+            max={50}
+            value={(config.maxLags as number) || 10}
+            onChange={(e) => onChange('maxLags', parseInt(e.target.value) || 10)}
+          />
+
+          <Select
+            value={(config.criterion as string) || 'aic'}
+            onValueChange={(v) => onChange('criterion', v)}
+          >
+            <SelectTrigger label="Selection Criterion">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="aic">AIC</SelectItem>
+              <SelectItem value="bic">BIC</SelectItem>
+              <SelectItem value="hqic">HQIC</SelectItem>
+              <SelectItem value="fpe">FPE</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Forecast Periods"
+            type="number"
+            min={1}
+            max={100}
+            value={(config.forecastPeriods as number) || 10}
+            onChange={(e) => onChange('forecastPeriods', parseInt(e.target.value) || 10)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> VAR coefficients, impulse responses, forecasts, Granger causality results.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'interrupted-time-series':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.dateColumn as string) || ''}
+                onValueChange={(v) => onChange('dateColumn', v)}
+              >
+                <SelectTrigger label="Date Column">
+                  <SelectValue placeholder="Select date column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.valueColumn as string) || ''}
+                onValueChange={(v) => onChange('valueColumn', v)}
+              >
+                <SelectTrigger label="Value Column">
+                  <SelectValue placeholder="Select value column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="Date Column"
+                value={(config.dateColumn as string) || ''}
+                onChange={(e) => onChange('dateColumn', e.target.value)}
+              />
+              <Input
+                label="Value Column"
+                value={(config.valueColumn as string) || ''}
+                onChange={(e) => onChange('valueColumn', e.target.value)}
+              />
+            </>
+          )}
+
+          <Input
+            label="Intervention Date"
+            type="date"
+            value={(config.interventionDate as string) || ''}
+            onChange={(e) => onChange('interventionDate', e.target.value)}
+          />
+
+          <Input
+            label="Number of Segments"
+            type="number"
+            min={2}
+            max={5}
+            value={(config.segments as number) || 2}
+            onChange={(e) => onChange('segments', parseInt(e.target.value) || 2)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Level change, slope change, pre/post trends, counterfactual estimates.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'granger-causality':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column1 as string) || ''}
+                onValueChange={(v) => onChange('column1', v)}
+              >
+                <SelectTrigger label="First Column (Potential Cause)">
+                  <SelectValue placeholder="Select first column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={(config.column2 as string) || ''}
+                onValueChange={(v) => onChange('column2', v)}
+              >
+                <SelectTrigger label="Second Column (Potential Effect)">
+                  <SelectValue placeholder="Select second column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input
+                label="First Column (Potential Cause)"
+                value={(config.column1 as string) || ''}
+                onChange={(e) => onChange('column1', e.target.value)}
+              />
+              <Input
+                label="Second Column (Potential Effect)"
+                value={(config.column2 as string) || ''}
+                onChange={(e) => onChange('column2', e.target.value)}
+              />
+            </>
+          )}
+
+          <Input
+            label="Max Lag"
+            type="number"
+            min={1}
+            max={50}
+            value={(config.maxLag as number) || 10}
+            onChange={(e) => onChange('maxLag', parseInt(e.target.value) || 10)}
+          />
+
+          <Input
+            label="Significance Level"
+            type="number"
+            min={0.01}
+            max={0.1}
+            step="0.01"
+            value={(config.significanceLevel as number) || 0.05}
+            onChange={(e) => onChange('significanceLevel', parseFloat(e.target.value) || 0.05)}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> F-statistics, p-values for each lag, causality conclusion.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'local-outlier-factor':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns for outlier detection"
+            />
+          ) : (
+            <Input
+              label="Columns (comma-separated)"
+              value={((config.columns as string[]) || []).join(', ')}
+              onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          )}
+
+          <Input
+            label="Number of Neighbors"
+            type="number"
+            min={2}
+            max={100}
+            value={(config.nNeighbors as number) || 20}
+            onChange={(e) => onChange('nNeighbors', parseInt(e.target.value) || 20)}
+          />
+
+          <Input
+            label="Contamination"
+            type="number"
+            min={0}
+            max={0.5}
+            step="0.01"
+            value={(config.contamination as number) || 0.1}
+            onChange={(e) => onChange('contamination', parseFloat(e.target.value) || 0.1)}
+          />
+
+          <Select
+            value={(config.algorithm as string) || 'auto'}
+            onValueChange={(v) => onChange('algorithm', v)}
+          >
+            <SelectTrigger label="Algorithm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto</SelectItem>
+              <SelectItem value="ball_tree">Ball Tree</SelectItem>
+              <SelectItem value="kd_tree">KD Tree</SelectItem>
+              <SelectItem value="brute">Brute Force</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'lof_score'}
+            onChange={(e) => onChange('outputColumn', e.target.value || 'lof_score')}
+          />
+
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> LOF scores (negative values are outliers), outlier labels.
+            </p>
+          </div>
+        </div>
+      );
+
+    case 'feature-selection':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Feature Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.features as string[]) || []}
+              onChange={(values) => onChange('features', values)}
+              placeholder="Select features (or leave empty for all numeric)"
+            />
+          ) : (
+            <Input
+              label="Feature Columns (comma-separated)"
+              value={((config.features as string[]) || []).join(', ')}
+              onChange={(e) => onChange('features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+            />
+          )}
+          {availableColumns.length > 0 ? (
+            <Select value={(config.target as string) || ''} onValueChange={(v) => onChange('target', v)}>
+              <SelectTrigger label="Target Column"><SelectValue placeholder="Select target" /></SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input label="Target Column" value={(config.target as string) || ''} onChange={(e) => onChange('target', e.target.value)} />
+          )}
+          <Select value={(config.method as string) || 'selectkbest'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="selectkbest">SelectKBest</SelectItem>
+              <SelectItem value="rfe">Recursive Feature Elimination</SelectItem>
+              <SelectItem value="mutual_info">Mutual Information</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Number of Features" type="number" min={1} value={(config.nFeatures as number) || 10} onChange={(e) => onChange('nFeatures', parseInt(e.target.value) || 10)} />
+          <Select value={(config.scoreFunc as string) || 'f_classif'} onValueChange={(v) => onChange('scoreFunc', v)}>
+            <SelectTrigger label="Score Function"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="f_classif">F-statistic (ANOVA)</SelectItem>
+              <SelectItem value="mutual_info">Mutual Information</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'outlier-treatment':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns (or leave empty for all numeric)"
+            />
+          ) : (
+            <Input label="Columns (comma-separated)" value={((config.columns as string[]) || []).join(', ')} onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Select value={(config.method as string) || 'iqr'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Detection Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="iqr">IQR (Interquartile Range)</SelectItem>
+              <SelectItem value="zscore">Z-Score</SelectItem>
+              <SelectItem value="percentile">Percentile</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={(config.action as string) || 'cap'} onValueChange={(v) => onChange('action', v)}>
+            <SelectTrigger label="Treatment Action"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cap">Cap (Winsorize)</SelectItem>
+              <SelectItem value="remove">Remove Rows</SelectItem>
+              <SelectItem value="null">Set to Null</SelectItem>
+              <SelectItem value="mean">Replace with Mean</SelectItem>
+              <SelectItem value="median">Replace with Median</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Threshold" type="number" step="0.1" value={(config.threshold as number) || 1.5} onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 1.5)} />
+        </div>
+      );
+
+    case 'data-drift':
+      return (
+        <div className="space-y-4">
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+            <p className="text-small text-text-muted">Connect two data sources: Reference (baseline) and Current data.</p>
+          </div>
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns to Compare"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns (or leave empty for all numeric)"
+            />
+          ) : (
+            <Input label="Columns (comma-separated)" value={((config.columns as string[]) || []).join(', ')} onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Select value={(config.method as string) || 'ks_test'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Detection Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ks_test">KS Test</SelectItem>
+              <SelectItem value="psi">PSI (Population Stability Index)</SelectItem>
+              <SelectItem value="both">Both</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Significance Threshold" type="number" step="0.01" value={(config.threshold as number) || 0.05} onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 0.05)} />
+        </div>
+      );
+
+    case 'polynomial-features':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns (max 10)"
+            />
+          ) : (
+            <Input label="Columns (comma-separated)" value={((config.columns as string[]) || []).join(', ')} onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Input label="Polynomial Degree" type="number" min={2} max={4} value={(config.degree as number) || 2} onChange={(e) => onChange('degree', parseInt(e.target.value) || 2)} />
+          <div className="flex items-center space-x-2">
+            <input type="checkbox" id="interactionOnly" checked={(config.interactionOnly as boolean) || false} onChange={(e) => onChange('interactionOnly', e.target.checked)} className="rounded" />
+            <label htmlFor="interactionOnly" className="text-small">Interaction terms only (no powers)</label>
+          </div>
+        </div>
+      );
+
+    case 'multi-output':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Feature Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.features as string[]) || []}
+              onChange={(values) => onChange('features', values)}
+              placeholder="Select features (or leave empty for auto)"
+            />
+          ) : (
+            <Input label="Features (comma-separated)" value={((config.features as string[]) || []).join(', ')} onChange={(e) => onChange('features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Target Columns (min 2)"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.targets as string[]) || []}
+              onChange={(values) => onChange('targets', values)}
+              placeholder="Select multiple targets"
+            />
+          ) : (
+            <Input label="Targets (comma-separated)" value={((config.targets as string[]) || []).join(', ')} onChange={(e) => onChange('targets', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Select value={(config.taskType as string) || 'auto'} onValueChange={(v) => onChange('taskType', v)}>
+            <SelectTrigger label="Task Type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto-detect</SelectItem>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Test Size" type="number" min={0.1} max={0.5} step="0.05" value={(config.testSize as number) || 0.2} onChange={(e) => onChange('testSize', parseFloat(e.target.value) || 0.2)} />
+        </div>
+      );
+
+    case 'probability-calibration':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select value={(config.probabilityColumn as string) || ''} onValueChange={(v) => onChange('probabilityColumn', v)}>
+              <SelectTrigger label="Probability Column"><SelectValue placeholder="Select probability column" /></SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input label="Probability Column" value={(config.probabilityColumn as string) || ''} onChange={(e) => onChange('probabilityColumn', e.target.value)} />
+          )}
+          {availableColumns.length > 0 ? (
+            <Select value={(config.actualColumn as string) || ''} onValueChange={(v) => onChange('actualColumn', v)}>
+              <SelectTrigger label="Actual Column (0/1)"><SelectValue placeholder="Select actual column" /></SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input label="Actual Column" value={(config.actualColumn as string) || ''} onChange={(e) => onChange('actualColumn', e.target.value)} />
+          )}
+          <Select value={(config.method as string) || 'isotonic'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Calibration Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="isotonic">Isotonic Regression</SelectItem>
+              <SelectItem value="platt">Platt Scaling (Logistic)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Number of Bins" type="number" min={5} max={20} value={(config.nBins as number) || 10} onChange={(e) => onChange('nBins', parseInt(e.target.value) || 10)} />
+        </div>
+      );
+
+    case 'tsne-reduction':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Feature Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.features as string[]) || []}
+              onChange={(values) => onChange('features', values)}
+              placeholder="Select features (or leave empty for all numeric)"
+            />
+          ) : (
+            <Input label="Features (comma-separated)" value={((config.features as string[]) || []).join(', ')} onChange={(e) => onChange('features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Select value={String((config.nComponents as number) || 2)} onValueChange={(v) => onChange('nComponents', parseInt(v))}>
+            <SelectTrigger label="Output Dimensions"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="2">2D</SelectItem>
+              <SelectItem value="3">3D</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Perplexity" type="number" min={5} max={50} value={(config.perplexity as number) || 30} onChange={(e) => onChange('perplexity', parseInt(e.target.value) || 30)} />
+          <Input label="Learning Rate" type="number" min={10} max={1000} value={(config.learningRate as number) || 200} onChange={(e) => onChange('learningRate', parseInt(e.target.value) || 200)} />
+          <Input label="Iterations" type="number" min={250} max={5000} value={(config.nIter as number) || 1000} onChange={(e) => onChange('nIter', parseInt(e.target.value) || 1000)} />
+        </div>
+      );
+
+    case 'statistical-tests':
+      return (
+        <div className="space-y-4">
+          <Select value={(config.testType as string) || 'mann_whitney'} onValueChange={(v) => onChange('testType', v)}>
+            <SelectTrigger label="Test Type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mann_whitney">Mann-Whitney U Test</SelectItem>
+              <SelectItem value="wilcoxon">Wilcoxon Signed-Rank</SelectItem>
+              <SelectItem value="kruskal_wallis">Kruskal-Wallis H Test</SelectItem>
+              <SelectItem value="levene">Levene Test (Variance)</SelectItem>
+            </SelectContent>
+          </Select>
+          {((config.testType as string) === 'mann_whitney' || (config.testType as string) === 'wilcoxon') && (
+            <>
+              {availableColumns.length > 0 ? (
+                <>
+                  <Select value={(config.column1 as string) || ''} onValueChange={(v) => onChange('column1', v)}>
+                    <SelectTrigger label="Column 1"><SelectValue placeholder="Select first column" /></SelectTrigger>
+                    <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+                  </Select>
+                  <Select value={(config.column2 as string) || ''} onValueChange={(v) => onChange('column2', v)}>
+                    <SelectTrigger label="Column 2"><SelectValue placeholder="Select second column" /></SelectTrigger>
+                    <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Input label="Column 1" value={(config.column1 as string) || ''} onChange={(e) => onChange('column1', e.target.value)} />
+                  <Input label="Column 2" value={(config.column2 as string) || ''} onChange={(e) => onChange('column2', e.target.value)} />
+                </>
+              )}
+            </>
+          )}
+          {((config.testType as string) === 'kruskal_wallis' || (config.testType as string) === 'levene') && (
+            <>
+              {availableColumns.length > 0 ? (
+                <>
+                  <Select value={(config.groupColumn as string) || ''} onValueChange={(v) => onChange('groupColumn', v)}>
+                    <SelectTrigger label="Group Column"><SelectValue placeholder="Select group column" /></SelectTrigger>
+                    <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+                  </Select>
+                  <Select value={(config.valueColumn as string) || ''} onValueChange={(v) => onChange('valueColumn', v)}>
+                    <SelectTrigger label="Value Column"><SelectValue placeholder="Select value column" /></SelectTrigger>
+                    <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  <Input label="Group Column" value={(config.groupColumn as string) || ''} onChange={(e) => onChange('groupColumn', e.target.value)} />
+                  <Input label="Value Column" value={(config.valueColumn as string) || ''} onChange={(e) => onChange('valueColumn', e.target.value)} />
+                </>
+              )}
+            </>
+          )}
+          <Input label="Alpha (Significance)" type="number" step="0.01" value={(config.alpha as number) || 0.05} onChange={(e) => onChange('alpha', parseFloat(e.target.value) || 0.05)} />
+        </div>
+      );
+
+    case 'optimal-binning':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select value={(config.column as string) || ''} onValueChange={(v) => onChange('column', v)}>
+              <SelectTrigger label="Column to Bin"><SelectValue placeholder="Select column" /></SelectTrigger>
+              <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+            </Select>
+          ) : (
+            <Input label="Column" value={(config.column as string) || ''} onChange={(e) => onChange('column', e.target.value)} />
+          )}
+          {availableColumns.length > 0 ? (
+            <Select value={(config.target as string) || ''} onValueChange={(v) => onChange('target', v)}>
+              <SelectTrigger label="Target Column (optional)"><SelectValue placeholder="Select target for WoE/IV" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input label="Target Column (optional)" value={(config.target as string) || ''} onChange={(e) => onChange('target', e.target.value)} />
+          )}
+          <Select value={(config.method as string) || 'quantile'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Binning Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="quantile">Quantile (Equal Frequency)</SelectItem>
+              <SelectItem value="equal_width">Equal Width</SelectItem>
+              <SelectItem value="tree">Decision Tree</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="Number of Bins" type="number" min={2} max={20} value={(config.nBins as number) || 10} onChange={(e) => onChange('nBins', parseInt(e.target.value) || 10)} />
+        </div>
+      );
+
+    case 'correlation-finder':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns (or leave empty for all numeric)"
+            />
+          ) : (
+            <Input label="Columns (comma-separated)" value={((config.columns as string[]) || []).join(', ')} onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          <Select value={(config.method as string) || 'pearson'} onValueChange={(v) => onChange('method', v)}>
+            <SelectTrigger label="Correlation Method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pearson">Pearson</SelectItem>
+              <SelectItem value="spearman">Spearman</SelectItem>
+              <SelectItem value="kendall">Kendall</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="High Correlation Threshold" type="number" step="0.1" min={0.5} max={1} value={(config.threshold as number) || 0.7} onChange={(e) => onChange('threshold', parseFloat(e.target.value) || 0.7)} />
+          <Input label="Show Top N Pairs" type="number" min={5} max={100} value={(config.showTopN as number) || 20} onChange={(e) => onChange('showTopN', parseInt(e.target.value) || 20)} />
+        </div>
+      );
+
+    case 'ab-test-calculator':
+      return (
+        <div className="space-y-4">
+          <Select value={(config.testType as string) || 'conversion'} onValueChange={(v) => onChange('testType', v)}>
+            <SelectTrigger label="Test Type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="conversion">Conversion Rate (Binary)</SelectItem>
+              <SelectItem value="continuous">Continuous Metric</SelectItem>
+            </SelectContent>
+          </Select>
+          {availableColumns.length > 0 ? (
+            <>
+              <Select value={(config.groupColumn as string) || ''} onValueChange={(v) => onChange('groupColumn', v)}>
+                <SelectTrigger label="Group Column (A/B)"><SelectValue placeholder="Select group column" /></SelectTrigger>
+                <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+              </Select>
+              <Select value={(config.valueColumn as string) || ''} onValueChange={(v) => onChange('valueColumn', v)}>
+                <SelectTrigger label="Value/Metric Column"><SelectValue placeholder="Select value column" /></SelectTrigger>
+                <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+              </Select>
+            </>
+          ) : (
+            <>
+              <Input label="Group Column" value={(config.groupColumn as string) || ''} onChange={(e) => onChange('groupColumn', e.target.value)} />
+              <Input label="Value Column" value={(config.valueColumn as string) || ''} onChange={(e) => onChange('valueColumn', e.target.value)} />
+            </>
+          )}
+          <Input label="Confidence Level" type="number" step="0.01" min={0.9} max={0.99} value={(config.confidenceLevel as number) || 0.95} onChange={(e) => onChange('confidenceLevel', parseFloat(e.target.value) || 0.95)} />
+        </div>
+      );
+
+    case 'target-encoding':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Categorical Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(values) => onChange('columns', values)}
+              placeholder="Select columns to encode"
+            />
+          ) : (
+            <Input label="Columns (comma-separated)" value={((config.columns as string[]) || []).join(', ')} onChange={(e) => onChange('columns', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          {availableColumns.length > 0 ? (
+            <Select value={(config.target as string) || ''} onValueChange={(v) => onChange('target', v)}>
+              <SelectTrigger label="Target Column"><SelectValue placeholder="Select target" /></SelectTrigger>
+              <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+            </Select>
+          ) : (
+            <Input label="Target Column" value={(config.target as string) || ''} onChange={(e) => onChange('target', e.target.value)} />
+          )}
+          <Input label="Smoothing Parameter" type="number" min={1} max={100} value={(config.smoothing as number) || 10} onChange={(e) => onChange('smoothing', parseInt(e.target.value) || 10)} />
+          <Select value={(config.handleUnknown as string) || 'global_mean'} onValueChange={(v) => onChange('handleUnknown', v)}>
+            <SelectTrigger label="Handle Unknown"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="global_mean">Global Mean</SelectItem>
+              <SelectItem value="null">Set to Null</SelectItem>
+              <SelectItem value="zero">Set to Zero</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'learning-curves':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Feature Columns"
+              options={availableColumns.map(col => ({ value: col, label: col }))}
+              selected={(config.features as string[]) || []}
+              onChange={(values) => onChange('features', values)}
+              placeholder="Select features (or leave empty for auto)"
+            />
+          ) : (
+            <Input label="Features (comma-separated)" value={((config.features as string[]) || []).join(', ')} onChange={(e) => onChange('features', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} />
+          )}
+          {availableColumns.length > 0 ? (
+            <Select value={(config.target as string) || ''} onValueChange={(v) => onChange('target', v)}>
+              <SelectTrigger label="Target Column"><SelectValue placeholder="Select target" /></SelectTrigger>
+              <SelectContent>{availableColumns.map((col) => (<SelectItem key={col} value={col}>{col}</SelectItem>))}</SelectContent>
+            </Select>
+          ) : (
+            <Input label="Target Column" value={(config.target as string) || ''} onChange={(e) => onChange('target', e.target.value)} />
+          )}
+          <Select value={(config.modelType as string) || 'random_forest'} onValueChange={(v) => onChange('modelType', v)}>
+            <SelectTrigger label="Model Type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="random_forest">Random Forest</SelectItem>
+              <SelectItem value="linear">Linear Model</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={(config.taskType as string) || 'auto'} onValueChange={(v) => onChange('taskType', v)}>
+            <SelectTrigger label="Task Type"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">Auto-detect</SelectItem>
+              <SelectItem value="classification">Classification</SelectItem>
+              <SelectItem value="regression">Regression</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input label="CV Folds" type="number" min={2} max={10} value={(config.cvFolds as number) || 5} onChange={(e) => onChange('cvFolds', parseInt(e.target.value) || 5)} />
+          <div className="p-3 bg-bg-tertiary rounded-lg">
+            <p className="text-small text-text-muted">
+              <strong>Outputs:</strong> Training/test scores at different data sizes, bias/variance diagnosis.
             </p>
           </div>
         </div>
