@@ -2280,6 +2280,580 @@ output = df
 `,
   },
 
+  'explode-column': {
+    type: 'explode-column',
+    category: 'transform',
+    label: 'Explode Column',
+    description: 'Expand list/array values in a column into separate rows',
+    icon: 'Expand',
+    defaultConfig: {
+      column: '',
+      delimiter: ',',
+      ignoreIndex: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import ast
+
+df = input_data.copy()
+column = config.get('column', '')
+delimiter = config.get('delimiter', ',')
+ignore_index = config.get('ignoreIndex', True)
+
+if not column:
+    raise ValueError("Explode Column: Please specify a column to explode in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Explode Column: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Try to parse string representations of lists, or split by delimiter
+def parse_value(x):
+    if pd.isna(x):
+        return [x]
+    if isinstance(x, (list, tuple)):
+        return list(x)
+    if isinstance(x, str):
+        # Try to parse as Python literal (list, tuple)
+        try:
+            parsed = ast.literal_eval(x)
+            if isinstance(parsed, (list, tuple)):
+                return list(parsed)
+        except (ValueError, SyntaxError):
+            pass
+        # Fall back to splitting by delimiter
+        if delimiter:
+            return [item.strip() for item in x.split(delimiter)]
+    return [x]
+
+df[column] = df[column].apply(parse_value)
+df = df.explode(column, ignore_index=ignore_index)
+
+output = df
+`,
+  },
+
+  'add-constant-column': {
+    type: 'add-constant-column',
+    category: 'transform',
+    label: 'Add Constant Column',
+    description: 'Add a new column with a fixed value for all rows',
+    icon: 'PlusSquare',
+    defaultConfig: {
+      columnName: 'new_column',
+      value: '',
+      valueType: 'string',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column_name = config.get('columnName', 'new_column')
+value = config.get('value', '')
+value_type = config.get('valueType', 'string')
+
+if not column_name:
+    raise ValueError("Add Constant Column: Please specify a column name in the Config tab")
+
+# Convert value to the specified type
+if value_type == 'integer':
+    try:
+        value = int(float(value)) if value != '' else 0
+    except (ValueError, TypeError):
+        raise ValueError(f"Add Constant Column: Cannot convert '{value}' to integer")
+elif value_type == 'float':
+    try:
+        value = float(value) if value != '' else 0.0
+    except (ValueError, TypeError):
+        raise ValueError(f"Add Constant Column: Cannot convert '{value}' to float")
+elif value_type == 'boolean':
+    value = str(value).lower() in ('true', '1', 'yes')
+elif value_type == 'null':
+    value = np.nan
+# else keep as string
+
+df[column_name] = value
+
+output = df
+`,
+  },
+
+  'drop-columns': {
+    type: 'drop-columns',
+    category: 'transform',
+    label: 'Drop Columns',
+    description: 'Remove specific columns from the dataset',
+    icon: 'Trash2',
+    defaultConfig: {
+      columns: [],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+columns = config.get('columns', [])
+
+if not columns:
+    raise ValueError("Drop Columns: Please specify columns to drop in the Config tab")
+
+# Validate columns exist
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Drop Columns: Column(s) not found: {', '.join(missing)}. Available: {', '.join(df.columns.tolist())}")
+
+df = df.drop(columns=columns)
+
+output = df
+`,
+  },
+
+  'flatten-json': {
+    type: 'flatten-json',
+    category: 'transform',
+    label: 'Flatten JSON',
+    description: 'Expand nested dict/JSON columns into separate columns',
+    icon: 'Layers',
+    defaultConfig: {
+      column: '',
+      prefix: '',
+      separator: '_',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import json
+import ast
+
+df = input_data.copy()
+column = config.get('column', '')
+prefix = config.get('prefix', '')
+separator = config.get('separator', '_')
+
+if not column:
+    raise ValueError("Flatten JSON: Please specify a column to flatten in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Flatten JSON: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Parse JSON/dict strings
+def parse_json(x):
+    if pd.isna(x):
+        return {}
+    if isinstance(x, dict):
+        return x
+    if isinstance(x, str):
+        try:
+            return json.loads(x)
+        except json.JSONDecodeError:
+            try:
+                return ast.literal_eval(x)
+            except (ValueError, SyntaxError):
+                return {}
+    return {}
+
+parsed = df[column].apply(parse_json)
+flat_df = pd.json_normalize(parsed, sep=separator)
+
+# Add prefix if specified
+if prefix:
+    flat_df.columns = [f"{prefix}{separator}{col}" for col in flat_df.columns]
+
+# Drop original column and join flattened columns
+df = df.drop(columns=[column])
+df = pd.concat([df.reset_index(drop=True), flat_df.reset_index(drop=True)], axis=1)
+
+output = df
+`,
+  },
+
+  'coalesce-columns': {
+    type: 'coalesce-columns',
+    category: 'transform',
+    label: 'Coalesce Columns',
+    description: 'Get the first non-null value from multiple columns',
+    icon: 'Merge',
+    defaultConfig: {
+      columns: [],
+      outputColumn: 'coalesced',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+output_col = config.get('outputColumn', 'coalesced')
+
+if not columns or len(columns) < 2:
+    raise ValueError("Coalesce Columns: Please specify at least 2 columns to coalesce in the Config tab")
+
+if not output_col:
+    output_col = 'coalesced'
+
+# Validate columns exist
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Coalesce Columns: Column(s) not found: {', '.join(missing)}. Available: {', '.join(df.columns.tolist())}")
+
+# Get first non-null value across specified columns
+df[output_col] = df[columns].bfill(axis=1).iloc[:, 0]
+
+output = df
+`,
+  },
+
+  'reorder-columns': {
+    type: 'reorder-columns',
+    category: 'transform',
+    label: 'Reorder Columns',
+    description: 'Rearrange column order in the dataset',
+    icon: 'ArrowUpDown',
+    defaultConfig: {
+      columns: [],
+      position: 'start',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+columns = config.get('columns', [])
+position = config.get('position', 'start')
+
+if not columns:
+    raise ValueError("Reorder Columns: Please specify columns to reorder in the Config tab")
+
+# Validate columns exist
+missing = [c for c in columns if c not in df.columns]
+if missing:
+    raise ValueError(f"Reorder Columns: Column(s) not found: {', '.join(missing)}. Available: {', '.join(df.columns.tolist())}")
+
+# Get remaining columns (not in the reorder list)
+remaining = [c for c in df.columns if c not in columns]
+
+if position == 'start':
+    new_order = columns + remaining
+elif position == 'end':
+    new_order = remaining + columns
+elif position == 'custom':
+    # Use the exact order specified (columns should contain all columns)
+    new_order = columns
+else:
+    new_order = columns + remaining
+
+df = df[new_order]
+
+output = df
+`,
+  },
+
+  'trim-text': {
+    type: 'trim-text',
+    category: 'transform',
+    label: 'Trim & Clean Text',
+    description: 'Remove whitespace and clean text formatting',
+    icon: 'Eraser',
+    defaultConfig: {
+      columns: [],
+      trimWhitespace: true,
+      collapseSpaces: false,
+      removeNonPrintable: false,
+      applyToAll: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+
+df = input_data.copy()
+columns = config.get('columns', [])
+trim_whitespace = config.get('trimWhitespace', True)
+collapse_spaces = config.get('collapseSpaces', False)
+remove_non_printable = config.get('removeNonPrintable', False)
+apply_to_all = config.get('applyToAll', False)
+
+# Determine which columns to process
+if apply_to_all:
+    cols_to_process = df.select_dtypes(include=['object']).columns.tolist()
+elif columns:
+    cols_to_process = columns
+else:
+    raise ValueError("Trim & Clean Text: Please specify columns or enable 'Apply to all text columns' in the Config tab")
+
+# Validate columns exist
+missing = [c for c in cols_to_process if c not in df.columns]
+if missing:
+    raise ValueError(f"Trim & Clean Text: Column(s) not found: {', '.join(missing)}")
+
+def clean_text(x):
+    if pd.isna(x) or not isinstance(x, str):
+        return x
+    result = x
+    if remove_non_printable:
+        result = ''.join(char for char in result if char.isprintable() or char in '\\n\\t')
+    if collapse_spaces:
+        result = re.sub(r'\\s+', ' ', result)
+    if trim_whitespace:
+        result = result.strip()
+    return result
+
+for col in cols_to_process:
+    df[col] = df[col].apply(clean_text)
+
+output = df
+`,
+  },
+
+  'lookup-vlookup': {
+    type: 'lookup-vlookup',
+    category: 'transform',
+    label: 'Lookup (VLOOKUP)',
+    description: 'Match and retrieve values from another dataset like Excel VLOOKUP',
+    icon: 'Search',
+    defaultConfig: {
+      lookupColumn: '',
+      returnColumns: [],
+      matchType: 'exact',
+    },
+    inputs: 2,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+# input_data is a list of DataFrames when there are 2 inputs
+if not isinstance(input_data, list) or len(input_data) < 2:
+    raise ValueError("Lookup (VLOOKUP): This block requires 2 inputs - main data (top) and lookup table (bottom)")
+
+main_df = input_data[0].copy()
+lookup_df = input_data[1].copy()
+
+lookup_col = config.get('lookupColumn', '')
+return_cols = config.get('returnColumns', [])
+match_type = config.get('matchType', 'exact')
+
+if not lookup_col:
+    raise ValueError("Lookup (VLOOKUP): Please specify the lookup column in the Config tab")
+
+if lookup_col not in main_df.columns:
+    raise ValueError(f"Lookup (VLOOKUP): Lookup column '{lookup_col}' not found in main data. Available: {', '.join(main_df.columns.tolist())}")
+
+if lookup_col not in lookup_df.columns:
+    raise ValueError(f"Lookup (VLOOKUP): Lookup column '{lookup_col}' not found in lookup table. Available: {', '.join(lookup_df.columns.tolist())}")
+
+# Determine which columns to return
+if not return_cols:
+    return_cols = [c for c in lookup_df.columns if c != lookup_col]
+
+# Validate return columns exist
+missing = [c for c in return_cols if c not in lookup_df.columns]
+if missing:
+    raise ValueError(f"Lookup (VLOOKUP): Return column(s) not found in lookup table: {', '.join(missing)}")
+
+# Perform the lookup (merge)
+cols_to_merge = [lookup_col] + return_cols
+lookup_subset = lookup_df[cols_to_merge].drop_duplicates(subset=[lookup_col], keep='first')
+
+df = main_df.merge(lookup_subset, on=lookup_col, how='left')
+
+output = df
+`,
+  },
+
+  'cross-join': {
+    type: 'cross-join',
+    category: 'transform',
+    label: 'Cross Join',
+    description: 'Create Cartesian product of two datasets (all combinations)',
+    icon: 'Grid3x3',
+    defaultConfig: {
+      suffixes: ['_x', '_y'],
+    },
+    inputs: 2,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+# input_data is a list of DataFrames when there are 2 inputs
+if not isinstance(input_data, list) or len(input_data) < 2:
+    raise ValueError("Cross Join: This block requires 2 inputs")
+
+df1 = input_data[0].copy()
+df2 = input_data[1].copy()
+
+suffixes = config.get('suffixes', ['_x', '_y'])
+if not suffixes or len(suffixes) < 2:
+    suffixes = ['_x', '_y']
+
+# Warn about potentially large output
+total_rows = len(df1) * len(df2)
+if total_rows > 1000000:
+    raise ValueError(f"Cross Join: Result would have {total_rows:,} rows. Consider filtering inputs first to avoid memory issues.")
+
+# Perform cross join
+df1['_cross_key'] = 1
+df2['_cross_key'] = 1
+df = df1.merge(df2, on='_cross_key', suffixes=suffixes).drop('_cross_key', axis=1)
+
+output = df
+`,
+  },
+
+  'filter-expression': {
+    type: 'filter-expression',
+    category: 'transform',
+    label: 'Filter by Expression',
+    description: 'Filter rows using a Python expression for advanced conditions',
+    icon: 'Code',
+    defaultConfig: {
+      expression: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+expression = config.get('expression', '')
+
+if not expression:
+    raise ValueError("Filter by Expression: Please enter a filter expression in the Config tab. Example: (df['age'] > 18) & (df['status'] == 'active')")
+
+try:
+    # Allow using column names directly and common functions
+    mask = eval(expression)
+    if not isinstance(mask, pd.Series):
+        mask = pd.Series(mask, index=df.index)
+    df = df[mask]
+except Exception as e:
+    raise ValueError(f"Filter by Expression: Invalid expression - {str(e)}. Example: (df['age'] > 18) & (df['status'] == 'active')")
+
+output = df
+`,
+  },
+
+  'number-format': {
+    type: 'number-format',
+    category: 'transform',
+    label: 'Number Format',
+    description: 'Format numbers with thousands separators, decimals, currency, or percentage',
+    icon: 'Hash',
+    defaultConfig: {
+      column: '',
+      format: 'thousands',
+      decimals: 2,
+      prefix: '',
+      suffix: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+format_type = config.get('format', 'thousands')
+decimals = int(config.get('decimals', 2))
+prefix = config.get('prefix', '')
+suffix = config.get('suffix', '')
+
+if not column:
+    raise ValueError("Number Format: Please specify a column to format in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Number Format: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+# Convert to numeric first
+numeric_col = pd.to_numeric(df[column], errors='coerce')
+
+def format_number(x):
+    if pd.isna(x):
+        return ''
+
+    if format_type == 'thousands':
+        formatted = f"{x:,.{decimals}f}"
+    elif format_type == 'currency':
+        formatted = f"{x:,.{decimals}f}"
+    elif format_type == 'percentage':
+        formatted = f"{x * 100:.{decimals}f}%"
+    elif format_type == 'scientific':
+        formatted = f"{x:.{decimals}e}"
+    elif format_type == 'plain':
+        formatted = f"{x:.{decimals}f}"
+    else:
+        formatted = f"{x:,.{decimals}f}"
+
+    return f"{prefix}{formatted}{suffix}"
+
+df[column] = numeric_col.apply(format_number)
+
+output = df
+`,
+  },
+
+  'extract-pattern': {
+    type: 'extract-pattern',
+    category: 'transform',
+    label: 'Extract Pattern',
+    description: 'Extract text matching a regex pattern into a new column',
+    icon: 'Regex',
+    defaultConfig: {
+      column: '',
+      pattern: '',
+      outputColumn: 'extracted',
+      extractAll: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+
+df = input_data.copy()
+column = config.get('column', '')
+pattern = config.get('pattern', '')
+output_col = config.get('outputColumn', 'extracted')
+extract_all = config.get('extractAll', False)
+
+if not column:
+    raise ValueError("Extract Pattern: Please specify a source column in the Config tab")
+
+if not pattern:
+    raise ValueError("Extract Pattern: Please specify a regex pattern in the Config tab. Examples: r'\\\\d+' for numbers, r'[A-Za-z]+@[A-Za-z]+\\\\.[A-Za-z]+' for emails")
+
+if column not in df.columns:
+    raise ValueError(f"Extract Pattern: Column '{column}' not found. Available columns: {', '.join(df.columns.tolist())}")
+
+if not output_col:
+    output_col = 'extracted'
+
+try:
+    if extract_all:
+        # Extract all matches as a list
+        df[output_col] = df[column].astype(str).apply(lambda x: re.findall(pattern, x) if pd.notna(x) else [])
+    else:
+        # Extract first match only
+        extracted = df[column].astype(str).str.extract(f'({pattern})', expand=False)
+        df[output_col] = extracted
+except re.error as e:
+    raise ValueError(f"Extract Pattern: Invalid regex pattern - {str(e)}")
+
+output = df
+`,
+  },
+
   // Analysis Blocks
   'statistics': {
     type: 'statistics',
