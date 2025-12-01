@@ -113,6 +113,14 @@ import {
   BarChart4,
   SeparatorHorizontal,
   Network as DendrogramIcon,
+  FileBarChart,
+  ShieldCheck,
+  Cpu,
+  Wand2,
+  FileCode,
+  ScanSearch,
+  Save,
+  DatabaseZap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -291,6 +299,17 @@ const blocks: BlockInfo[] = [
   { icon: TrendingUp, name: 'Uplift Modeling', description: 'Estimate individual treatment effects to identify who responds best to an intervention', category: 'Analysis' },
   { icon: BarChart3, name: 'Quantile Regression', description: 'Predict specific quantiles to create prediction intervals with calibrated coverage', category: 'Analysis' },
   { icon: AlertTriangle, name: 'Adversarial Validation', description: 'Detect distribution shift between train and test sets by training a classifier to distinguish them', category: 'Analysis' },
+  { icon: Code, name: 'Custom Python Code', description: 'Execute arbitrary Python code with full pandas, numpy, and scikit-learn access for custom transformations', category: 'Analysis' },
+  { icon: DatabaseZap, name: 'SQL Query', description: 'Run SQL queries directly on dataframes using DuckDB - supports SELECT, JOIN, GROUP BY, window functions, and CTEs', category: 'Analysis' },
+  { icon: FileBarChart, name: 'Auto-EDA', description: 'Generate comprehensive automated EDA: data types, distributions, correlations, outliers, missing values, and quality alerts', category: 'Analysis' },
+  { icon: ShieldCheck, name: 'Data Validation', description: 'Define data quality rules and expectations - check nulls, ranges, patterns, uniqueness, and referential integrity', category: 'Analysis' },
+  { icon: Cpu, name: 'Neural Network', description: 'Build and train neural networks for tabular data with configurable layers, activations, dropout, and early stopping', category: 'Analysis' },
+  { icon: Sparkles, name: 'Auto Feature Engineering', description: 'Automatically generate features: interactions, polynomials, date decomposition, binning, and lag features', category: 'Analysis' },
+  { icon: Lightbulb, name: 'SHAP Interpretation', description: 'Explain model predictions with SHAP values - global importance, individual explanations, dependence plots', category: 'Analysis' },
+  { icon: Wand2, name: 'AutoML', description: 'Automatically train and compare multiple models with hyperparameter tuning and cross-validation', category: 'Analysis' },
+  { icon: ScanSearch, name: 'Multivariate Anomaly Detection', description: 'Detect anomalies considering multiple features together using Isolation Forest, One-Class SVM, or Mahalanobis distance', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Causal Impact Analysis', description: 'Measure causal effect of interventions using Difference-in-Differences or synthetic control methods', category: 'Analysis' },
+  { icon: Save, name: 'Model Registry', description: 'Save trained models to IndexedDB with versioning and metadata, or load previously saved models for inference', category: 'Analysis' },
 
   // Visualization (50 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -344,8 +363,9 @@ const blocks: BlockInfo[] = [
   { icon: LayoutGrid, name: 'Marginal Histogram', description: 'Scatter plot with histograms on margins showing variable distributions', category: 'Visualization' },
   { icon: ArrowLeftRight, name: 'Dumbbell Chart', description: 'Connected dots showing change between two values per category', category: 'Visualization' },
 
-  // Output (1 block)
+  // Output (2 blocks)
   { icon: Download, name: 'Export CSV', description: 'Export data to CSV format and download', category: 'Output' },
+  { icon: FileCode, name: 'Pipeline Export', description: 'Export entire pipeline as standalone Python script with imports, transformations, and requirements.txt', category: 'Output' },
 ];
 
 // Category data for navigation
@@ -566,6 +586,18 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Uplift Modeling': { name: 'blocks.upliftModeling', description: 'blockDescriptions.upliftModeling' },
   'Quantile Regression': { name: 'blocks.quantileRegression', description: 'blockDescriptions.quantileRegression' },
   'Adversarial Validation': { name: 'blocks.adversarialValidation', description: 'blockDescriptions.adversarialValidation' },
+  'Custom Python Code': { name: 'blocks.customPythonCode', description: 'blockDescriptions.customPythonCode' },
+  'SQL Query': { name: 'blocks.sqlQuery', description: 'blockDescriptions.sqlQuery' },
+  'Auto-EDA': { name: 'blocks.autoEda', description: 'blockDescriptions.autoEda' },
+  'Data Validation': { name: 'blocks.dataValidation', description: 'blockDescriptions.dataValidation' },
+  'Neural Network': { name: 'blocks.neuralNetwork', description: 'blockDescriptions.neuralNetwork' },
+  'Auto Feature Engineering': { name: 'blocks.autoFeatureEngineering', description: 'blockDescriptions.autoFeatureEngineering' },
+  'SHAP Interpretation': { name: 'blocks.shapInterpretation', description: 'blockDescriptions.shapInterpretation' },
+  'AutoML': { name: 'blocks.automl', description: 'blockDescriptions.automl' },
+  'Multivariate Anomaly Detection': { name: 'blocks.multivariateAnomaly', description: 'blockDescriptions.multivariateAnomaly' },
+  'Causal Impact Analysis': { name: 'blocks.causalImpact', description: 'blockDescriptions.causalImpact' },
+  'Model Registry': { name: 'blocks.modelRegistry', description: 'blockDescriptions.modelRegistry' },
+  'Pipeline Export': { name: 'blocks.pipelineExport', description: 'blockDescriptions.pipelineExport' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
   'Correlation Matrix': { name: 'blocks.correlationMatrix', description: 'blockDescriptions.correlationMatrix' },
@@ -723,7 +755,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">213</p>
+                <p className="text-h2 font-bold text-text-primary">225</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
