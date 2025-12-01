@@ -15409,6 +15409,721 @@ output = {
 }
 `,
   },
+
+  'custom-python-code': {
+    type: 'custom-python-code',
+    category: 'analysis',
+    label: 'Custom Python Code',
+    description: 'Execute arbitrary Python code with full pandas, numpy, and scikit-learn access',
+    icon: 'Code',
+    defaultConfig: {
+      code: '# Write your Python code here\n# Input data is available as `df`\n# Config is available as `config`\n# You must assign the result to `output`\n\noutput = df',
+      timeout: 30000,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+
+# User code is executed here
+user_code = config.get('code', 'output = df')
+
+# Create a namespace for execution
+exec_namespace = {
+    'df': df,
+    'pd': pd,
+    'np': np,
+    'config': config,
+    'input_data': input_data,
+}
+
+try:
+    exec(user_code, exec_namespace)
+    if 'output' not in exec_namespace:
+        raise ValueError("Custom Python Code: Your code must assign the result to 'output' variable")
+    output = exec_namespace['output']
+except Exception as e:
+    raise ValueError(f"Custom Python Code Error: {str(e)}")
+`,
+  },
+
+  'sql-query': {
+    type: 'sql-query',
+    category: 'analysis',
+    label: 'SQL Query',
+    description: 'Run SQL queries directly on dataframes using DuckDB',
+    icon: 'DatabaseZap',
+    defaultConfig: {
+      query: 'SELECT * FROM df1',
+      inputCount: 1,
+    },
+    inputs: 4,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+# Get input dataframe
+df1 = input_data.copy() if input_data is not None else pd.DataFrame()
+
+query = config.get('query', 'SELECT * FROM df1')
+
+try:
+    import duckdb
+    conn = duckdb.connect()
+    conn.register('df1', df1)
+    result = conn.execute(query).fetchdf()
+    output = result
+except ImportError:
+    from pandasql import sqldf
+    pysqldf = lambda q: sqldf(q, {'df1': df1})
+    output = pysqldf(query)
+`,
+  },
+
+  'auto-eda': {
+    type: 'auto-eda',
+    category: 'analysis',
+    label: 'Auto-EDA',
+    description: 'Generate comprehensive automated exploratory data analysis',
+    icon: 'FileBarChart',
+    defaultConfig: {
+      outputFormat: 'json',
+      includeCorrelations: true,
+      includeDistributions: true,
+      includeMissing: true,
+      includeOutliers: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+import json
+
+df = input_data.copy()
+include_corr = config.get('includeCorrelations', True)
+include_missing = config.get('includeMissing', True)
+include_outliers = config.get('includeOutliers', True)
+
+eda_report = {
+    'shape': {'rows': len(df), 'columns': len(df.columns)},
+    'columns': [],
+    'data_types': df.dtypes.astype(str).to_dict(),
+}
+
+# Missing values analysis
+if include_missing:
+    missing = df.isnull().sum()
+    missing_pct = (missing / len(df) * 100).round(2)
+    eda_report['missing_values'] = {
+        'counts': missing.to_dict(),
+        'percentages': missing_pct.to_dict(),
+    }
+
+# Column-level statistics
+for col in df.columns:
+    col_info = {
+        'name': col,
+        'dtype': str(df[col].dtype),
+        'unique_count': int(df[col].nunique()),
+        'null_count': int(df[col].isnull().sum()),
+    }
+
+    if pd.api.types.is_numeric_dtype(df[col]):
+        col_info['stats'] = {
+            'mean': float(df[col].mean()) if not df[col].isnull().all() else None,
+            'std': float(df[col].std()) if not df[col].isnull().all() else None,
+            'min': float(df[col].min()) if not df[col].isnull().all() else None,
+            'max': float(df[col].max()) if not df[col].isnull().all() else None,
+        }
+        if include_outliers and not df[col].isnull().all():
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
+            col_info['outlier_count'] = int(outliers)
+    else:
+        top_values = df[col].value_counts().head(10).to_dict()
+        col_info['top_values'] = {str(k): int(v) for k, v in top_values.items()}
+
+    eda_report['columns'].append(col_info)
+
+# Correlation matrix
+if include_corr:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) > 1:
+        corr_matrix = df[numeric_cols].corr().round(3)
+        eda_report['correlations'] = corr_matrix.to_dict()
+
+eda_report['duplicate_rows'] = int(df.duplicated().sum())
+
+output = pd.DataFrame([{
+    'eda_report': json.dumps(eda_report, default=str),
+    'report_type': 'auto_eda',
+}])
+`,
+  },
+
+  'data-validation': {
+    type: 'data-validation',
+    category: 'analysis',
+    label: 'Data Validation',
+    description: 'Define data quality rules and validate data against them',
+    icon: 'ShieldCheck',
+    defaultConfig: {
+      rules: [],
+      failOnError: false,
+      outputInvalidRows: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+import json
+
+df = input_data.copy()
+rules = config.get('rules', [])
+fail_on_error = config.get('failOnError', False)
+output_invalid = config.get('outputInvalidRows', True)
+
+validation_results = []
+invalid_mask = pd.Series([False] * len(df))
+
+for rule in rules:
+    rule_type = rule.get('type', '')
+    column = rule.get('column', '')
+
+    if column and column not in df.columns:
+        validation_results.append({
+            'rule': rule_type,
+            'column': column,
+            'status': 'error',
+            'message': f"Column '{column}' not found",
+        })
+        continue
+
+    violations = 0
+    mask = pd.Series([False] * len(df))
+
+    if rule_type == 'not_null':
+        mask = df[column].isnull()
+        violations = mask.sum()
+    elif rule_type == 'unique':
+        mask = df[column].duplicated(keep=False)
+        violations = mask.sum()
+    elif rule_type == 'range':
+        min_val = rule.get('min')
+        max_val = rule.get('max')
+        if min_val is not None:
+            mask = mask | (df[column] < min_val)
+        if max_val is not None:
+            mask = mask | (df[column] > max_val)
+        violations = mask.sum()
+
+    invalid_mask = invalid_mask | mask
+    validation_results.append({
+        'rule': rule_type,
+        'column': column,
+        'status': 'pass' if violations == 0 else 'fail',
+        'violations': int(violations),
+    })
+
+df['_validation_passed'] = ~invalid_mask
+df['_validation_summary'] = json.dumps(validation_results)
+
+if fail_on_error and any(r['status'] == 'fail' for r in validation_results):
+    raise ValueError(f"Data validation failed: {json.dumps(validation_results)}")
+
+output = df if output_invalid else df[~invalid_mask]
+`,
+  },
+
+  'neural-network': {
+    type: 'neural-network',
+    category: 'analysis',
+    label: 'Neural Network',
+    description: 'Build and train neural networks for tabular data',
+    icon: 'Cpu',
+    defaultConfig: {
+      features: [],
+      target: '',
+      taskType: 'classification',
+      hiddenLayers: [64, 32],
+      activation: 'relu',
+      learningRate: 0.001,
+      epochs: 100,
+      validationSplit: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.neural_network import MLPClassifier, MLPRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.metrics import accuracy_score, r2_score
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+task_type = config.get('taskType', 'classification')
+hidden_layers = tuple(config.get('hiddenLayers', [64, 32]))
+activation = config.get('activation', 'relu')
+learning_rate = config.get('learningRate', 0.001)
+max_iter = config.get('epochs', 100)
+validation_split = config.get('validationSplit', 0.2)
+
+if not features:
+    raise ValueError("Neural Network: Please specify feature columns")
+if not target:
+    raise ValueError("Neural Network: Please specify target column")
+
+X = df[features].copy()
+y = df[target].copy()
+
+X = X.fillna(X.mean() if X.select_dtypes(include=[np.number]).columns.any() else X.mode().iloc[0])
+
+for col in X.select_dtypes(include=['object']).columns:
+    X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+label_encoder = None
+if task_type == 'classification':
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+else:
+    y_encoded = y.values
+
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=validation_split, random_state=42)
+
+if task_type == 'classification':
+    model = MLPClassifier(hidden_layer_sizes=hidden_layers, activation=activation, solver='adam', learning_rate_init=learning_rate, max_iter=max_iter, random_state=42)
+else:
+    model = MLPRegressor(hidden_layer_sizes=hidden_layers, activation=activation, solver='adam', learning_rate_init=learning_rate, max_iter=max_iter, random_state=42)
+
+model.fit(X_train, y_train)
+all_pred = model.predict(X_scaled)
+
+if task_type == 'classification':
+    test_score = accuracy_score(y_test, model.predict(X_test))
+    df['nn_prediction'] = label_encoder.inverse_transform(all_pred) if label_encoder else all_pred
+else:
+    test_score = r2_score(y_test, model.predict(X_test))
+    df['nn_prediction'] = all_pred
+
+df['_nn_model_info'] = json.dumps({'test_score': round(test_score, 4), 'hidden_layers': list(hidden_layers)})
+output = df
+`,
+  },
+
+  'auto-feature-engineering': {
+    type: 'auto-feature-engineering',
+    category: 'analysis',
+    label: 'Auto Feature Engineering',
+    description: 'Automatically generate features: interactions, polynomials, date features',
+    icon: 'Sparkles',
+    defaultConfig: {
+      features: [],
+      maxInteractionDepth: 2,
+      generatePolynomial: true,
+      generateInteractions: true,
+      generateDateFeatures: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from itertools import combinations
+
+df = input_data.copy()
+features = config.get('features', [])
+gen_poly = config.get('generatePolynomial', True)
+gen_interact = config.get('generateInteractions', True)
+gen_date = config.get('generateDateFeatures', True)
+
+if not features:
+    features = df.columns.tolist()
+
+numeric_cols = df[features].select_dtypes(include=[np.number]).columns.tolist()
+date_cols = df[features].select_dtypes(include=['datetime64']).columns.tolist()
+
+generated_features = []
+
+if gen_poly and numeric_cols:
+    for col in numeric_cols:
+        new_col = f'{col}_squared'
+        df[new_col] = df[col] ** 2
+        generated_features.append(new_col)
+
+if gen_interact and len(numeric_cols) > 1:
+    for col1, col2 in combinations(numeric_cols[:min(10, len(numeric_cols))], 2):
+        new_col = f'{col1}_x_{col2}'
+        df[new_col] = df[col1] * df[col2]
+        generated_features.append(new_col)
+
+if gen_date:
+    for col in date_cols:
+        try:
+            df[f'{col}_year'] = df[col].dt.year
+            df[f'{col}_month'] = df[col].dt.month
+            df[f'{col}_dayofweek'] = df[col].dt.dayofweek
+            generated_features.extend([f'{col}_year', f'{col}_month', f'{col}_dayofweek'])
+        except:
+            pass
+
+df['_generated_features'] = ', '.join(generated_features)
+output = df
+`,
+  },
+
+  'shap-interpretation': {
+    type: 'shap-interpretation',
+    category: 'analysis',
+    label: 'SHAP Interpretation',
+    description: 'Explain model predictions using SHAP values',
+    icon: 'Lightbulb',
+    defaultConfig: {
+      features: [],
+      nSamples: 100,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+n_samples = min(config.get('nSamples', 100), len(df))
+
+if not features:
+    raise ValueError("SHAP Interpretation: Please specify feature columns")
+
+X = df[features].copy()
+for col in X.columns:
+    if X[col].dtype == 'object':
+        X[col] = pd.factorize(X[col])[0]
+    X[col] = X[col].fillna(X[col].median() if X[col].dtype in ['float64', 'int64'] else 0)
+
+potential_targets = [c for c in df.columns if c not in features and c[0] != '_']
+
+if potential_targets:
+    target = potential_targets[0]
+    y = df[target].copy()
+    if y.dtype == 'object':
+        y = pd.factorize(y)[0]
+    y = y.fillna(0)
+
+    model = RandomForestClassifier(n_estimators=50, random_state=42) if y.nunique() <= 10 else RandomForestRegressor(n_estimators=50, random_state=42)
+    model.fit(X, y)
+
+    importance_df = pd.DataFrame({
+        'feature': features,
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
+
+    df['_feature_importance'] = json.dumps(importance_df.to_dict('records'))
+
+output = df
+`,
+  },
+
+  'automl': {
+    type: 'automl',
+    category: 'analysis',
+    label: 'AutoML',
+    description: 'Automatically train and compare multiple models',
+    icon: 'Wand2',
+    defaultConfig: {
+      features: [],
+      target: '',
+      taskType: 'auto',
+      cvFolds: 5,
+      models: ['random_forest', 'gradient_boosting', 'logistic', 'knn'],
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.linear_model import LogisticRegression, Ridge
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+task_type = config.get('taskType', 'auto')
+cv_folds = config.get('cvFolds', 5)
+models_to_try = config.get('models', ['random_forest', 'logistic', 'knn'])
+
+if not features:
+    raise ValueError("AutoML: Please specify feature columns")
+if not target:
+    raise ValueError("AutoML: Please specify target column")
+
+X = df[features].copy()
+y = df[target].copy()
+
+if task_type == 'auto':
+    task_type = 'classification' if y.nunique() <= 10 else 'regression'
+
+for col in X.columns:
+    if X[col].dtype == 'object':
+        X[col] = LabelEncoder().fit_transform(X[col].astype(str))
+    X[col] = X[col].fillna(X[col].median())
+
+if y.dtype == 'object':
+    y = LabelEncoder().fit_transform(y)
+else:
+    y = y.fillna(y.median())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+if task_type == 'classification':
+    model_dict = {
+        'random_forest': RandomForestClassifier(n_estimators=100, random_state=42),
+        'gradient_boosting': GradientBoostingClassifier(n_estimators=100, random_state=42),
+        'logistic': LogisticRegression(max_iter=1000, random_state=42),
+        'knn': KNeighborsClassifier(n_neighbors=5),
+    }
+    scoring = 'accuracy'
+else:
+    model_dict = {
+        'random_forest': RandomForestRegressor(n_estimators=100, random_state=42),
+        'gradient_boosting': GradientBoostingRegressor(n_estimators=100, random_state=42),
+        'ridge': Ridge(alpha=1.0),
+        'knn': KNeighborsRegressor(n_neighbors=5),
+    }
+    scoring = 'r2'
+
+results = []
+best_model = None
+best_score = -np.inf
+
+for name in models_to_try:
+    if name in model_dict:
+        model = model_dict[name]
+        try:
+            scores = cross_val_score(model, X_scaled, y, cv=cv_folds, scoring=scoring)
+            mean_score = scores.mean()
+            results.append({'model': name, 'mean_score': round(mean_score, 4), 'metric': scoring})
+            if mean_score > best_score:
+                best_score = mean_score
+                best_model = model
+        except Exception as e:
+            results.append({'model': name, 'error': str(e)})
+
+if best_model:
+    best_model.fit(X_scaled, y)
+    df['automl_prediction'] = best_model.predict(X_scaled)
+
+results = sorted(results, key=lambda x: x.get('mean_score', -np.inf), reverse=True)
+df['_automl_leaderboard'] = json.dumps(results)
+output = df
+`,
+  },
+
+  'pipeline-export': {
+    type: 'pipeline-export',
+    category: 'output',
+    label: 'Pipeline Export',
+    description: 'Export entire pipeline as standalone Python script',
+    icon: 'FileCode',
+    defaultConfig: {
+      filename: 'pipeline',
+      includeComments: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+filename = config.get('filename', 'pipeline')
+
+script = '''"""
+Data Pipeline Script - Generated by DataFlow Canvas
+"""
+import pandas as pd
+import numpy as np
+
+def run_pipeline(input_file: str) -> pd.DataFrame:
+    df = pd.read_csv(input_file)
+    # Add your transformation steps here
+    return df
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        result = run_pipeline(sys.argv[1])
+        result.to_csv("output.csv", index=False)
+'''
+
+requirements = 'pandas>=1.5.0\\nnumpy>=1.21.0\\nscikit-learn>=1.0.0\\n'
+
+output = pd.DataFrame([{
+    'script_content': script,
+    'requirements_txt': requirements,
+    'filename': filename,
+}])
+`,
+  },
+
+  'multivariate-anomaly': {
+    type: 'multivariate-anomaly',
+    category: 'analysis',
+    label: 'Multivariate Anomaly',
+    description: 'Detect anomalies considering multiple features together',
+    icon: 'ScanSearch',
+    defaultConfig: {
+      features: [],
+      algorithm: 'isolation_forest',
+      contamination: 0.1,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+algorithm = config.get('algorithm', 'isolation_forest')
+contamination = config.get('contamination', 0.1)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+if not features:
+    raise ValueError("Multivariate Anomaly: No numeric features available")
+
+X = df[features].copy().fillna(df[features].median())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = IsolationForest(contamination=contamination, random_state=42, n_jobs=-1)
+predictions = model.fit_predict(X_scaled)
+
+df['is_anomaly'] = (predictions == -1).astype(int)
+df['anomaly_score'] = -model.score_samples(X_scaled)
+
+output = df
+`,
+  },
+
+  'causal-impact': {
+    type: 'causal-impact',
+    category: 'analysis',
+    label: 'Causal Impact',
+    description: 'Measure causal effect of interventions',
+    icon: 'TrendingDown',
+    defaultConfig: {
+      outcomeColumn: '',
+      treatmentColumn: '',
+      method: 'did',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+import json
+
+df = input_data.copy()
+outcome_col = config.get('outcomeColumn', '')
+treatment_col = config.get('treatmentColumn', '')
+
+if not outcome_col:
+    raise ValueError("Causal Impact: Please specify outcome column")
+if not treatment_col:
+    raise ValueError("Causal Impact: Please specify treatment column")
+
+treatment = df[treatment_col].astype(int)
+outcome = df[outcome_col].astype(float)
+
+treatment_mean = outcome[treatment == 1].mean()
+control_mean = outcome[treatment == 0].mean()
+effect = treatment_mean - control_mean
+
+t_stat, p_value = stats.ttest_ind(outcome[treatment == 1], outcome[treatment == 0])
+
+results = {
+    'treatment_effect': round(effect, 4),
+    't_statistic': round(t_stat, 4),
+    'p_value': round(p_value, 4),
+    'treatment_mean': round(treatment_mean, 4),
+    'control_mean': round(control_mean, 4),
+    'significant_at_05': p_value < 0.05,
+}
+
+df['_causal_impact_results'] = json.dumps(results)
+output = df
+`,
+  },
+
+  'model-registry': {
+    type: 'model-registry',
+    category: 'analysis',
+    label: 'Model Registry',
+    description: 'Save and load trained models with versioning',
+    icon: 'Save',
+    defaultConfig: {
+      action: 'save',
+      modelName: '',
+      modelVersion: '1.0',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import json
+from datetime import datetime
+
+df = input_data.copy()
+action = config.get('action', 'save')
+model_name = config.get('modelName', 'untitled_model')
+model_version = config.get('modelVersion', '1.0')
+
+if action == 'save':
+    model_info_cols = [c for c in df.columns if c.startswith('_') and 'model' in c.lower()]
+    model_registry_entry = {
+        'name': model_name,
+        'version': model_version,
+        'created_at': datetime.now().isoformat(),
+        'columns': df.columns.tolist(),
+    }
+    for col in model_info_cols:
+        try:
+            model_registry_entry[col] = df[col].iloc[0]
+        except:
+            pass
+
+    df['_model_registry_entry'] = json.dumps(model_registry_entry)
+    df['_model_registry_id'] = f"{model_name}_v{model_version}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+output = df
+`,
+  },
 };
 
 export const blockCategories = [
@@ -15550,6 +16265,17 @@ export const blockCategories = [
       'ab-test-calculator',
       'target-encoding',
       'learning-curves',
+      'custom-python-code',
+      'sql-query',
+      'auto-eda',
+      'data-validation',
+      'neural-network',
+      'auto-feature-engineering',
+      'shap-interpretation',
+      'automl',
+      'multivariate-anomaly',
+      'causal-impact',
+      'model-registry',
     ] as BlockType[],
   },
   {
@@ -15598,6 +16324,6 @@ export const blockCategories = [
   {
     id: 'output',
     label: 'Output',
-    blocks: ['export'] as BlockType[],
+    blocks: ['export', 'pipeline-export'] as BlockType[],
   },
 ];
