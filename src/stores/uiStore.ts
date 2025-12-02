@@ -54,9 +54,9 @@ export const useUIStore = create<UIState>((set) => ({
   isNewProjectModalOpen: false,
   isExportModalOpen: false,
 
-  // Theme - check system preference
+  // Theme - default to dark, respect explicit light preference
   isDarkMode: typeof window !== 'undefined'
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? !window.matchMedia('(prefers-color-scheme: light)').matches
     : true,
 
   // Actions
