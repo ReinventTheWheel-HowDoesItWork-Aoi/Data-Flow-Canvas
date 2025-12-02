@@ -38,6 +38,8 @@ import {
   AlertTriangle,
   GitFork,
   Activity,
+  Search,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils/cn';
@@ -164,6 +166,7 @@ export function Sidebar() {
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>(
     blockCategories.map((c) => c.id)
   );
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -172,6 +175,45 @@ export function Sidebar() {
         : [...prev, categoryId]
     );
   };
+
+  // Filter blocks based on search query
+  const filteredCategories = React.useMemo(() => {
+    if (!searchQuery.trim()) {
+      return blockCategories;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+
+    return blockCategories
+      .map((category) => {
+        const filteredBlocks = category.blocks.filter((blockType) => {
+          const definition = blockDefinitions[blockType];
+          const label = definition.label.toLowerCase();
+          const description = definition.description.toLowerCase();
+          const translatedLabel = t(blockTranslationKeys[blockType] || definition.label).toLowerCase();
+
+          return (
+            label.includes(query) ||
+            description.includes(query) ||
+            translatedLabel.includes(query) ||
+            blockType.includes(query)
+          );
+        });
+
+        return {
+          ...category,
+          blocks: filteredBlocks,
+        };
+      })
+      .filter((category) => category.blocks.length > 0);
+  }, [searchQuery, t]);
+
+  // Auto-expand categories when searching
+  React.useEffect(() => {
+    if (searchQuery.trim()) {
+      setExpandedCategories(filteredCategories.map((c) => c.id));
+    }
+  }, [searchQuery, filteredCategories]);
 
   const onDragStart = (
     event: React.DragEvent<HTMLDivElement>,
@@ -194,8 +236,51 @@ export function Sidebar() {
         </p>
       </div>
 
+      {/* Search Bar */}
+      <div className="px-3 py-2 border-b border-border-default">
+        <div className="relative">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('sidebar.searchBlocks', 'Search blocks...')}
+            className={cn(
+              'w-full pl-9 pr-8 py-2 rounded-lg',
+              'bg-bg-tertiary border border-border-default',
+              'text-small text-text-primary placeholder:text-text-muted',
+              'focus:outline-none focus:ring-2 focus:ring-electric-indigo focus:border-transparent',
+              'transition-all duration-200'
+            )}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-bg-secondary rounded"
+            >
+              <X size={14} className="text-text-muted" />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="text-xs text-text-muted mt-1">
+            {filteredCategories.reduce((acc, cat) => acc + cat.blocks.length, 0)} {t('sidebar.blocksFound', 'blocks found')}
+          </p>
+        )}
+      </div>
+
       <div className="flex-1 overflow-y-auto p-2">
-        {blockCategories.map((category) => {
+        {filteredCategories.length === 0 && searchQuery ? (
+          <div className="text-center py-8 text-text-muted">
+            <Search size={32} className="mx-auto mb-2 opacity-50" />
+            <p className="text-small">{t('sidebar.noBlocksFound', 'No blocks found')}</p>
+            <p className="text-xs mt-1">{t('sidebar.tryDifferentSearch', 'Try a different search term')}</p>
+          </div>
+        ) : (
+          filteredCategories.map((category) => {
           const isExpanded = expandedCategories.includes(category.id);
           const CategoryIcon = categoryIcons[category.id] || Database;
 
@@ -270,7 +355,8 @@ export function Sidebar() {
               </AnimatePresence>
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </aside>
   );
