@@ -11,13 +11,16 @@
 
 @layer base {
   :root {
-    /* Plasma Fusion Palette */
+    /* Plasma Fusion Palette - static colors */
     --color-plasma-magenta: 255 46 151;
     --color-plasma-cyan: 0 212 255;
     --color-plasma-purple: 191 0 255;
-    --color-plasma-yellow: 223 255 0;
     --color-void-black: 5 5 8;
     --color-deep-purple: 18 0 31;
+
+    /* Theme-aware colors - darker in light mode for readability */
+    --color-plasma-yellow: 180 130 0;
+    --color-golden-amber: 180 130 0;
 
     /* Legacy color mappings */
     --color-deep-navy: 26 26 46;
@@ -25,7 +28,6 @@
     --color-soft-violet: 191 0 255;
     --color-fresh-teal: 0 212 255;
     --color-warm-coral: 244 63 94;
-    --color-golden-amber: 223 255 0;
 
     /* Light Mode */
     --color-bg-primary: 255 255 255;
@@ -39,6 +41,10 @@
   }
 
   .dark {
+    /* Bright neon yellow for dark mode */
+    --color-plasma-yellow: 223 255 0;
+    --color-golden-amber: 223 255 0;
+
     --color-bg-primary: 5 5 8;
     --color-bg-secondary: 18 0 31;
     --color-bg-tertiary: 30 10 50;
