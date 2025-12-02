@@ -19,12 +19,20 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // Plasma Fusion Palette
+        'plasma-magenta': '#FF2E97',
+        'plasma-cyan': '#00D4FF',
+        'plasma-purple': '#BF00FF',
+        'plasma-yellow': '#DFFF00',
+        'void-black': '#050508',
+        'deep-purple': '#12001F',
+        // Legacy colors (keeping for editor compatibility)
         'deep-navy': '#1a1a2e',
-        'electric-indigo': '#6366f1',
-        'soft-violet': '#8b5cf6',
-        'fresh-teal': '#14b8a6',
+        'electric-indigo': '#FF2E97', // Now maps to plasma magenta
+        'soft-violet': '#BF00FF', // Now maps to plasma purple
+        'fresh-teal': '#00D4FF', // Now maps to plasma cyan
         'warm-coral': '#f43f5e',
-        'golden-amber': '#f59e0b',
+        'golden-amber': '#DFFF00', // Now maps to plasma yellow
         'bg-primary': 'rgb(var(--color-bg-primary) / <alpha-value>)',
         'bg-secondary': 'rgb(var(--color-bg-secondary) / <alpha-value>)',
         'bg-tertiary': 'rgb(var(--color-bg-tertiary) / <alpha-value>)',
@@ -59,9 +67,12 @@ const config: Config = {
         'sm': '0 1px 2px rgba(0,0,0,0.05)',
         'md': '0 4px 6px -1px rgba(0,0,0,0.1)',
         'lg': '0 10px 15px -3px rgba(0,0,0,0.1)',
-        'glow': '0 0 20px rgba(99,102,241,0.3)',
-        'glow-teal': '0 0 20px rgba(20,184,166,0.3)',
+        'glow': '0 0 20px rgba(255,46,151,0.4)',
+        'glow-cyan': '0 0 20px rgba(0,212,255,0.4)',
+        'glow-purple': '0 0 20px rgba(191,0,255,0.4)',
+        'glow-teal': '0 0 20px rgba(0,212,255,0.3)',
         'glow-coral': '0 0 20px rgba(244,63,94,0.3)',
+        'glow-plasma': '0 0 30px rgba(255,46,151,0.3), 0 0 60px rgba(191,0,255,0.2)',
       },
       animation: {
         'fade-in': 'fadeIn 200ms ease-out',
