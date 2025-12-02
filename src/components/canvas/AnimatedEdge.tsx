@@ -36,7 +36,7 @@ export function AnimatedEdge({
         style={{
           ...style,
           strokeWidth: 2,
-          stroke: '#14b8a6',
+          stroke: '#00D4FF', // plasma-cyan
         }}
         className={cn(
           'stroke-fresh-teal',
