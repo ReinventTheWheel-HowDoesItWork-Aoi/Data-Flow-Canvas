@@ -279,12 +279,13 @@ export function Canvas() {
           )}
           nodeColor={(node) => {
             const category = (node.data as BlockData)?.category;
+            // Plasma Fusion color palette
             const colors: Record<string, string> = {
-              'data-input': '#6366f1',
-              'transform': '#8b5cf6',
-              'analysis': '#14b8a6',
-              'visualization': '#f59e0b',
-              'output': '#f43f5e',
+              'data-input': '#FF2E97',    // plasma-magenta
+              'transform': '#BF00FF',     // plasma-purple
+              'analysis': '#00D4FF',      // plasma-cyan
+              'visualization': '#DFFF00', // plasma-yellow
+              'output': '#f43f5e',        // warm-coral
             };
             return colors[category] || '#64748b';
           }}
