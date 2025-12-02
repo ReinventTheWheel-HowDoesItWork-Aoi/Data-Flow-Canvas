@@ -32,15 +32,15 @@ import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { cn } from '@/lib/utils/cn';
 import { useUIStore } from '@/stores/uiStore';
 
-// Animated dot grid background
+// Animated dot grid background - Plasma Fusion
 const DotGrid = ({ isDark }: { isDark: boolean }) => (
   <div className="absolute inset-0 overflow-hidden">
     <div
       className={cn(
         'absolute inset-0',
         isDark
-          ? '[background-image:radial-gradient(circle,rgba(99,102,241,0.15)_1px,transparent_1px)]'
-          : '[background-image:radial-gradient(circle,rgba(99,102,241,0.08)_1px,transparent_1px)]'
+          ? '[background-image:radial-gradient(circle,rgba(255,46,151,0.15)_1px,transparent_1px)]'
+          : '[background-image:radial-gradient(circle,rgba(255,46,151,0.08)_1px,transparent_1px)]'
       )}
       style={{ backgroundSize: '32px 32px' }}
     />
@@ -49,14 +49,14 @@ const DotGrid = ({ isDark }: { isDark: boolean }) => (
       animate={{
         background: isDark
           ? [
-              'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(99,102,241,0.15), transparent)',
-              'radial-gradient(ellipse 60% 40% at 60% 60%, rgba(139,92,246,0.12), transparent)',
-              'radial-gradient(ellipse 80% 50% at 40% 40%, rgba(99,102,241,0.15), transparent)',
+              'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255,46,151,0.2), transparent)',
+              'radial-gradient(ellipse 60% 40% at 60% 60%, rgba(191,0,255,0.15), transparent)',
+              'radial-gradient(ellipse 80% 50% at 40% 40%, rgba(0,212,255,0.15), transparent)',
             ]
           : [
-              'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(99,102,241,0.08), transparent)',
-              'radial-gradient(ellipse 60% 40% at 60% 60%, rgba(139,92,246,0.06), transparent)',
-              'radial-gradient(ellipse 80% 50% at 40% 40%, rgba(99,102,241,0.08), transparent)',
+              'radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255,46,151,0.1), transparent)',
+              'radial-gradient(ellipse 60% 40% at 60% 60%, rgba(191,0,255,0.08), transparent)',
+              'radial-gradient(ellipse 80% 50% at 40% 40%, rgba(0,212,255,0.08), transparent)',
             ],
       }}
       transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
@@ -255,9 +255,9 @@ const ConnectionLine = ({
     >
       <defs>
         <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#14b8a6" />
-          <stop offset="50%" stopColor="#6366f1" />
-          <stop offset="100%" stopColor="#8b5cf6" />
+          <stop offset="0%" stopColor="#FF2E97" />
+          <stop offset="50%" stopColor="#BF00FF" />
+          <stop offset="100%" stopColor="#00D4FF" />
         </linearGradient>
         <filter id="glow">
           <feGaussianBlur stdDeviation="2" result="coloredBlur" />
@@ -271,7 +271,7 @@ const ConnectionLine = ({
       <motion.path
         d={`M ${x1} ${y1} Q ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${(y1 + y2) / 2} T ${x2} ${y2}`}
         fill="none"
-        stroke={isDark ? 'rgba(99,102,241,0.3)' : 'rgba(99,102,241,0.15)'}
+        stroke={isDark ? 'rgba(255,46,151,0.3)' : 'rgba(255,46,151,0.15)'}
         strokeWidth="8"
         strokeLinecap="round"
         initial={{ pathLength: 0 }}
@@ -294,7 +294,7 @@ const ConnectionLine = ({
       {/* Animated particle */}
       <motion.circle
         r="4"
-        fill="#6366f1"
+        fill="#FF2E97"
         filter="url(#glow)"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 1, 1, 0] }}
@@ -306,7 +306,7 @@ const ConnectionLine = ({
       </motion.circle>
       <motion.circle
         r="6"
-        fill="#14b8a6"
+        fill="#00D4FF"
         opacity="0.5"
         filter="url(#glow)"
         initial={{ opacity: 0 }}
@@ -352,24 +352,24 @@ const FeatureCard = ({
           className={cn(
             'absolute inset-0',
             isDark
-              ? 'bg-gradient-to-r from-electric-indigo/50 via-soft-violet/50 to-fresh-teal/50'
-              : 'bg-gradient-to-r from-electric-indigo/30 via-soft-violet/30 to-fresh-teal/30'
+              ? 'bg-gradient-to-r from-plasma-magenta/50 via-plasma-purple/50 to-plasma-cyan/50'
+              : 'bg-gradient-to-r from-plasma-magenta/30 via-plasma-purple/30 to-plasma-cyan/30'
           )}
           animate={{
             background: isDark
               ? [
-                  'linear-gradient(0deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5), rgba(20,184,166,0.5))',
-                  'linear-gradient(90deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5), rgba(20,184,166,0.5))',
-                  'linear-gradient(180deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5), rgba(20,184,166,0.5))',
-                  'linear-gradient(270deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5), rgba(20,184,166,0.5))',
-                  'linear-gradient(360deg, rgba(99,102,241,0.5), rgba(139,92,246,0.5), rgba(20,184,166,0.5))',
+                  'linear-gradient(0deg, rgba(255,46,151,0.5), rgba(191,0,255,0.5), rgba(0,212,255,0.5))',
+                  'linear-gradient(90deg, rgba(255,46,151,0.5), rgba(191,0,255,0.5), rgba(0,212,255,0.5))',
+                  'linear-gradient(180deg, rgba(255,46,151,0.5), rgba(191,0,255,0.5), rgba(0,212,255,0.5))',
+                  'linear-gradient(270deg, rgba(255,46,151,0.5), rgba(191,0,255,0.5), rgba(0,212,255,0.5))',
+                  'linear-gradient(360deg, rgba(255,46,151,0.5), rgba(191,0,255,0.5), rgba(0,212,255,0.5))',
                 ]
               : [
-                  'linear-gradient(0deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(20,184,166,0.3))',
-                  'linear-gradient(90deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(20,184,166,0.3))',
-                  'linear-gradient(180deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(20,184,166,0.3))',
-                  'linear-gradient(270deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(20,184,166,0.3))',
-                  'linear-gradient(360deg, rgba(99,102,241,0.3), rgba(139,92,246,0.3), rgba(20,184,166,0.3))',
+                  'linear-gradient(0deg, rgba(255,46,151,0.3), rgba(191,0,255,0.3), rgba(0,212,255,0.3))',
+                  'linear-gradient(90deg, rgba(255,46,151,0.3), rgba(191,0,255,0.3), rgba(0,212,255,0.3))',
+                  'linear-gradient(180deg, rgba(255,46,151,0.3), rgba(191,0,255,0.3), rgba(0,212,255,0.3))',
+                  'linear-gradient(270deg, rgba(255,46,151,0.3), rgba(191,0,255,0.3), rgba(0,212,255,0.3))',
+                  'linear-gradient(360deg, rgba(255,46,151,0.3), rgba(191,0,255,0.3), rgba(0,212,255,0.3))',
                 ],
           }}
           transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
@@ -379,8 +379,8 @@ const FeatureCard = ({
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
           style={{
             background: isDark
-              ? 'linear-gradient(135deg, rgba(99,102,241,0.6), rgba(139,92,246,0.4), rgba(20,184,166,0.6))'
-              : 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(139,92,246,0.3), rgba(20,184,166,0.4))',
+              ? 'linear-gradient(135deg, rgba(255,46,151,0.6), rgba(191,0,255,0.4), rgba(0,212,255,0.6))'
+              : 'linear-gradient(135deg, rgba(255,46,151,0.4), rgba(191,0,255,0.3), rgba(0,212,255,0.4))',
           }}
         />
       </div>
@@ -474,7 +474,7 @@ const StepCard = ({
           )}
         >
           <motion.div
-            className="h-full bg-gradient-to-r from-electric-indigo to-soft-violet"
+            className="h-full bg-gradient-to-r from-plasma-magenta to-plasma-cyan"
             initial={{ scaleX: 0 }}
             animate={isInView ? { scaleX: 1 } : {}}
             transition={{ duration: 0.8, delay: index * 0.2 + 0.3 }}
@@ -489,7 +489,7 @@ const StepCard = ({
         whileHover={{ scale: 1.1 }}
         transition={{ type: 'spring', stiffness: 300 }}
       >
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center text-2xl font-bold text-white shadow-glow relative overflow-hidden">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-plasma-magenta to-plasma-purple flex items-center justify-center text-2xl font-bold text-white shadow-glow relative overflow-hidden">
           <span className="relative z-10">{index + 1}</span>
           {/* Shine effect */}
           <motion.div
@@ -542,7 +542,7 @@ export default function LandingPage() {
       className={cn(
         'min-h-screen overflow-hidden transition-colors duration-500',
         isDarkMode
-          ? 'bg-[#0a0a14] text-white'
+          ? 'bg-[#050508] text-white'
           : 'bg-gradient-to-b from-slate-50 via-white to-slate-50 text-slate-900'
       )}
     >
@@ -550,11 +550,11 @@ export default function LandingPage() {
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <DotGrid isDark={isDarkMode} />
 
-        {/* Enhanced floating orbs */}
+        {/* Enhanced floating orbs - Plasma Fusion */}
         <FloatingOrb
           className={cn(
             'w-[700px] h-[700px] -top-48 -left-48 blur-3xl',
-            isDarkMode ? 'bg-electric-indigo/30' : 'bg-electric-indigo/15'
+            isDarkMode ? 'bg-plasma-magenta/30' : 'bg-plasma-magenta/15'
           )}
           delay={0}
           duration={25}
@@ -562,7 +562,7 @@ export default function LandingPage() {
         <FloatingOrb
           className={cn(
             'w-[600px] h-[600px] top-1/4 -right-32 blur-3xl',
-            isDarkMode ? 'bg-soft-violet/25' : 'bg-soft-violet/12'
+            isDarkMode ? 'bg-plasma-purple/25' : 'bg-plasma-purple/12'
           )}
           delay={3}
           duration={22}
@@ -570,7 +570,7 @@ export default function LandingPage() {
         <FloatingOrb
           className={cn(
             'w-[500px] h-[500px] bottom-0 left-1/4 blur-3xl',
-            isDarkMode ? 'bg-fresh-teal/15' : 'bg-fresh-teal/8'
+            isDarkMode ? 'bg-plasma-cyan/20' : 'bg-plasma-cyan/10'
           )}
           delay={5}
           duration={28}
@@ -589,7 +589,7 @@ export default function LandingPage() {
 
         {/* Gradient overlay for dark mode */}
         {isDarkMode && (
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900/0 via-[#0a0a14] to-[#0a0a14]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#12001F]/0 via-[#050508] to-[#050508]" />
         )}
       </div>
 
@@ -825,16 +825,16 @@ export default function LandingPage() {
               className={cn(
                 'absolute inset-0 rounded-3xl blur-3xl',
                 isDarkMode
-                  ? 'bg-gradient-to-r from-electric-indigo/25 via-soft-violet/20 to-fresh-teal/25'
-                  : 'bg-gradient-to-r from-electric-indigo/15 via-soft-violet/10 to-fresh-teal/15'
+                  ? 'bg-gradient-to-r from-plasma-magenta/25 via-plasma-purple/20 to-plasma-cyan/25'
+                  : 'bg-gradient-to-r from-plasma-magenta/15 via-plasma-purple/10 to-plasma-cyan/15'
               )}
             />
             <div
               className={cn(
                 'absolute inset-4 rounded-2xl blur-2xl',
                 isDarkMode
-                  ? 'bg-gradient-to-br from-electric-indigo/20 to-soft-violet/20'
-                  : 'bg-gradient-to-br from-electric-indigo/10 to-soft-violet/10'
+                  ? 'bg-gradient-to-br from-plasma-magenta/20 to-plasma-purple/20'
+                  : 'bg-gradient-to-br from-plasma-magenta/10 to-plasma-purple/10'
               )}
             />
 
@@ -857,7 +857,7 @@ export default function LandingPage() {
                   transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                   style={{
                     background:
-                      'conic-gradient(from 0deg, #6366f1, #8b5cf6, #14b8a6, #6366f1)',
+                      'conic-gradient(from 0deg, #FF2E97, #BF00FF, #00D4FF, #FF2E97)',
                   }}
                 />
               </div>
@@ -932,7 +932,7 @@ export default function LandingPage() {
                   x={3}
                   y={15}
                   label={t('landing.previewNodes.loadCsv')}
-                  color="bg-electric-indigo"
+                  color="bg-plasma-magenta"
                   icon={Database}
                   delay={0.5}
                   isDark={isDarkMode}
@@ -941,7 +941,7 @@ export default function LandingPage() {
                   x={32}
                   y={40}
                   label={t('landing.previewNodes.filterRows')}
-                  color="bg-soft-violet"
+                  color="bg-plasma-purple"
                   icon={GitBranch}
                   delay={0.7}
                   isDark={isDarkMode}
@@ -950,7 +950,7 @@ export default function LandingPage() {
                   x={65}
                   y={25}
                   label={t('landing.previewNodes.groupBy')}
-                  color="bg-fresh-teal"
+                  color="bg-plasma-cyan"
                   icon={Cpu}
                   delay={0.9}
                   isDark={isDarkMode}
@@ -959,7 +959,7 @@ export default function LandingPage() {
                   x={65}
                   y={62}
                   label={t('landing.previewNodes.barChart')}
-                  color="bg-golden-amber"
+                  color="bg-plasma-yellow"
                   icon={BarChart3}
                   delay={1.1}
                   isDark={isDarkMode}
@@ -1063,8 +1063,8 @@ export default function LandingPage() {
               transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
               style={{
                 background: isDarkMode
-                  ? 'conic-gradient(from 0deg, #6366f1, #8b5cf6, #14b8a6, #f59e0b, #6366f1)'
-                  : 'conic-gradient(from 0deg, #6366f1, #8b5cf6, #14b8a6, #f59e0b, #6366f1)',
+                  ? 'conic-gradient(from 0deg, #FF2E97, #BF00FF, #00D4FF, #DFFF00, #FF2E97)'
+                  : 'conic-gradient(from 0deg, #FF2E97, #BF00FF, #00D4FF, #DFFF00, #FF2E97)',
               }}
             />
           </div>
@@ -1081,7 +1081,7 @@ export default function LandingPage() {
             <div
               className={cn(
                 'absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full blur-3xl',
-                isDarkMode ? 'bg-electric-indigo/15' : 'bg-electric-indigo/8'
+                isDarkMode ? 'bg-plasma-magenta/20' : 'bg-plasma-magenta/10'
               )}
             />
 
@@ -1218,29 +1218,29 @@ const features = [
     titleKey: 'landing.features.privacyFirst.title',
     descriptionKey: 'landing.features.privacyFirst.description',
     icon: Lock,
-    bgColor: 'bg-fresh-teal/20',
-    iconColor: 'text-fresh-teal',
+    bgColor: 'bg-plasma-cyan/20',
+    iconColor: 'text-plasma-cyan',
   },
   {
     titleKey: 'landing.features.quickStart.title',
     descriptionKey: 'landing.features.quickStart.description',
     icon: Zap,
-    bgColor: 'bg-electric-indigo/20',
-    iconColor: 'text-electric-indigo',
+    bgColor: 'bg-plasma-magenta/20',
+    iconColor: 'text-plasma-magenta',
   },
   {
     titleKey: 'landing.features.collaborate.title',
     descriptionKey: 'landing.features.collaborate.description',
     icon: Users,
-    bgColor: 'bg-soft-violet/20',
-    iconColor: 'text-soft-violet',
+    bgColor: 'bg-plasma-purple/20',
+    iconColor: 'text-plasma-purple',
   },
   {
     titleKey: 'landing.features.pythonPowered.title',
     descriptionKey: 'landing.features.pythonPowered.description',
     icon: Code2,
-    bgColor: 'bg-golden-amber/20',
-    iconColor: 'text-golden-amber',
+    bgColor: 'bg-plasma-yellow/20',
+    iconColor: 'text-plasma-yellow',
   },
 ];
 
