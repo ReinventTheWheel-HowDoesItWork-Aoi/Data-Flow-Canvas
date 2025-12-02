@@ -11,13 +11,21 @@
 
 @layer base {
   :root {
-    /* Primary Palette */
+    /* Plasma Fusion Palette */
+    --color-plasma-magenta: 255 46 151;
+    --color-plasma-cyan: 0 212 255;
+    --color-plasma-purple: 191 0 255;
+    --color-plasma-yellow: 223 255 0;
+    --color-void-black: 5 5 8;
+    --color-deep-purple: 18 0 31;
+
+    /* Legacy color mappings */
     --color-deep-navy: 26 26 46;
-    --color-electric-indigo: 99 102 241;
-    --color-soft-violet: 139 92 246;
-    --color-fresh-teal: 20 184 166;
+    --color-electric-indigo: 255 46 151;
+    --color-soft-violet: 191 0 255;
+    --color-fresh-teal: 0 212 255;
     --color-warm-coral: 244 63 94;
-    --color-golden-amber: 245 158 11;
+    --color-golden-amber: 223 255 0;
 
     /* Light Mode */
     --color-bg-primary: 255 255 255;
@@ -31,14 +39,14 @@
   }
 
   .dark {
-    --color-bg-primary: 15 15 26;
-    --color-bg-secondary: 26 26 46;
-    --color-bg-tertiary: 37 37 68;
-    --color-text-primary: 248 250 252;
+    --color-bg-primary: 5 5 8;
+    --color-bg-secondary: 18 0 31;
+    --color-bg-tertiary: 30 10 50;
+    --color-text-primary: 255 255 255;
     --color-text-secondary: 203 213 225;
-    --color-text-muted: 100 116 139;
-    --color-border-default: 51 65 85;
-    --color-border-emphasis: 71 85 105;
+    --color-text-muted: 120 100 150;
+    --color-border-default: 60 30 90;
+    --color-border-emphasis: 80 50 120;
   }
 
   * {
@@ -57,19 +65,28 @@
 
 @layer components {
   .shadow-glow {
-    box-shadow: 0 0 20px rgb(var(--color-electric-indigo) / 0.3);
+    box-shadow: 0 0 20px rgb(var(--color-plasma-magenta) / 0.4);
   }
 
   .shadow-glow-teal {
-    box-shadow: 0 0 20px rgb(var(--color-fresh-teal) / 0.3);
+    box-shadow: 0 0 20px rgb(var(--color-plasma-cyan) / 0.4);
   }
 
   .shadow-glow-coral {
     box-shadow: 0 0 20px rgb(var(--color-warm-coral) / 0.3);
   }
 
+  .shadow-glow-plasma {
+    box-shadow: 0 0 30px rgb(var(--color-plasma-magenta) / 0.3), 0 0 60px rgb(var(--color-plasma-purple) / 0.2);
+  }
+
   .gradient-text {
-    @apply bg-gradient-to-r from-electric-indigo to-soft-violet bg-clip-text text-transparent;
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #FF2E97 0%, #BF00FF 50%, #00D4FF 100%);
+  }
+
+  .gradient-plasma {
+    background: linear-gradient(135deg, #FF2E97 0%, #BF00FF 50%, #00D4FF 100%);
   }
 
   .glass {
