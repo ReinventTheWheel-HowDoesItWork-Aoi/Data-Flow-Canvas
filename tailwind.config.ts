@@ -23,7 +23,7 @@ const config: Config = {
         'plasma-magenta': '#FF2E97',
         'plasma-cyan': '#00D4FF',
         'plasma-purple': '#BF00FF',
-        'plasma-yellow': '#DFFF00',
+        'plasma-yellow': 'rgb(var(--color-plasma-yellow) / <alpha-value>)', // Theme-aware: dark=neon, light=darker
         'void-black': '#050508',
         'deep-purple': '#12001F',
         // Legacy colors (keeping for editor compatibility)
@@ -32,7 +32,7 @@ const config: Config = {
         'soft-violet': '#BF00FF', // Now maps to plasma purple
         'fresh-teal': '#00D4FF', // Now maps to plasma cyan
         'warm-coral': '#f43f5e',
-        'golden-amber': '#DFFF00', // Now maps to plasma yellow
+        'golden-amber': 'rgb(var(--color-golden-amber) / <alpha-value>)', // Theme-aware: dark=neon, light=darker
         'bg-primary': 'rgb(var(--color-bg-primary) / <alpha-value>)',
         'bg-secondary': 'rgb(var(--color-bg-secondary) / <alpha-value>)',
         'bg-tertiary': 'rgb(var(--color-bg-tertiary) / <alpha-value>)',
