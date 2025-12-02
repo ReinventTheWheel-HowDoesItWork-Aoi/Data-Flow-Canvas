@@ -3,13 +3,14 @@
  * @copyright Copyright (c) 2025 Lavelle Hatcher Jr. All rights reserved.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import {
   ChevronLeft,
   FileUp,
+  X,
   Database,
   PenLine,
   Filter,
@@ -655,6 +656,54 @@ export default function HelpPage() {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<Category>('Data Input');
   const [activeSection, setActiveSection] = useState('quick-start');
+  const [blockSearchQuery, setBlockSearchQuery] = useState('');
+
+  // Filter blocks based on search query
+  const filteredBlocks = useMemo(() => {
+    if (!blockSearchQuery.trim()) return blocks;
+    const query = blockSearchQuery.toLowerCase().trim();
+    return blocks.filter((block) => {
+      const translatedName = blockTranslationKeys[block.name]
+        ? t(blockTranslationKeys[block.name].name)
+        : block.name;
+      const translatedDesc = blockTranslationKeys[block.name]
+        ? t(blockTranslationKeys[block.name].description)
+        : block.description;
+      return (
+        block.name.toLowerCase().includes(query) ||
+        block.description.toLowerCase().includes(query) ||
+        translatedName.toLowerCase().includes(query) ||
+        translatedDesc.toLowerCase().includes(query)
+      );
+    });
+  }, [blockSearchQuery, t]);
+
+  // Get match counts per category
+  const categoryMatchCounts = useMemo(() => {
+    const counts: Record<Category, number> = {
+      'Data Input': 0,
+      'Transform': 0,
+      'Analysis': 0,
+      'Visualization': 0,
+      'Output': 0,
+    };
+    filteredBlocks.forEach((block) => {
+      counts[block.category as Category]++;
+    });
+    return counts;
+  }, [filteredBlocks]);
+
+  // Auto-select first category with matches when searching
+  useEffect(() => {
+    if (blockSearchQuery.trim() && categoryMatchCounts[activeCategory] === 0) {
+      const firstCategoryWithMatches = categories.find(
+        (cat) => categoryMatchCounts[cat] > 0
+      );
+      if (firstCategoryWithMatches) {
+        setActiveCategory(firstCategoryWithMatches);
+      }
+    }
+  }, [blockSearchQuery, categoryMatchCounts, activeCategory]);
 
   // Track active section on scroll
   useEffect(() => {
@@ -963,18 +1012,66 @@ export default function HelpPage() {
             </div>
           </div>
 
+          {/* Search Bar */}
+          <div className="relative mb-4">
+            <Search
+              size={18}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+            />
+            <input
+              type="text"
+              value={blockSearchQuery}
+              onChange={(e) => setBlockSearchQuery(e.target.value)}
+              placeholder={t('help.blockReference.searchPlaceholder', 'Search blocks...')}
+              className={cn(
+                'w-full pl-11 pr-10 py-3 rounded-xl',
+                'bg-bg-secondary border border-border-default',
+                'text-text-primary placeholder-text-muted',
+                'focus:outline-none focus:ring-2 focus:ring-electric-indigo/50 focus:border-electric-indigo',
+                'transition-all duration-200'
+              )}
+            />
+            {blockSearchQuery && (
+              <button
+                onClick={() => setBlockSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors"
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+
+          {/* Search Results Summary */}
+          {blockSearchQuery.trim() && (
+            <div className="mb-4 px-3 py-2 bg-electric-indigo/10 rounded-lg border border-electric-indigo/20">
+              <p className="text-small text-electric-indigo">
+                {filteredBlocks.length === 0
+                  ? t('help.blockReference.noResults', 'No blocks found matching your search.')
+                  : t('help.blockReference.resultsCount', {
+                      count: filteredBlocks.length,
+                      defaultValue: `Found ${filteredBlocks.length} block${filteredBlocks.length === 1 ? '' : 's'}`,
+                    })}
+              </p>
+            </div>
+          )}
+
           {/* Category Tabs */}
           <div className="flex flex-wrap gap-2 mb-6 p-1 bg-bg-secondary rounded-xl border border-border-default">
             {categories.map((category) => {
               const colors = categoryColors[category];
-              const count = blocks.filter(b => b.category === category).length;
+              const count = blockSearchQuery.trim()
+                ? categoryMatchCounts[category]
+                : blocks.filter(b => b.category === category).length;
+              const isDisabled = Boolean(blockSearchQuery.trim()) && count === 0;
               return (
                 <button
                   key={category}
-                  onClick={() => setActiveCategory(category)}
+                  onClick={() => !isDisabled && setActiveCategory(category)}
+                  disabled={isDisabled}
                   className={cn(
                     'flex items-center gap-2 px-4 py-2.5 rounded-lg text-small font-medium transition-all duration-200',
-                    activeCategory === category
+                    isDisabled && 'opacity-40 cursor-not-allowed',
+                    activeCategory === category && !isDisabled
                       ? `${colors.bg} ${colors.text} shadow-sm`
                       : 'text-text-muted hover:text-text-primary hover:bg-bg-tertiary'
                   )}
@@ -982,7 +1079,7 @@ export default function HelpPage() {
                   <span>{t(categoryTranslationKeys[category])}</span>
                   <span className={cn(
                     'px-1.5 py-0.5 rounded-md text-[10px] font-semibold',
-                    activeCategory === category
+                    activeCategory === category && !isDisabled
                       ? 'bg-white/20'
                       : 'bg-bg-tertiary'
                   )}>
@@ -995,7 +1092,7 @@ export default function HelpPage() {
 
           {/* Block Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {blocks
+            {filteredBlocks
               .filter((b) => b.category === activeCategory)
               .map((block, index) => {
                 const colors = categoryColors[activeCategory];
