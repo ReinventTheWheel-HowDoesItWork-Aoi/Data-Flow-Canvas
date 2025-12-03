@@ -253,6 +253,27 @@ export type BlockType =
   | 'surface-3d'
   | 'marginal-histogram'
   | 'dumbbell-chart'
+  // New Advanced Visualization Blocks for Data Scientists
+  | 'shap-summary-plot'
+  | 'partial-dependence-plot'
+  | 'feature-importance-plot'
+  | 'ice-plot'
+  | 'precision-recall-curve'
+  | 'learning-curve-plot'
+  | 'residual-plot'
+  | 'actual-vs-predicted-plot'
+  | 'calibration-curve'
+  | 'lift-chart'
+  | 'elbow-plot'
+  | 'silhouette-plot'
+  | 'tsne-umap-plot'
+  | 'missing-value-heatmap'
+  | 'outlier-detection-plot'
+  | 'distribution-comparison-plot'
+  | 'ecdf-plot'
+  | 'andrews-curves'
+  | 'cv-results-plot'
+  | 'hyperparameter-heatmap'
   // Output
   | 'export';
 
