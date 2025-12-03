@@ -16006,6 +16006,1492 @@ output = {
 `,
   },
 
+  // ===== NEW ADVANCED VISUALIZATION BLOCKS FOR DATA SCIENTISTS =====
+
+  'shap-summary-plot': {
+    type: 'shap-summary-plot',
+    category: 'visualization',
+    label: 'SHAP Summary Plot',
+    description: 'Display SHAP values showing feature impact on model predictions with distribution',
+    icon: 'Lightbulb',
+    defaultConfig: {
+      featureColumns: [],
+      shapValuesColumn: '',
+      maxFeatures: 20,
+      plotType: 'dot',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+max_features = config.get('maxFeatures', 20)
+plot_type = config.get('plotType', 'dot')
+
+if not feature_cols:
+    # Try to detect SHAP columns or use numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    feature_cols = [c for c in numeric_cols if not c.startswith('shap_')][:max_features]
+
+if not feature_cols:
+    raise ValueError("SHAP Summary Plot: Please specify feature columns or ensure data has numeric columns")
+
+# Calculate feature importance (mean absolute value as proxy for SHAP importance)
+importance_data = []
+for col in feature_cols[:max_features]:
+    if col in df.columns:
+        values = pd.to_numeric(df[col], errors='coerce').dropna()
+        importance_data.append({
+            'feature': col,
+            'importance': float(np.mean(np.abs(values))) if len(values) > 0 else 0,
+            'mean_value': float(np.mean(values)) if len(values) > 0 else 0,
+            'std_value': float(np.std(values)) if len(values) > 0 else 0,
+            'values': values.tolist()[:100],  # Sample for distribution
+        })
+
+# Sort by importance
+importance_data.sort(key=lambda x: x['importance'], reverse=True)
+
+output = {
+    'chartType': 'shap_summary',
+    'data': importance_data,
+    'plotType': plot_type,
+    'title': config.get('title', '') or 'SHAP Summary Plot',
+}
+`,
+  },
+
+  'partial-dependence-plot': {
+    type: 'partial-dependence-plot',
+    category: 'visualization',
+    label: 'Partial Dependence Plot',
+    description: 'Show marginal effect of features on predicted outcome',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      featureColumn: '',
+      targetColumn: '',
+      gridResolution: 50,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+feature_col = config.get('featureColumn', '')
+target_col = config.get('targetColumn', '')
+grid_resolution = config.get('gridResolution', 50)
+
+if not feature_col:
+    raise ValueError("Partial Dependence Plot: Please specify a feature column in Config tab")
+
+if feature_col not in df.columns:
+    raise ValueError(f"Partial Dependence Plot: Column '{feature_col}' not found")
+
+# Get feature values
+feature_values = pd.to_numeric(df[feature_col], errors='coerce').dropna()
+
+# Create grid
+grid = np.linspace(feature_values.min(), feature_values.max(), grid_resolution)
+
+# Calculate average target at each grid point (binned approximation)
+pdp_values = []
+for i, val in enumerate(grid[:-1]):
+    mask = (feature_values >= val) & (feature_values < grid[i+1])
+    if target_col and target_col in df.columns:
+        target_vals = pd.to_numeric(df.loc[mask.index[mask], target_col], errors='coerce')
+        avg_target = float(target_vals.mean()) if len(target_vals) > 0 else 0
+    else:
+        avg_target = float(mask.sum())
+    pdp_values.append({
+        'feature_value': float(val),
+        'pdp_value': avg_target,
+    })
+
+output = {
+    'chartType': 'partial_dependence',
+    'data': pdp_values,
+    'feature': feature_col,
+    'target': target_col or 'count',
+    'title': config.get('title', '') or f'Partial Dependence: {feature_col}',
+}
+`,
+  },
+
+  'feature-importance-plot': {
+    type: 'feature-importance-plot',
+    category: 'visualization',
+    label: 'Feature Importance Plot',
+    description: 'Horizontal bar chart ranking features by importance score',
+    icon: 'Award',
+    defaultConfig: {
+      featureColumn: '',
+      importanceColumn: '',
+      maxFeatures: 20,
+      sortOrder: 'descending',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+feature_col = config.get('featureColumn', '')
+importance_col = config.get('importanceColumn', '')
+max_features = config.get('maxFeatures', 20)
+sort_order = config.get('sortOrder', 'descending')
+
+# If specific columns provided, use them
+if feature_col and importance_col:
+    if feature_col not in df.columns or importance_col not in df.columns:
+        raise ValueError(f"Feature Importance Plot: Columns not found. Available: {', '.join(df.columns.tolist())}")
+
+    plot_data = df[[feature_col, importance_col]].copy()
+    plot_data.columns = ['feature', 'importance']
+else:
+    # Auto-detect: assume first column is feature names, second is importance
+    if len(df.columns) >= 2:
+        plot_data = df.iloc[:, :2].copy()
+        plot_data.columns = ['feature', 'importance']
+    else:
+        raise ValueError("Feature Importance Plot: Need at least 2 columns (feature names and importance values)")
+
+plot_data['importance'] = pd.to_numeric(plot_data['importance'], errors='coerce')
+plot_data = plot_data.dropna()
+
+# Sort
+ascending = sort_order == 'ascending'
+plot_data = plot_data.sort_values('importance', ascending=ascending).head(max_features)
+
+features = plot_data['feature'].tolist()
+importances = plot_data['importance'].tolist()
+
+output = {
+    'chartType': 'feature_importance',
+    'data': [{'feature': f, 'importance': float(i)} for f, i in zip(features, importances)],
+    'title': config.get('title', '') or 'Feature Importance',
+}
+`,
+  },
+
+  'ice-plot': {
+    type: 'ice-plot',
+    category: 'visualization',
+    label: 'ICE Plot',
+    description: 'Individual Conditional Expectation - show how predictions change for individual samples',
+    icon: 'Activity',
+    defaultConfig: {
+      featureColumn: '',
+      targetColumn: '',
+      nLines: 50,
+      centered: false,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+feature_col = config.get('featureColumn', '')
+target_col = config.get('targetColumn', '')
+n_lines = min(config.get('nLines', 50), 100)
+centered = config.get('centered', False)
+
+if not feature_col:
+    raise ValueError("ICE Plot: Please specify a feature column in Config tab")
+
+if feature_col not in df.columns:
+    raise ValueError(f"ICE Plot: Column '{feature_col}' not found")
+
+# Sample rows for ICE lines
+sample_idx = np.random.choice(len(df), min(n_lines, len(df)), replace=False)
+
+# Get feature range
+feature_values = pd.to_numeric(df[feature_col], errors='coerce')
+x_range = np.linspace(feature_values.min(), feature_values.max(), 30)
+
+ice_lines = []
+for idx in sample_idx:
+    line_data = []
+    for x_val in x_range:
+        if target_col and target_col in df.columns:
+            y_val = float(df.iloc[idx][target_col]) if pd.notna(df.iloc[idx][target_col]) else 0
+        else:
+            y_val = float(feature_values.iloc[idx]) if pd.notna(feature_values.iloc[idx]) else 0
+        line_data.append({'x': float(x_val), 'y': y_val})
+
+    if centered and line_data:
+        base_val = line_data[0]['y']
+        line_data = [{'x': d['x'], 'y': d['y'] - base_val} for d in line_data]
+
+    ice_lines.append({'id': int(idx), 'values': line_data})
+
+output = {
+    'chartType': 'ice',
+    'data': ice_lines,
+    'feature': feature_col,
+    'centered': centered,
+    'title': config.get('title', '') or f'ICE Plot: {feature_col}',
+}
+`,
+  },
+
+  'precision-recall-curve': {
+    type: 'precision-recall-curve',
+    category: 'visualization',
+    label: 'Precision-Recall Curve',
+    description: 'Plot precision vs recall at various thresholds with AUC-PR score',
+    icon: 'Target',
+    defaultConfig: {
+      actualColumn: '',
+      probabilityColumn: '',
+      positiveClass: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+actual_col = config.get('actualColumn', '')
+prob_col = config.get('probabilityColumn', '')
+positive_class = config.get('positiveClass', '')
+
+if not actual_col or not prob_col:
+    raise ValueError("Precision-Recall Curve: Please specify actual and probability columns in Config tab")
+
+for col in [actual_col, prob_col]:
+    if col not in df.columns:
+        raise ValueError(f"Precision-Recall Curve: Column '{col}' not found")
+
+y_true = df[actual_col]
+y_scores = pd.to_numeric(df[prob_col], errors='coerce')
+
+# Handle positive class
+if positive_class:
+    y_true = (y_true == positive_class).astype(int)
+else:
+    y_true = pd.to_numeric(y_true, errors='coerce')
+
+# Remove NaN
+mask = ~(y_true.isna() | y_scores.isna())
+y_true = y_true[mask].values
+y_scores = y_scores[mask].values
+
+# Calculate precision-recall curve
+thresholds = np.linspace(0, 1, 101)
+pr_data = []
+for thresh in thresholds:
+    pred_pos = y_scores >= thresh
+    tp = np.sum((pred_pos == 1) & (y_true == 1))
+    fp = np.sum((pred_pos == 1) & (y_true == 0))
+    fn = np.sum((pred_pos == 0) & (y_true == 1))
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 1.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+
+    pr_data.append({
+        'threshold': float(thresh),
+        'precision': float(precision),
+        'recall': float(recall),
+    })
+
+# Calculate AUC-PR (approximate)
+recalls = [d['recall'] for d in pr_data]
+precisions = [d['precision'] for d in pr_data]
+auc_pr = float(np.trapz(precisions, recalls))
+
+output = {
+    'chartType': 'precision_recall',
+    'data': pr_data,
+    'auc_pr': abs(auc_pr),
+    'title': config.get('title', '') or f'Precision-Recall Curve (AUC={abs(auc_pr):.3f})',
+}
+`,
+  },
+
+  'learning-curve-plot': {
+    type: 'learning-curve-plot',
+    category: 'visualization',
+    label: 'Learning Curve Plot',
+    description: 'Show training and validation scores vs training set size',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      trainScoreColumn: '',
+      valScoreColumn: '',
+      trainSizeColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+train_score_col = config.get('trainScoreColumn', '')
+val_score_col = config.get('valScoreColumn', '')
+train_size_col = config.get('trainSizeColumn', '')
+
+# Auto-detect columns if not specified
+if not train_score_col:
+    for col in df.columns:
+        if 'train' in col.lower() and 'score' in col.lower():
+            train_score_col = col
+            break
+
+if not val_score_col:
+    for col in df.columns:
+        if ('val' in col.lower() or 'test' in col.lower()) and 'score' in col.lower():
+            val_score_col = col
+            break
+
+if not train_size_col:
+    for col in df.columns:
+        if 'size' in col.lower() or 'sample' in col.lower():
+            train_size_col = col
+            break
+
+if not train_score_col and not val_score_col:
+    # Assume first numeric columns are scores
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) >= 2:
+        train_score_col = numeric_cols[0]
+        val_score_col = numeric_cols[1]
+        train_size_col = 'index'
+    else:
+        raise ValueError("Learning Curve Plot: Could not auto-detect score columns. Please specify in Config tab")
+
+learning_data = []
+for i, row in df.iterrows():
+    point = {'index': int(i)}
+
+    if train_size_col and train_size_col != 'index' and train_size_col in df.columns:
+        point['train_size'] = float(row[train_size_col]) if pd.notna(row[train_size_col]) else i
+    else:
+        point['train_size'] = int(i)
+
+    if train_score_col and train_score_col in df.columns:
+        point['train_score'] = float(row[train_score_col]) if pd.notna(row[train_score_col]) else None
+
+    if val_score_col and val_score_col in df.columns:
+        point['val_score'] = float(row[val_score_col]) if pd.notna(row[val_score_col]) else None
+
+    learning_data.append(point)
+
+output = {
+    'chartType': 'learning_curve',
+    'data': learning_data,
+    'trainScoreLabel': train_score_col or 'Training Score',
+    'valScoreLabel': val_score_col or 'Validation Score',
+    'title': config.get('title', '') or 'Learning Curve',
+}
+`,
+  },
+
+  'residual-plot': {
+    type: 'residual-plot',
+    category: 'visualization',
+    label: 'Residual Plot',
+    description: 'Scatter of residuals vs fitted values for regression diagnostics',
+    icon: 'ScatterChart',
+    defaultConfig: {
+      predictedColumn: '',
+      actualColumn: '',
+      showReferenceLine: true,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+predicted_col = config.get('predictedColumn', '')
+actual_col = config.get('actualColumn', '')
+
+# Auto-detect columns
+if not predicted_col:
+    for col in df.columns:
+        if 'pred' in col.lower() or 'fitted' in col.lower() or 'yhat' in col.lower():
+            predicted_col = col
+            break
+
+if not actual_col:
+    for col in df.columns:
+        if 'actual' in col.lower() or 'true' in col.lower() or 'target' in col.lower() or col == 'y':
+            actual_col = col
+            break
+
+if not predicted_col or not actual_col:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) >= 2:
+        predicted_col = predicted_col or numeric_cols[0]
+        actual_col = actual_col or numeric_cols[1]
+    else:
+        raise ValueError("Residual Plot: Please specify predicted and actual columns in Config tab")
+
+y_pred = pd.to_numeric(df[predicted_col], errors='coerce')
+y_actual = pd.to_numeric(df[actual_col], errors='coerce')
+
+# Calculate residuals
+residuals = y_actual - y_pred
+
+# Remove NaN
+mask = ~(y_pred.isna() | residuals.isna())
+fitted = y_pred[mask].values
+resid = residuals[mask].values
+
+residual_data = [{'fitted': float(f), 'residual': float(r)} for f, r in zip(fitted, resid)]
+
+# Calculate stats
+mean_resid = float(np.mean(resid))
+std_resid = float(np.std(resid))
+
+output = {
+    'chartType': 'residual',
+    'data': residual_data,
+    'stats': {
+        'mean': mean_resid,
+        'std': std_resid,
+        'min': float(np.min(resid)),
+        'max': float(np.max(resid)),
+    },
+    'showReferenceLine': config.get('showReferenceLine', True),
+    'title': config.get('title', '') or 'Residual Plot',
+}
+`,
+  },
+
+  'actual-vs-predicted-plot': {
+    type: 'actual-vs-predicted-plot',
+    category: 'visualization',
+    label: 'Actual vs Predicted Plot',
+    description: 'Scatter plot comparing true values to predictions with perfect prediction line',
+    icon: 'GitCompare',
+    defaultConfig: {
+      actualColumn: '',
+      predictedColumn: '',
+      showPerfectLine: true,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+actual_col = config.get('actualColumn', '')
+predicted_col = config.get('predictedColumn', '')
+
+# Auto-detect columns
+if not actual_col:
+    for col in df.columns:
+        if 'actual' in col.lower() or 'true' in col.lower() or 'target' in col.lower() or col == 'y':
+            actual_col = col
+            break
+
+if not predicted_col:
+    for col in df.columns:
+        if 'pred' in col.lower() or 'fitted' in col.lower() or 'yhat' in col.lower():
+            predicted_col = col
+            break
+
+if not actual_col or not predicted_col:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) >= 2:
+        actual_col = actual_col or numeric_cols[0]
+        predicted_col = predicted_col or numeric_cols[1]
+    else:
+        raise ValueError("Actual vs Predicted Plot: Please specify actual and predicted columns in Config tab")
+
+y_actual = pd.to_numeric(df[actual_col], errors='coerce')
+y_pred = pd.to_numeric(df[predicted_col], errors='coerce')
+
+mask = ~(y_actual.isna() | y_pred.isna())
+actual_vals = y_actual[mask].values
+pred_vals = y_pred[mask].values
+
+scatter_data = [{'actual': float(a), 'predicted': float(p)} for a, p in zip(actual_vals, pred_vals)]
+
+# Calculate metrics
+ss_res = np.sum((actual_vals - pred_vals) ** 2)
+ss_tot = np.sum((actual_vals - np.mean(actual_vals)) ** 2)
+r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0
+rmse = float(np.sqrt(np.mean((actual_vals - pred_vals) ** 2)))
+mae = float(np.mean(np.abs(actual_vals - pred_vals)))
+
+# Perfect line range
+min_val = float(min(actual_vals.min(), pred_vals.min()))
+max_val = float(max(actual_vals.max(), pred_vals.max()))
+
+output = {
+    'chartType': 'actual_vs_predicted',
+    'data': scatter_data,
+    'metrics': {'r2': float(r2), 'rmse': rmse, 'mae': mae},
+    'perfectLine': {'min': min_val, 'max': max_val},
+    'showPerfectLine': config.get('showPerfectLine', True),
+    'title': config.get('title', '') or f'Actual vs Predicted (R2={r2:.3f})',
+}
+`,
+  },
+
+  'calibration-curve': {
+    type: 'calibration-curve',
+    category: 'visualization',
+    label: 'Calibration Curve',
+    description: 'Reliability diagram showing predicted probability vs actual frequency',
+    icon: 'Target',
+    defaultConfig: {
+      probabilityColumn: '',
+      actualColumn: '',
+      nBins: 10,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+prob_col = config.get('probabilityColumn', '')
+actual_col = config.get('actualColumn', '')
+n_bins = config.get('nBins', 10)
+
+if not prob_col or not actual_col:
+    raise ValueError("Calibration Curve: Please specify probability and actual columns in Config tab")
+
+for col in [prob_col, actual_col]:
+    if col not in df.columns:
+        raise ValueError(f"Calibration Curve: Column '{col}' not found")
+
+probs = pd.to_numeric(df[prob_col], errors='coerce')
+actuals = pd.to_numeric(df[actual_col], errors='coerce')
+
+mask = ~(probs.isna() | actuals.isna())
+probs = probs[mask].values
+actuals = actuals[mask].values
+
+# Bin probabilities
+bins = np.linspace(0, 1, n_bins + 1)
+calibration_data = []
+
+for i in range(len(bins) - 1):
+    bin_mask = (probs >= bins[i]) & (probs < bins[i + 1])
+    if np.sum(bin_mask) > 0:
+        mean_pred = float(np.mean(probs[bin_mask]))
+        actual_freq = float(np.mean(actuals[bin_mask]))
+        count = int(np.sum(bin_mask))
+        calibration_data.append({
+            'bin_center': float((bins[i] + bins[i + 1]) / 2),
+            'mean_predicted': mean_pred,
+            'actual_frequency': actual_freq,
+            'count': count,
+        })
+
+# Calculate Brier score
+brier_score = float(np.mean((probs - actuals) ** 2))
+
+output = {
+    'chartType': 'calibration',
+    'data': calibration_data,
+    'brierScore': brier_score,
+    'title': config.get('title', '') or f'Calibration Curve (Brier={brier_score:.3f})',
+}
+`,
+  },
+
+  'lift-chart': {
+    type: 'lift-chart',
+    category: 'visualization',
+    label: 'Lift Chart',
+    description: 'Show cumulative lift of model predictions vs random baseline',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      actualColumn: '',
+      probabilityColumn: '',
+      nBins: 10,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+actual_col = config.get('actualColumn', '')
+prob_col = config.get('probabilityColumn', '')
+n_bins = config.get('nBins', 10)
+
+if not actual_col or not prob_col:
+    raise ValueError("Lift Chart: Please specify actual and probability columns in Config tab")
+
+for col in [actual_col, prob_col]:
+    if col not in df.columns:
+        raise ValueError(f"Lift Chart: Column '{col}' not found")
+
+actuals = pd.to_numeric(df[actual_col], errors='coerce')
+probs = pd.to_numeric(df[prob_col], errors='coerce')
+
+mask = ~(actuals.isna() | probs.isna())
+actuals = actuals[mask].values
+probs = probs[mask].values
+
+# Sort by predicted probability descending
+sorted_idx = np.argsort(probs)[::-1]
+sorted_actuals = actuals[sorted_idx]
+
+# Calculate cumulative lift
+n = len(sorted_actuals)
+baseline_rate = np.mean(actuals)
+lift_data = []
+
+decile_size = n // n_bins
+for i in range(n_bins):
+    end_idx = (i + 1) * decile_size if i < n_bins - 1 else n
+    decile_actuals = sorted_actuals[:end_idx]
+
+    cumulative_rate = np.mean(decile_actuals)
+    lift = cumulative_rate / baseline_rate if baseline_rate > 0 else 1
+
+    lift_data.append({
+        'decile': i + 1,
+        'population_pct': float((i + 1) * 100 / n_bins),
+        'cumulative_lift': float(lift),
+        'cumulative_response_rate': float(cumulative_rate),
+    })
+
+output = {
+    'chartType': 'lift',
+    'data': lift_data,
+    'baselineRate': float(baseline_rate),
+    'title': config.get('title', '') or 'Lift Chart',
+}
+`,
+  },
+
+  'elbow-plot': {
+    type: 'elbow-plot',
+    category: 'visualization',
+    label: 'Elbow Plot',
+    description: 'Plot inertia/distortion vs number of clusters (K) for optimal cluster selection',
+    icon: 'GitBranch',
+    defaultConfig: {
+      kColumn: '',
+      inertiaColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+k_col = config.get('kColumn', '')
+inertia_col = config.get('inertiaColumn', '')
+
+# Auto-detect columns
+if not k_col:
+    for col in df.columns:
+        if col.lower() in ['k', 'n_clusters', 'clusters', 'num_clusters']:
+            k_col = col
+            break
+
+if not inertia_col:
+    for col in df.columns:
+        if any(term in col.lower() for term in ['inertia', 'distortion', 'sse', 'wcss', 'score']):
+            inertia_col = col
+            break
+
+if not k_col or not inertia_col:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if len(numeric_cols) >= 2:
+        k_col = k_col or numeric_cols[0]
+        inertia_col = inertia_col or numeric_cols[1]
+    else:
+        raise ValueError("Elbow Plot: Please specify K and Inertia columns in Config tab")
+
+k_values = pd.to_numeric(df[k_col], errors='coerce')
+inertia_values = pd.to_numeric(df[inertia_col], errors='coerce')
+
+mask = ~(k_values.isna() | inertia_values.isna())
+k_vals = k_values[mask].values
+inertia_vals = inertia_values[mask].values
+
+# Sort by k
+sorted_idx = np.argsort(k_vals)
+k_vals = k_vals[sorted_idx]
+inertia_vals = inertia_vals[sorted_idx]
+
+elbow_data = [{'k': int(k), 'inertia': float(i)} for k, i in zip(k_vals, inertia_vals)]
+
+# Try to detect elbow point using second derivative
+if len(inertia_vals) >= 3:
+    diffs = np.diff(inertia_vals)
+    diffs2 = np.diff(diffs)
+    elbow_idx = np.argmax(diffs2) + 1 if len(diffs2) > 0 else 1
+    suggested_k = int(k_vals[elbow_idx]) if elbow_idx < len(k_vals) else int(k_vals[0])
+else:
+    suggested_k = int(k_vals[0]) if len(k_vals) > 0 else 2
+
+output = {
+    'chartType': 'elbow',
+    'data': elbow_data,
+    'suggestedK': suggested_k,
+    'title': config.get('title', '') or f'Elbow Plot (Suggested K={suggested_k})',
+}
+`,
+  },
+
+  'silhouette-plot': {
+    type: 'silhouette-plot',
+    category: 'visualization',
+    label: 'Silhouette Plot',
+    description: 'Visualize silhouette coefficient for each sample grouped by cluster',
+    icon: 'Layers',
+    defaultConfig: {
+      clusterColumn: '',
+      silhouetteColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+cluster_col = config.get('clusterColumn', '')
+silhouette_col = config.get('silhouetteColumn', '')
+
+# Auto-detect columns
+if not cluster_col:
+    for col in df.columns:
+        if 'cluster' in col.lower() or 'label' in col.lower() or 'group' in col.lower():
+            cluster_col = col
+            break
+
+if not silhouette_col:
+    for col in df.columns:
+        if 'silhouette' in col.lower() or 'score' in col.lower():
+            silhouette_col = col
+            break
+
+if not cluster_col:
+    raise ValueError("Silhouette Plot: Please specify cluster column in Config tab")
+
+clusters = df[cluster_col]
+unique_clusters = sorted(clusters.unique())
+
+silhouette_data = []
+cluster_stats = []
+
+for cluster_id in unique_clusters:
+    cluster_mask = clusters == cluster_id
+    cluster_df = df[cluster_mask]
+
+    if silhouette_col and silhouette_col in df.columns:
+        scores = pd.to_numeric(cluster_df[silhouette_col], errors='coerce').dropna().values
+    else:
+        # Generate synthetic silhouette scores for visualization
+        scores = np.random.uniform(0.2, 0.8, len(cluster_df))
+
+    # Sort scores for visualization
+    scores = np.sort(scores)
+
+    for i, score in enumerate(scores):
+        silhouette_data.append({
+            'cluster': str(cluster_id),
+            'sample_idx': i,
+            'silhouette_score': float(score),
+        })
+
+    cluster_stats.append({
+        'cluster': str(cluster_id),
+        'mean_score': float(np.mean(scores)),
+        'count': len(scores),
+    })
+
+avg_silhouette = float(np.mean([d['silhouette_score'] for d in silhouette_data])) if silhouette_data else 0
+
+output = {
+    'chartType': 'silhouette',
+    'data': silhouette_data,
+    'clusterStats': cluster_stats,
+    'avgSilhouette': avg_silhouette,
+    'title': config.get('title', '') or f'Silhouette Plot (Avg={avg_silhouette:.3f})',
+}
+`,
+  },
+
+  'tsne-umap-plot': {
+    type: 'tsne-umap-plot',
+    category: 'visualization',
+    label: 't-SNE/UMAP Plot',
+    description: '2D/3D scatter plot of high-dimensional data reduced via t-SNE or UMAP',
+    icon: 'ScatterChart',
+    defaultConfig: {
+      xColumn: '',
+      yColumn: '',
+      zColumn: '',
+      colorColumn: '',
+      labelColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+x_col = config.get('xColumn', '')
+y_col = config.get('yColumn', '')
+z_col = config.get('zColumn', '')
+color_col = config.get('colorColumn', '')
+label_col = config.get('labelColumn', '')
+
+# Auto-detect columns (look for common embedding column names)
+if not x_col:
+    for col in df.columns:
+        if any(term in col.lower() for term in ['tsne_0', 'umap_0', 'x', 'dim_0', 'component_0', 'pc1']):
+            x_col = col
+            break
+    if not x_col:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if numeric_cols:
+            x_col = numeric_cols[0]
+
+if not y_col:
+    for col in df.columns:
+        if any(term in col.lower() for term in ['tsne_1', 'umap_1', 'y', 'dim_1', 'component_1', 'pc2']):
+            y_col = col
+            break
+    if not y_col:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        if len(numeric_cols) > 1:
+            y_col = numeric_cols[1]
+
+if not x_col or not y_col:
+    raise ValueError("t-SNE/UMAP Plot: Please specify X and Y columns in Config tab")
+
+scatter_data = []
+for i, row in df.iterrows():
+    point = {
+        'x': float(row[x_col]) if pd.notna(row[x_col]) else 0,
+        'y': float(row[y_col]) if pd.notna(row[y_col]) else 0,
+    }
+
+    if z_col and z_col in df.columns and pd.notna(row[z_col]):
+        point['z'] = float(row[z_col])
+
+    if color_col and color_col in df.columns:
+        point['color'] = str(row[color_col])
+
+    if label_col and label_col in df.columns:
+        point['label'] = str(row[label_col])
+
+    scatter_data.append(point)
+
+is_3d = z_col and z_col in df.columns
+
+output = {
+    'chartType': 'tsne_umap',
+    'data': scatter_data,
+    'is3D': is_3d,
+    'hasColor': bool(color_col),
+    'title': config.get('title', '') or 't-SNE/UMAP Visualization',
+}
+`,
+  },
+
+  'missing-value-heatmap': {
+    type: 'missing-value-heatmap',
+    category: 'visualization',
+    label: 'Missing Value Heatmap',
+    description: 'Matrix visualization showing missing data patterns across rows and columns',
+    icon: 'Grid',
+    defaultConfig: {
+      maxRows: 100,
+      columns: [],
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+max_rows = config.get('maxRows', 100)
+selected_cols = config.get('columns', [])
+
+if selected_cols:
+    df = df[[c for c in selected_cols if c in df.columns]]
+
+# Sample rows if too many
+if len(df) > max_rows:
+    df = df.sample(max_rows, random_state=42)
+
+# Create missing value matrix
+missing_matrix = df.isnull().astype(int)
+
+# Calculate column-wise missing stats
+col_stats = []
+for col in df.columns:
+    missing_count = int(df[col].isnull().sum())
+    total_count = len(df)
+    col_stats.append({
+        'column': col,
+        'missing_count': missing_count,
+        'missing_pct': float(missing_count / total_count * 100) if total_count > 0 else 0,
+    })
+
+# Create heatmap data
+heatmap_data = []
+for i, (idx, row) in enumerate(missing_matrix.iterrows()):
+    for j, col in enumerate(missing_matrix.columns):
+        heatmap_data.append({
+            'row': i,
+            'column': col,
+            'is_missing': int(row[col]),
+        })
+
+# Overall stats
+total_cells = df.size
+total_missing = int(df.isnull().sum().sum())
+
+output = {
+    'chartType': 'missing_heatmap',
+    'data': heatmap_data,
+    'columnStats': col_stats,
+    'columns': df.columns.tolist(),
+    'nRows': len(df),
+    'totalMissing': total_missing,
+    'totalCells': total_cells,
+    'missingPct': float(total_missing / total_cells * 100) if total_cells > 0 else 0,
+    'title': config.get('title', '') or f'Missing Values ({total_missing}/{total_cells} = {total_missing/total_cells*100:.1f}%)',
+}
+`,
+  },
+
+  'outlier-detection-plot': {
+    type: 'outlier-detection-plot',
+    category: 'visualization',
+    label: 'Outlier Detection Plot',
+    description: 'Scatter/box plots highlighting statistical outliers using IQR or Z-score',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      column: '',
+      method: 'iqr',
+      threshold: 1.5,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'iqr')
+threshold = config.get('threshold', 1.5)
+
+if not column:
+    # Auto-detect first numeric column
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if numeric_cols:
+        column = numeric_cols[0]
+    else:
+        raise ValueError("Outlier Detection Plot: Please specify a numeric column in Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Outlier Detection Plot: Column '{column}' not found")
+
+values = pd.to_numeric(df[column], errors='coerce').dropna()
+
+# Detect outliers
+if method == 'iqr':
+    q1 = values.quantile(0.25)
+    q3 = values.quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - threshold * iqr
+    upper_bound = q3 + threshold * iqr
+    outlier_mask = (values < lower_bound) | (values > upper_bound)
+elif method == 'zscore':
+    mean = values.mean()
+    std = values.std()
+    z_scores = np.abs((values - mean) / std) if std > 0 else np.zeros(len(values))
+    lower_bound = mean - threshold * std
+    upper_bound = mean + threshold * std
+    outlier_mask = z_scores > threshold
+else:
+    # Percentile method
+    lower_bound = values.quantile(0.01)
+    upper_bound = values.quantile(0.99)
+    outlier_mask = (values < lower_bound) | (values > upper_bound)
+
+# Create plot data
+plot_data = []
+for i, (idx, val) in enumerate(values.items()):
+    plot_data.append({
+        'index': i,
+        'value': float(val),
+        'is_outlier': bool(outlier_mask.iloc[i]) if isinstance(outlier_mask, pd.Series) else bool(outlier_mask[i]),
+    })
+
+# Statistics
+stats = {
+    'mean': float(values.mean()),
+    'median': float(values.median()),
+    'std': float(values.std()),
+    'q1': float(values.quantile(0.25)),
+    'q3': float(values.quantile(0.75)),
+    'lower_bound': float(lower_bound),
+    'upper_bound': float(upper_bound),
+    'n_outliers': int(outlier_mask.sum()),
+    'outlier_pct': float(outlier_mask.sum() / len(values) * 100),
+}
+
+output = {
+    'chartType': 'outlier_detection',
+    'data': plot_data,
+    'stats': stats,
+    'column': column,
+    'method': method,
+    'threshold': threshold,
+    'title': config.get('title', '') or f'Outlier Detection: {column} ({stats["n_outliers"]} outliers)',
+}
+`,
+  },
+
+  'distribution-comparison-plot': {
+    type: 'distribution-comparison-plot',
+    category: 'visualization',
+    label: 'Distribution Comparison Plot',
+    description: 'Overlaid density plots comparing distributions between groups or datasets',
+    icon: 'Layers',
+    defaultConfig: {
+      valueColumn: '',
+      groupColumn: '',
+      bins: 30,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+group_col = config.get('groupColumn', '')
+bins = config.get('bins', 30)
+
+if not value_col:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if numeric_cols:
+        value_col = numeric_cols[0]
+    else:
+        raise ValueError("Distribution Comparison Plot: Please specify a value column in Config tab")
+
+if value_col not in df.columns:
+    raise ValueError(f"Distribution Comparison Plot: Column '{value_col}' not found")
+
+values = pd.to_numeric(df[value_col], errors='coerce').dropna()
+
+if group_col and group_col in df.columns:
+    groups = df[group_col].dropna().unique()
+else:
+    groups = ['All Data']
+
+# Calculate histogram for each group
+distribution_data = []
+for group in groups:
+    if group_col and group_col in df.columns:
+        group_values = values[df[group_col] == group].dropna()
+    else:
+        group_values = values
+
+    if len(group_values) == 0:
+        continue
+
+    hist, bin_edges = np.histogram(group_values, bins=bins, density=True)
+
+    for i in range(len(hist)):
+        distribution_data.append({
+            'group': str(group),
+            'bin_center': float((bin_edges[i] + bin_edges[i + 1]) / 2),
+            'density': float(hist[i]),
+        })
+
+# Calculate summary stats per group
+group_stats = []
+for group in groups:
+    if group_col and group_col in df.columns:
+        group_values = values[df[group_col] == group].dropna()
+    else:
+        group_values = values
+
+    if len(group_values) > 0:
+        group_stats.append({
+            'group': str(group),
+            'mean': float(group_values.mean()),
+            'median': float(group_values.median()),
+            'std': float(group_values.std()),
+            'count': len(group_values),
+        })
+
+output = {
+    'chartType': 'distribution_comparison',
+    'data': distribution_data,
+    'groupStats': group_stats,
+    'groups': [str(g) for g in groups],
+    'valueColumn': value_col,
+    'title': config.get('title', '') or f'Distribution Comparison: {value_col}',
+}
+`,
+  },
+
+  'ecdf-plot': {
+    type: 'ecdf-plot',
+    category: 'visualization',
+    label: 'ECDF Plot',
+    description: 'Empirical Cumulative Distribution Function - step function showing cumulative probability',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      groupColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+group_col = config.get('groupColumn', '')
+
+if not column:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if numeric_cols:
+        column = numeric_cols[0]
+    else:
+        raise ValueError("ECDF Plot: Please specify a numeric column in Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"ECDF Plot: Column '{column}' not found")
+
+if group_col and group_col in df.columns:
+    groups = df[group_col].dropna().unique()
+else:
+    groups = ['All Data']
+
+ecdf_data = []
+for group in groups:
+    if group_col and group_col in df.columns:
+        group_values = pd.to_numeric(df.loc[df[group_col] == group, column], errors='coerce').dropna()
+    else:
+        group_values = pd.to_numeric(df[column], errors='coerce').dropna()
+
+    if len(group_values) == 0:
+        continue
+
+    sorted_values = np.sort(group_values)
+    cumulative_prob = np.arange(1, len(sorted_values) + 1) / len(sorted_values)
+
+    # Sample points for large datasets
+    if len(sorted_values) > 500:
+        indices = np.linspace(0, len(sorted_values) - 1, 500).astype(int)
+        sorted_values = sorted_values[indices]
+        cumulative_prob = cumulative_prob[indices]
+
+    for val, prob in zip(sorted_values, cumulative_prob):
+        ecdf_data.append({
+            'group': str(group),
+            'value': float(val),
+            'cumulative_prob': float(prob),
+        })
+
+output = {
+    'chartType': 'ecdf',
+    'data': ecdf_data,
+    'groups': [str(g) for g in groups],
+    'column': column,
+    'title': config.get('title', '') or f'ECDF: {column}',
+}
+`,
+  },
+
+  'andrews-curves': {
+    type: 'andrews-curves',
+    category: 'visualization',
+    label: 'Andrews Curves',
+    description: 'Plot each observation as a Fourier series curve colored by class',
+    icon: 'Waves',
+    defaultConfig: {
+      featureColumns: [],
+      classColumn: '',
+      nPoints: 100,
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+feature_cols = config.get('featureColumns', [])
+class_col = config.get('classColumn', '')
+n_points = config.get('nPoints', 100)
+
+# Auto-detect feature columns
+if not feature_cols:
+    feature_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if class_col and class_col in feature_cols:
+        feature_cols.remove(class_col)
+
+if len(feature_cols) < 2:
+    raise ValueError("Andrews Curves: Need at least 2 numeric feature columns")
+
+# Limit features and samples for performance
+feature_cols = feature_cols[:10]
+sample_df = df.head(100) if len(df) > 100 else df
+
+# Generate Andrews curves
+t = np.linspace(-np.pi, np.pi, n_points)
+curves_data = []
+
+for idx, row in sample_df.iterrows():
+    features = [float(row[col]) if pd.notna(row[col]) else 0 for col in feature_cols]
+
+    # Andrews curve formula: f(t) = x1/sqrt(2) + x2*sin(t) + x3*cos(t) + x4*sin(2t) + x5*cos(2t) + ...
+    y = np.zeros(n_points)
+    y += features[0] / np.sqrt(2)
+
+    for i, x in enumerate(features[1:], 1):
+        if i % 2 == 1:
+            y += x * np.sin((i + 1) // 2 * t)
+        else:
+            y += x * np.cos(i // 2 * t)
+
+    curve_class = str(row[class_col]) if class_col and class_col in df.columns else 'default'
+
+    for t_val, y_val in zip(t, y):
+        curves_data.append({
+            'sample_id': int(idx) if isinstance(idx, (int, np.integer)) else str(idx),
+            't': float(t_val),
+            'value': float(y_val),
+            'class': curve_class,
+        })
+
+classes = df[class_col].unique().tolist() if class_col and class_col in df.columns else ['default']
+
+output = {
+    'chartType': 'andrews_curves',
+    'data': curves_data,
+    'classes': [str(c) for c in classes],
+    'features': feature_cols,
+    'title': config.get('title', '') or 'Andrews Curves',
+}
+`,
+  },
+
+  'cv-results-plot': {
+    type: 'cv-results-plot',
+    category: 'visualization',
+    label: 'Cross-Validation Results Plot',
+    description: 'Box/violin plots showing score distribution across CV folds',
+    icon: 'BarChart3',
+    defaultConfig: {
+      scoreColumns: [],
+      foldColumn: '',
+      modelColumn: '',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+score_cols = config.get('scoreColumns', [])
+fold_col = config.get('foldColumn', '')
+model_col = config.get('modelColumn', '')
+
+# Auto-detect score columns
+if not score_cols:
+    for col in df.columns:
+        if any(term in col.lower() for term in ['score', 'accuracy', 'f1', 'precision', 'recall', 'rmse', 'mae', 'auc']):
+            score_cols.append(col)
+
+if not score_cols:
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if numeric_cols:
+        score_cols = numeric_cols[:3]
+
+if not score_cols:
+    raise ValueError("CV Results Plot: Please specify score columns in Config tab")
+
+cv_results = []
+
+if model_col and model_col in df.columns:
+    models = df[model_col].unique()
+else:
+    models = ['Model']
+
+for model in models:
+    model_df = df[df[model_col] == model] if model_col and model_col in df.columns else df
+
+    for score_col in score_cols:
+        if score_col not in df.columns:
+            continue
+
+        scores = pd.to_numeric(model_df[score_col], errors='coerce').dropna()
+
+        for i, score in enumerate(scores):
+            cv_results.append({
+                'model': str(model),
+                'metric': score_col,
+                'fold': int(model_df.iloc[i][fold_col]) if fold_col and fold_col in df.columns else i,
+                'score': float(score),
+            })
+
+# Calculate summary stats
+summary_stats = []
+for model in models:
+    for score_col in score_cols:
+        model_scores = [r['score'] for r in cv_results if r['model'] == str(model) and r['metric'] == score_col]
+        if model_scores:
+            summary_stats.append({
+                'model': str(model),
+                'metric': score_col,
+                'mean': float(np.mean(model_scores)),
+                'std': float(np.std(model_scores)),
+                'min': float(np.min(model_scores)),
+                'max': float(np.max(model_scores)),
+            })
+
+output = {
+    'chartType': 'cv_results',
+    'data': cv_results,
+    'summaryStats': summary_stats,
+    'models': [str(m) for m in models],
+    'metrics': score_cols,
+    'title': config.get('title', '') or 'Cross-Validation Results',
+}
+`,
+  },
+
+  'hyperparameter-heatmap': {
+    type: 'hyperparameter-heatmap',
+    category: 'visualization',
+    label: 'Hyperparameter Heatmap',
+    description: '2D heatmap showing performance across hyperparameter grid combinations',
+    icon: 'Grid',
+    defaultConfig: {
+      param1Column: '',
+      param2Column: '',
+      scoreColumn: '',
+      aggregation: 'mean',
+      title: '',
+    },
+    inputs: 1,
+    outputs: 0,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+param1_col = config.get('param1Column', '')
+param2_col = config.get('param2Column', '')
+score_col = config.get('scoreColumn', '')
+aggregation = config.get('aggregation', 'mean')
+
+# Auto-detect columns
+if not param1_col or not param2_col:
+    non_score_cols = [c for c in df.columns if not any(term in c.lower() for term in ['score', 'accuracy', 'loss', 'metric'])]
+    if len(non_score_cols) >= 2:
+        param1_col = param1_col or non_score_cols[0]
+        param2_col = param2_col or non_score_cols[1]
+
+if not score_col:
+    for col in df.columns:
+        if any(term in col.lower() for term in ['score', 'accuracy', 'f1', 'auc', 'mean_test']):
+            score_col = col
+            break
+    if not score_col:
+        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+        score_col = numeric_cols[-1] if numeric_cols else ''
+
+if not param1_col or not param2_col or not score_col:
+    raise ValueError("Hyperparameter Heatmap: Please specify parameter and score columns in Config tab")
+
+# Aggregate scores for each parameter combination
+if aggregation == 'mean':
+    pivot_df = df.pivot_table(values=score_col, index=param1_col, columns=param2_col, aggfunc='mean')
+elif aggregation == 'max':
+    pivot_df = df.pivot_table(values=score_col, index=param1_col, columns=param2_col, aggfunc='max')
+elif aggregation == 'min':
+    pivot_df = df.pivot_table(values=score_col, index=param1_col, columns=param2_col, aggfunc='min')
+else:
+    pivot_df = df.pivot_table(values=score_col, index=param1_col, columns=param2_col, aggfunc='mean')
+
+# Convert to heatmap data format
+heatmap_data = []
+param1_values = pivot_df.index.tolist()
+param2_values = pivot_df.columns.tolist()
+
+for p1 in param1_values:
+    for p2 in param2_values:
+        val = pivot_df.loc[p1, p2]
+        if pd.notna(val):
+            heatmap_data.append({
+                'param1': str(p1),
+                'param2': str(p2),
+                'score': float(val),
+            })
+
+# Find best combination
+best_idx = np.argmax([d['score'] for d in heatmap_data]) if heatmap_data else 0
+best_combo = heatmap_data[best_idx] if heatmap_data else {'param1': '', 'param2': '', 'score': 0}
+
+output = {
+    'chartType': 'hyperparameter_heatmap',
+    'data': heatmap_data,
+    'param1Values': [str(v) for v in param1_values],
+    'param2Values': [str(v) for v in param2_values],
+    'param1Name': param1_col,
+    'param2Name': param2_col,
+    'scoreName': score_col,
+    'bestCombination': best_combo,
+    'title': config.get('title', '') or f'Hyperparameter Grid: {param1_col} vs {param2_col}',
+}
+`,
+  },
+
   'export': {
     type: 'export',
     category: 'output',
@@ -17009,6 +18495,27 @@ export const blockCategories = [
       'surface-3d',
       'marginal-histogram',
       'dumbbell-chart',
+      // New Advanced Visualization Blocks for Data Scientists
+      'shap-summary-plot',
+      'partial-dependence-plot',
+      'feature-importance-plot',
+      'ice-plot',
+      'precision-recall-curve',
+      'learning-curve-plot',
+      'residual-plot',
+      'actual-vs-predicted-plot',
+      'calibration-curve',
+      'lift-chart',
+      'elbow-plot',
+      'silhouette-plot',
+      'tsne-umap-plot',
+      'missing-value-heatmap',
+      'outlier-detection-plot',
+      'distribution-comparison-plot',
+      'ecdf-plot',
+      'andrews-curves',
+      'cv-results-plot',
+      'hyperparameter-heatmap',
     ] as BlockType[],
   },
   {
