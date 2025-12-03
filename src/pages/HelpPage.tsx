@@ -324,7 +324,7 @@ const blocks: BlockInfo[] = [
   { icon: TrendingUp, name: 'Causal Impact Analysis', description: 'Measure causal effect of interventions using Difference-in-Differences or synthetic control methods', category: 'Analysis' },
   { icon: Save, name: 'Model Registry', description: 'Save trained models to IndexedDB with versioning and metadata, or load previously saved models for inference', category: 'Analysis' },
 
-  // Visualization (50 blocks)
+  // Visualization (70 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
   { icon: Table, name: 'Table', description: 'Display data in an interactive table', category: 'Visualization' },
   { icon: Grid2x2, name: 'Correlation Matrix', description: 'Visualize correlations as a heatmap', category: 'Visualization' },
@@ -375,6 +375,26 @@ const blocks: BlockInfo[] = [
   { icon: Grid3x3, name: '3D Surface Plot', description: 'Interactive 3D surface showing Z values across X-Y grid', category: 'Visualization' },
   { icon: LayoutGrid, name: 'Marginal Histogram', description: 'Scatter plot with histograms on margins showing variable distributions', category: 'Visualization' },
   { icon: ArrowLeftRight, name: 'Dumbbell Chart', description: 'Connected dots showing change between two values per category', category: 'Visualization' },
+  { icon: Lightbulb, name: 'SHAP Summary Plot', description: 'Display SHAP values showing feature impact on model predictions with distribution', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Partial Dependence Plot', description: 'Show marginal effect of features on predicted outcome', category: 'Visualization' },
+  { icon: Award, name: 'Feature Importance Plot', description: 'Visualize feature importance scores from tree-based or permutation methods', category: 'Visualization' },
+  { icon: Activity, name: 'ICE Plot', description: 'Individual Conditional Expectation curves showing per-instance feature effects', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Precision-Recall Curve', description: 'Evaluate classifier performance especially for imbalanced datasets', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Learning Curve Plot', description: 'Diagnose bias/variance by plotting performance vs training set size', category: 'Visualization' },
+  { icon: ScatterChart, name: 'Residual Plot', description: 'Diagnose regression models by visualizing prediction errors', category: 'Visualization' },
+  { icon: ScatterChart, name: 'Actual vs Predicted Plot', description: 'Compare true values against model predictions with perfect prediction line', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Calibration Curve', description: 'Assess probability calibration of classifiers against perfect calibration', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Lift Chart', description: 'Evaluate model performance for marketing and targeting applications', category: 'Visualization' },
+  { icon: TrendingUp, name: 'Elbow Plot', description: 'Determine optimal number of clusters using inertia or distortion', category: 'Visualization' },
+  { icon: BarChart3, name: 'Silhouette Plot', description: 'Visualize cluster quality and separation with silhouette coefficients', category: 'Visualization' },
+  { icon: ScatterChart, name: 't-SNE/UMAP Plot', description: 'Visualize high-dimensional data in 2D/3D using dimensionality reduction', category: 'Visualization' },
+  { icon: Grid3x3, name: 'Missing Value Heatmap', description: 'Visualize missing data patterns across features and samples', category: 'Visualization' },
+  { icon: AlertTriangle, name: 'Outlier Detection Plot', description: 'Visualize detected outliers highlighted in scatter or distribution plots', category: 'Visualization' },
+  { icon: BarChart3, name: 'Distribution Comparison Plot', description: 'Compare distributions between groups or time periods', category: 'Visualization' },
+  { icon: TrendingUp, name: 'ECDF Plot', description: 'Empirical Cumulative Distribution Function for distribution analysis', category: 'Visualization' },
+  { icon: Activity, name: 'Andrews Curves', description: 'Multivariate data visualization using Fourier series representation', category: 'Visualization' },
+  { icon: BarChart3, name: 'CV Results Plot', description: 'Visualize cross-validation scores across folds with confidence intervals', category: 'Visualization' },
+  { icon: Grid3x3, name: 'Hyperparameter Heatmap', description: 'Display grid search results as heatmap for parameter tuning', category: 'Visualization' },
 
   // Output (2 blocks)
   { icon: Download, name: 'Export CSV', description: 'Export data to CSV format and download', category: 'Output' },
@@ -661,6 +681,26 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   '3D Surface Plot': { name: 'blocks.surface3d', description: 'blockDescriptions.surface3d' },
   'Marginal Histogram': { name: 'blocks.marginalHistogram', description: 'blockDescriptions.marginalHistogram' },
   'Dumbbell Chart': { name: 'blocks.dumbbellChart', description: 'blockDescriptions.dumbbellChart' },
+  'SHAP Summary Plot': { name: 'blocks.shapSummaryPlot', description: 'blockDescriptions.shapSummaryPlot' },
+  'Partial Dependence Plot': { name: 'blocks.partialDependencePlot', description: 'blockDescriptions.partialDependencePlot' },
+  'Feature Importance Plot': { name: 'blocks.featureImportancePlot', description: 'blockDescriptions.featureImportancePlot' },
+  'ICE Plot': { name: 'blocks.icePlot', description: 'blockDescriptions.icePlot' },
+  'Precision-Recall Curve': { name: 'blocks.precisionRecallCurve', description: 'blockDescriptions.precisionRecallCurve' },
+  'Learning Curve Plot': { name: 'blocks.learningCurvePlot', description: 'blockDescriptions.learningCurvePlot' },
+  'Residual Plot': { name: 'blocks.residualPlot', description: 'blockDescriptions.residualPlot' },
+  'Actual vs Predicted Plot': { name: 'blocks.actualVsPredictedPlot', description: 'blockDescriptions.actualVsPredictedPlot' },
+  'Calibration Curve': { name: 'blocks.calibrationCurve', description: 'blockDescriptions.calibrationCurve' },
+  'Lift Chart': { name: 'blocks.liftChart', description: 'blockDescriptions.liftChart' },
+  'Elbow Plot': { name: 'blocks.elbowPlot', description: 'blockDescriptions.elbowPlot' },
+  'Silhouette Plot': { name: 'blocks.silhouettePlot', description: 'blockDescriptions.silhouettePlot' },
+  't-SNE/UMAP Plot': { name: 'blocks.tsneUmapPlot', description: 'blockDescriptions.tsneUmapPlot' },
+  'Missing Value Heatmap': { name: 'blocks.missingValueHeatmap', description: 'blockDescriptions.missingValueHeatmap' },
+  'Outlier Detection Plot': { name: 'blocks.outlierDetectionPlot', description: 'blockDescriptions.outlierDetectionPlot' },
+  'Distribution Comparison Plot': { name: 'blocks.distributionComparisonPlot', description: 'blockDescriptions.distributionComparisonPlot' },
+  'ECDF Plot': { name: 'blocks.ecdfPlot', description: 'blockDescriptions.ecdfPlot' },
+  'Andrews Curves': { name: 'blocks.andrewsCurves', description: 'blockDescriptions.andrewsCurves' },
+  'CV Results Plot': { name: 'blocks.cvResultsPlot', description: 'blockDescriptions.cvResultsPlot' },
+  'Hyperparameter Heatmap': { name: 'blocks.hyperparameterHeatmap', description: 'blockDescriptions.hyperparameterHeatmap' },
   'Export CSV': { name: 'blocks.export', description: 'blockDescriptions.export' },
 };
 
@@ -816,7 +856,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">237</p>
+                <p className="text-h2 font-bold text-text-primary">257</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
