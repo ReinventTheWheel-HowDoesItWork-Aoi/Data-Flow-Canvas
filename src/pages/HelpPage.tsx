@@ -138,7 +138,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (64 blocks)
+  // Transform (76 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -203,6 +203,18 @@ const blocks: BlockInfo[] = [
   { icon: ListOrdered, name: 'Generate Sequence', description: 'Create helper tables with number ranges, date ranges, or repeated patterns', category: 'Transform' },
   { icon: Trophy, name: 'Top N per Group', description: 'Get top or bottom N rows per group based on a ranking column', category: 'Transform' },
   { icon: ListFilter, name: 'First/Last per Group', description: 'Get the first, last, or both rows per group based on sort order', category: 'Transform' },
+  { icon: Binary, name: 'One-Hot Encode', description: 'Convert categorical columns to binary indicator columns (dummy variables) for ML models', category: 'Transform' },
+  { icon: Hash, name: 'Label Encode', description: 'Convert categorical values to integer codes (0, 1, 2, ...) for tree-based ML models', category: 'Transform' },
+  { icon: ListOrdered, name: 'Ordinal Encode', description: 'Encode categorical values with user-defined order (e.g., low=1, medium=2, high=3)', category: 'Transform' },
+  { icon: Scale, name: 'Min-Max Normalize', description: 'Scale numeric columns to [0, 1] range using (x - min) / (max - min)', category: 'Transform' },
+  { icon: Activity, name: 'Z-Score Standardize', description: 'Transform columns to mean=0 and std=1 using (x - mean) / std', category: 'Transform' },
+  { icon: TrendingUp, name: 'Rolling Statistics', description: 'Calculate moving window statistics (mean, sum, min, max, std) for time series', category: 'Transform' },
+  { icon: Clock, name: 'Resample Time Series', description: 'Change time series frequency (minute to hour, day to week) with aggregation', category: 'Transform' },
+  { icon: Code, name: 'Regex Replace', description: 'Find and replace text using regular expression patterns with capture groups', category: 'Transform' },
+  { icon: Layers, name: 'Expand JSON Column', description: 'Parse JSON strings in a column and expand into multiple columns', category: 'Transform' },
+  { icon: Hash, name: 'Add Unique ID', description: 'Generate unique identifiers for each row (sequential, UUID, or hash-based)', category: 'Transform' },
+  { icon: AlertTriangle, name: 'Missing Value Indicator', description: 'Create binary columns indicating where values are missing (1=missing, 0=present)', category: 'Transform' },
+  { icon: BarChart3, name: 'Quantile Transform', description: 'Transform values to their quantile rank, then to uniform or normal distribution', category: 'Transform' },
 
   // Analysis (95 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
@@ -804,7 +816,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">225</p>
+                <p className="text-h2 font-bold text-text-primary">237</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
