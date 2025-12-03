@@ -13004,6 +13004,635 @@ output = result.reset_index(drop=True)
 `,
   },
 
+  // ML Preprocessing Transform Blocks
+  'one-hot-encode': {
+    type: 'one-hot-encode',
+    category: 'transform',
+    label: 'One-Hot Encode',
+    description: 'Convert categorical columns to binary indicator columns (dummy variables) for ML models',
+    icon: 'Binary',
+    defaultConfig: {
+      columns: [],
+      dropFirst: false,
+      prefix: '',
+      handleUnknown: 'error',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+
+df = input_data.copy()
+columns = config.get('columns', [])
+drop_first = config.get('dropFirst', False)
+prefix = config.get('prefix', '')
+handle_unknown = config.get('handleUnknown', 'error')
+
+if not columns or len(columns) == 0:
+    raise ValueError("One-Hot Encode: Please specify at least one column to encode in the Config tab")
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"One-Hot Encode: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+# Get non-encoded columns to preserve
+other_cols = [c for c in df.columns if c not in valid_cols]
+preserved_df = df[other_cols].copy() if other_cols else None
+
+# Apply one-hot encoding
+encoded_df = pd.get_dummies(
+    df[valid_cols],
+    prefix=prefix if prefix else None,
+    prefix_sep='_' if prefix else '_',
+    drop_first=drop_first,
+    dtype=int
+)
+
+# Combine preserved and encoded columns
+if preserved_df is not None:
+    output = pd.concat([preserved_df, encoded_df], axis=1)
+else:
+    output = encoded_df
+`,
+  },
+
+  'label-encode': {
+    type: 'label-encode',
+    category: 'transform',
+    label: 'Label Encode',
+    description: 'Convert categorical values to integer codes (0, 1, 2, ...) for tree-based ML models',
+    icon: 'Hash',
+    defaultConfig: {
+      columns: [],
+      mappingOrder: 'alphabetical',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+mapping_order = config.get('mappingOrder', 'alphabetical')
+
+if not columns or len(columns) == 0:
+    raise ValueError("Label Encode: Please specify at least one column to encode in the Config tab")
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"Label Encode: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+mappings = {}
+for col in valid_cols:
+    unique_vals = df[col].dropna().unique()
+
+    if mapping_order == 'alphabetical':
+        sorted_vals = sorted(unique_vals, key=str)
+    elif mapping_order == 'frequency':
+        value_counts = df[col].value_counts()
+        sorted_vals = value_counts.index.tolist()
+    else:  # appearance order
+        sorted_vals = list(unique_vals)
+
+    mapping = {val: idx for idx, val in enumerate(sorted_vals)}
+    mappings[col] = mapping
+    df[col] = df[col].map(mapping)
+    # Keep NaN as NaN
+    df[col] = df[col].astype('Int64')
+
+output = df
+`,
+  },
+
+  'ordinal-encode': {
+    type: 'ordinal-encode',
+    category: 'transform',
+    label: 'Ordinal Encode',
+    description: 'Encode categorical values with user-defined order (e.g., low=1, medium=2, high=3)',
+    icon: 'ListOrdered',
+    defaultConfig: {
+      column: '',
+      orderMapping: [],
+      unknownValue: -1,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+order_mapping = config.get('orderMapping', [])
+unknown_value = config.get('unknownValue', -1)
+
+if not column:
+    raise ValueError("Ordinal Encode: Please specify a column to encode in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Ordinal Encode: Column '{column}' not found. Available: {', '.join(df.columns.tolist())}")
+
+if not order_mapping or len(order_mapping) == 0:
+    raise ValueError("Ordinal Encode: Please specify the order mapping (e.g., ['low', 'medium', 'high'])")
+
+# Create mapping from order list
+mapping = {val: idx + 1 for idx, val in enumerate(order_mapping)}
+
+# Apply mapping, use unknown_value for values not in mapping
+df[column + '_encoded'] = df[column].apply(lambda x: mapping.get(x, unknown_value) if pd.notna(x) else np.nan)
+df[column + '_encoded'] = df[column + '_encoded'].astype('Int64')
+
+output = df
+`,
+  },
+
+  'min-max-normalize': {
+    type: 'min-max-normalize',
+    category: 'transform',
+    label: 'Min-Max Normalize',
+    description: 'Scale numeric columns to [0, 1] range using (x - min) / (max - min)',
+    icon: 'Scale',
+    defaultConfig: {
+      columns: [],
+      featureRangeMin: 0,
+      featureRangeMax: 1,
+      suffix: '_normalized',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+range_min = config.get('featureRangeMin', 0)
+range_max = config.get('featureRangeMax', 1)
+suffix = config.get('suffix', '_normalized')
+
+if not columns or len(columns) == 0:
+    raise ValueError("Min-Max Normalize: Please specify at least one column to normalize in the Config tab")
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"Min-Max Normalize: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+for col in valid_cols:
+    col_data = pd.to_numeric(df[col], errors='coerce')
+    col_min = col_data.min()
+    col_max = col_data.max()
+
+    if col_max == col_min:
+        # Avoid division by zero - set to middle of range
+        df[col + suffix] = (range_min + range_max) / 2
+    else:
+        # Apply min-max normalization
+        normalized = (col_data - col_min) / (col_max - col_min)
+        df[col + suffix] = normalized * (range_max - range_min) + range_min
+
+output = df
+`,
+  },
+
+  'z-score-standardize': {
+    type: 'z-score-standardize',
+    category: 'transform',
+    label: 'Z-Score Standardize',
+    description: 'Transform columns to mean=0 and std=1 using (x - mean) / std',
+    icon: 'Activity',
+    defaultConfig: {
+      columns: [],
+      withMean: true,
+      withStd: true,
+      suffix: '_standardized',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+with_mean = config.get('withMean', True)
+with_std = config.get('withStd', True)
+suffix = config.get('suffix', '_standardized')
+
+if not columns or len(columns) == 0:
+    raise ValueError("Z-Score Standardize: Please specify at least one column to standardize in the Config tab")
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"Z-Score Standardize: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+for col in valid_cols:
+    col_data = pd.to_numeric(df[col], errors='coerce')
+    col_mean = col_data.mean() if with_mean else 0
+    col_std = col_data.std() if with_std else 1
+
+    if col_std == 0 or pd.isna(col_std):
+        # Avoid division by zero
+        df[col + suffix] = 0 if with_mean else col_data
+    else:
+        df[col + suffix] = (col_data - col_mean) / col_std
+
+output = df
+`,
+  },
+
+  'rolling-statistics': {
+    type: 'rolling-statistics',
+    category: 'transform',
+    label: 'Rolling Statistics',
+    description: 'Calculate moving window statistics (mean, sum, min, max, std) for time series',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      column: '',
+      windowSize: 7,
+      statistic: 'mean',
+      minPeriods: 1,
+      center: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+window_size = config.get('windowSize', 7)
+statistic = config.get('statistic', 'mean')
+min_periods = config.get('minPeriods', 1)
+center = config.get('center', False)
+
+if not column:
+    raise ValueError("Rolling Statistics: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Rolling Statistics: Column '{column}' not found. Available: {', '.join(df.columns.tolist())}")
+
+col_data = pd.to_numeric(df[column], errors='coerce')
+rolling = col_data.rolling(window=window_size, min_periods=min_periods, center=center)
+
+new_col_name = f"{column}_rolling_{statistic}_{window_size}"
+
+if statistic == 'mean':
+    df[new_col_name] = rolling.mean()
+elif statistic == 'sum':
+    df[new_col_name] = rolling.sum()
+elif statistic == 'min':
+    df[new_col_name] = rolling.min()
+elif statistic == 'max':
+    df[new_col_name] = rolling.max()
+elif statistic == 'std':
+    df[new_col_name] = rolling.std()
+elif statistic == 'median':
+    df[new_col_name] = rolling.median()
+elif statistic == 'count':
+    df[new_col_name] = rolling.count()
+elif statistic == 'var':
+    df[new_col_name] = rolling.var()
+else:
+    raise ValueError(f"Rolling Statistics: Unknown statistic '{statistic}'. Use mean, sum, min, max, std, median, count, or var")
+
+output = df
+`,
+  },
+
+  'resample-timeseries': {
+    type: 'resample-timeseries',
+    category: 'transform',
+    label: 'Resample Time Series',
+    description: 'Change time series frequency (minute to hour, day to week, etc.) with aggregation',
+    icon: 'Clock',
+    defaultConfig: {
+      datetimeColumn: '',
+      frequency: 'D',
+      aggregation: 'mean',
+      fillMethod: 'none',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+datetime_col = config.get('datetimeColumn', '')
+frequency = config.get('frequency', 'D')
+aggregation = config.get('aggregation', 'mean')
+fill_method = config.get('fillMethod', 'none')
+
+if not datetime_col:
+    raise ValueError("Resample Time Series: Please specify a datetime column in the Config tab")
+
+if datetime_col not in df.columns:
+    raise ValueError(f"Resample Time Series: Column '{datetime_col}' not found. Available: {', '.join(df.columns.tolist())}")
+
+# Convert to datetime
+df[datetime_col] = pd.to_datetime(df[datetime_col], errors='coerce')
+
+# Set datetime as index for resampling
+df_indexed = df.set_index(datetime_col)
+
+# Get numeric columns for aggregation
+numeric_cols = df_indexed.select_dtypes(include=[np.number]).columns.tolist()
+
+if not numeric_cols:
+    raise ValueError("Resample Time Series: No numeric columns found for aggregation")
+
+# Apply resampling with aggregation
+if aggregation == 'mean':
+    resampled = df_indexed[numeric_cols].resample(frequency).mean()
+elif aggregation == 'sum':
+    resampled = df_indexed[numeric_cols].resample(frequency).sum()
+elif aggregation == 'min':
+    resampled = df_indexed[numeric_cols].resample(frequency).min()
+elif aggregation == 'max':
+    resampled = df_indexed[numeric_cols].resample(frequency).max()
+elif aggregation == 'first':
+    resampled = df_indexed[numeric_cols].resample(frequency).first()
+elif aggregation == 'last':
+    resampled = df_indexed[numeric_cols].resample(frequency).last()
+elif aggregation == 'count':
+    resampled = df_indexed[numeric_cols].resample(frequency).count()
+elif aggregation == 'median':
+    resampled = df_indexed[numeric_cols].resample(frequency).median()
+else:
+    raise ValueError(f"Resample Time Series: Unknown aggregation '{aggregation}'")
+
+# Apply fill method if specified
+if fill_method == 'ffill':
+    resampled = resampled.ffill()
+elif fill_method == 'bfill':
+    resampled = resampled.bfill()
+elif fill_method == 'interpolate':
+    resampled = resampled.interpolate()
+
+output = resampled.reset_index()
+`,
+  },
+
+  'regex-replace': {
+    type: 'regex-replace',
+    category: 'transform',
+    label: 'Regex Replace',
+    description: 'Find and replace text using regular expression patterns with capture groups',
+    icon: 'Code',
+    defaultConfig: {
+      column: '',
+      pattern: '',
+      replacement: '',
+      caseInsensitive: false,
+      replaceAll: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import re
+
+df = input_data.copy()
+column = config.get('column', '')
+pattern = config.get('pattern', '')
+replacement = config.get('replacement', '')
+case_insensitive = config.get('caseInsensitive', False)
+replace_all = config.get('replaceAll', True)
+
+if not column:
+    raise ValueError("Regex Replace: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Regex Replace: Column '{column}' not found. Available: {', '.join(df.columns.tolist())}")
+
+if not pattern:
+    raise ValueError("Regex Replace: Please specify a regex pattern")
+
+flags = re.IGNORECASE if case_insensitive else 0
+
+try:
+    if replace_all:
+        df[column] = df[column].astype(str).str.replace(pattern, replacement, regex=True, flags=flags)
+    else:
+        # Replace only first occurrence
+        df[column] = df[column].astype(str).apply(
+            lambda x: re.sub(pattern, replacement, x, count=1, flags=flags)
+        )
+except re.error as e:
+    raise ValueError(f"Regex Replace: Invalid regex pattern - {str(e)}")
+
+output = df
+`,
+  },
+
+  'expand-json-column': {
+    type: 'expand-json-column',
+    category: 'transform',
+    label: 'Expand JSON Column',
+    description: 'Parse JSON strings in a column and expand into multiple columns',
+    icon: 'Layers',
+    defaultConfig: {
+      column: '',
+      prefix: '',
+      maxLevel: 1,
+      keepOriginal: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import json
+
+df = input_data.copy()
+column = config.get('column', '')
+prefix = config.get('prefix', '')
+max_level = config.get('maxLevel', 1)
+keep_original = config.get('keepOriginal', False)
+
+if not column:
+    raise ValueError("Expand JSON Column: Please specify a column in the Config tab")
+
+if column not in df.columns:
+    raise ValueError(f"Expand JSON Column: Column '{column}' not found. Available: {', '.join(df.columns.tolist())}")
+
+def safe_json_parse(x):
+    if pd.isna(x):
+        return {}
+    if isinstance(x, dict):
+        return x
+    try:
+        return json.loads(str(x))
+    except (json.JSONDecodeError, TypeError):
+        return {}
+
+# Parse JSON strings
+parsed = df[column].apply(safe_json_parse)
+
+# Normalize to DataFrame
+json_df = pd.json_normalize(parsed, max_level=max_level)
+
+# Add prefix if specified
+if prefix:
+    json_df.columns = [f"{prefix}_{col}" for col in json_df.columns]
+else:
+    json_df.columns = [f"{column}_{col}" for col in json_df.columns]
+
+# Combine with original data
+if keep_original:
+    output = pd.concat([df, json_df], axis=1)
+else:
+    other_cols = [c for c in df.columns if c != column]
+    output = pd.concat([df[other_cols], json_df], axis=1)
+`,
+  },
+
+  'add-unique-id': {
+    type: 'add-unique-id',
+    category: 'transform',
+    label: 'Add Unique ID',
+    description: 'Generate unique identifiers for each row (sequential, UUID, or hash-based)',
+    icon: 'Hash',
+    defaultConfig: {
+      idType: 'sequential',
+      columnName: 'id',
+      prefix: '',
+      startFrom: 1,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import uuid
+import hashlib
+
+df = input_data.copy()
+id_type = config.get('idType', 'sequential')
+column_name = config.get('columnName', 'id')
+prefix = config.get('prefix', '')
+start_from = config.get('startFrom', 1)
+
+n_rows = len(df)
+
+if id_type == 'sequential':
+    ids = [f"{prefix}{i}" if prefix else i for i in range(start_from, start_from + n_rows)]
+elif id_type == 'uuid':
+    ids = [f"{prefix}{str(uuid.uuid4())}" if prefix else str(uuid.uuid4()) for _ in range(n_rows)]
+elif id_type == 'uuid_short':
+    ids = [f"{prefix}{str(uuid.uuid4())[:8]}" if prefix else str(uuid.uuid4())[:8] for _ in range(n_rows)]
+elif id_type == 'hash':
+    # Create hash from row index and random component
+    ids = []
+    for i in range(n_rows):
+        hash_input = f"{i}_{uuid.uuid4()}"
+        hash_val = hashlib.sha256(hash_input.encode()).hexdigest()[:12]
+        ids.append(f"{prefix}{hash_val}" if prefix else hash_val)
+else:
+    raise ValueError(f"Add Unique ID: Unknown id type '{id_type}'. Use sequential, uuid, uuid_short, or hash")
+
+# Insert ID column at the beginning
+df.insert(0, column_name, ids)
+
+output = df
+`,
+  },
+
+  'missing-indicator': {
+    type: 'missing-indicator',
+    category: 'transform',
+    label: 'Missing Value Indicator',
+    description: 'Create binary columns indicating where values are missing (1=missing, 0=present)',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      columns: [],
+      suffix: '_missing',
+      onlyIfMissing: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+columns = config.get('columns', [])
+suffix = config.get('suffix', '_missing')
+only_if_missing = config.get('onlyIfMissing', True)
+
+# If no columns specified, use all columns
+if not columns or len(columns) == 0:
+    columns = df.columns.tolist()
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"Missing Value Indicator: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+for col in valid_cols:
+    has_missing = df[col].isna().any()
+
+    # Only create indicator if column has missing values (when onlyIfMissing is True)
+    if not only_if_missing or has_missing:
+        df[col + suffix] = df[col].isna().astype(int)
+
+output = df
+`,
+  },
+
+  'quantile-transform': {
+    type: 'quantile-transform',
+    category: 'transform',
+    label: 'Quantile Transform',
+    description: 'Transform values to their quantile rank, then to uniform [0,1] or normal distribution',
+    icon: 'BarChart3',
+    defaultConfig: {
+      columns: [],
+      outputDistribution: 'uniform',
+      nQuantiles: 1000,
+      suffix: '_quantile',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+columns = config.get('columns', [])
+output_dist = config.get('outputDistribution', 'uniform')
+n_quantiles = config.get('nQuantiles', 1000)
+suffix = config.get('suffix', '_quantile')
+
+if not columns or len(columns) == 0:
+    raise ValueError("Quantile Transform: Please specify at least one column in the Config tab")
+
+valid_cols = [c for c in columns if c in df.columns]
+if not valid_cols:
+    raise ValueError(f"Quantile Transform: No valid columns found. Available: {', '.join(df.columns.tolist())}")
+
+for col in valid_cols:
+    col_data = pd.to_numeric(df[col], errors='coerce')
+
+    # Calculate quantile ranks (0 to 1)
+    # Use average method to handle ties
+    ranks = col_data.rank(method='average', pct=True)
+
+    if output_dist == 'uniform':
+        # Already in [0, 1] range
+        df[col + suffix] = ranks
+    elif output_dist == 'normal':
+        # Transform to standard normal using inverse CDF
+        # Clip to avoid infinite values at 0 and 1
+        clipped_ranks = ranks.clip(1e-7, 1 - 1e-7)
+        df[col + suffix] = stats.norm.ppf(clipped_ranks)
+    else:
+        raise ValueError(f"Quantile Transform: Unknown output distribution '{output_dist}'. Use 'uniform' or 'normal'")
+
+output = df
+`,
+  },
+
   // New Visualization Blocks
   'funnel-chart': {
     type: 'funnel-chart',
@@ -16188,6 +16817,18 @@ export const blockCategories = [
       'generate-sequence',
       'top-n-per-group',
       'first-last-per-group',
+      'one-hot-encode',
+      'label-encode',
+      'ordinal-encode',
+      'min-max-normalize',
+      'z-score-standardize',
+      'rolling-statistics',
+      'resample-timeseries',
+      'regex-replace',
+      'expand-json-column',
+      'add-unique-id',
+      'missing-indicator',
+      'quantile-transform',
       'explode-column',
       'add-constant-column',
       'drop-columns',
