@@ -94,6 +94,17 @@ export type BlockType =
   | 'add-unique-id'
   | 'missing-indicator'
   | 'quantile-transform'
+  // New Data Science Transform Blocks
+  | 'fuzzy-join'
+  | 'memory-optimizer'
+  | 'cyclical-time-encoder'
+  | 'geographic-distance'
+  | 'rare-category-combiner'
+  | 'smart-auto-cleaner'
+  | 'interaction-generator'
+  | 'fuzzy-deduplicator'
+  | 'array-aggregator'
+  | 'target-aware-binning'
   // Analysis
   | 'statistics'
   | 'regression'
