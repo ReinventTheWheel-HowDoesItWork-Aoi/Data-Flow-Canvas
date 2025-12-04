@@ -108,6 +108,17 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'add-unique-id': 'blocks.addUniqueId',
   'missing-indicator': 'blocks.missingIndicator',
   'quantile-transform': 'blocks.quantileTransform',
+  // New Data Science Transform Blocks
+  'fuzzy-join': 'blocks.fuzzyJoin',
+  'memory-optimizer': 'blocks.memoryOptimizer',
+  'cyclical-time-encoder': 'blocks.cyclicalTimeEncoder',
+  'geographic-distance': 'blocks.geographicDistance',
+  'rare-category-combiner': 'blocks.rareCategoryCombiner',
+  'smart-auto-cleaner': 'blocks.smartAutoCleaner',
+  'interaction-generator': 'blocks.interactionGenerator',
+  'fuzzy-deduplicator': 'blocks.fuzzyDeduplicator',
+  'array-aggregator': 'blocks.arrayAggregator',
+  'target-aware-binning': 'blocks.targetAwareBinning',
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
   'clustering': 'blocks.clustering',
@@ -370,6 +381,17 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'add-unique-id': 'blockDescriptions.addUniqueId',
   'missing-indicator': 'blockDescriptions.missingIndicator',
   'quantile-transform': 'blockDescriptions.quantileTransform',
+  // New Data Science Transform Blocks
+  'fuzzy-join': 'blockDescriptions.fuzzyJoin',
+  'memory-optimizer': 'blockDescriptions.memoryOptimizer',
+  'cyclical-time-encoder': 'blockDescriptions.cyclicalTimeEncoder',
+  'geographic-distance': 'blockDescriptions.geographicDistance',
+  'rare-category-combiner': 'blockDescriptions.rareCategoryCombiner',
+  'smart-auto-cleaner': 'blockDescriptions.smartAutoCleaner',
+  'interaction-generator': 'blockDescriptions.interactionGenerator',
+  'fuzzy-deduplicator': 'blockDescriptions.fuzzyDeduplicator',
+  'array-aggregator': 'blockDescriptions.arrayAggregator',
+  'target-aware-binning': 'blockDescriptions.targetAwareBinning',
   'statistics': 'blockDescriptions.statistics',
   'regression': 'blockDescriptions.regression',
   'clustering': 'blockDescriptions.clustering',
@@ -10290,6 +10312,598 @@ function renderConfigFields(
         </div>
       );
     }
+
+    case 'fuzzy-join':
+      return (
+        <div className="space-y-4">
+          <p className="text-xs text-text-muted">Connect 2 datasets to this block. Left=first connection, Right=second.</p>
+          <Input
+            label="Left Column"
+            value={(config.leftColumn as string) || ''}
+            onChange={(e) => onChange('leftColumn', e.target.value)}
+            placeholder="Column from left dataset"
+          />
+          <Input
+            label="Right Column"
+            value={(config.rightColumn as string) || ''}
+            onChange={(e) => onChange('rightColumn', e.target.value)}
+            placeholder="Column from right dataset"
+          />
+          <Select
+            value={(config.method as string) || 'levenshtein'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Matching Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="levenshtein">Levenshtein</SelectItem>
+              <SelectItem value="jaro_winkler">Jaro-Winkler</SelectItem>
+            </SelectContent>
+          </Select>
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Threshold ({(config.threshold as number) || 80}%)</label>
+            <input
+              type="range"
+              min="50"
+              max="100"
+              value={(config.threshold as number) || 80}
+              onChange={(e) => onChange('threshold', parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+          <Select
+            value={(config.joinType as string) || 'left'}
+            onValueChange={(v) => onChange('joinType', v)}
+          >
+            <SelectTrigger label="Join Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="left">Left Join</SelectItem>
+              <SelectItem value="inner">Inner Join</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'memory-optimizer':
+      return (
+        <div className="space-y-4">
+          <p className="text-xs text-text-muted">Automatically optimize data types to reduce memory usage.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.includeInts as boolean) ?? true}
+                onChange={(e) => onChange('includeInts', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Optimize integers</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.includeFloats as boolean) ?? true}
+                onChange={(e) => onChange('includeFloats', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Optimize floats</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.includeStrings as boolean) ?? true}
+                onChange={(e) => onChange('includeStrings', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Convert strings to category</span>
+            </label>
+          </div>
+          <Input
+            label="Category Threshold (max unique values)"
+            type="number"
+            value={(config.categoryThreshold as number) || 50}
+            onChange={(e) => onChange('categoryThreshold', parseInt(e.target.value))}
+          />
+        </div>
+      );
+
+    case 'cyclical-time-encoder':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="DateTime Column">
+                <SelectValue placeholder="Select datetime column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <div>
+            <label className="block text-xs text-text-muted mb-2">Time Components</label>
+            <div className="space-y-1">
+              {['hour', 'dayofweek', 'day', 'month', 'quarter', 'minute', 'second', 'week', 'dayofyear'].map((comp) => (
+                <label key={comp} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={((config.components as string[]) || ['hour', 'dayofweek', 'month']).includes(comp)}
+                    onChange={(e) => {
+                      const current = (config.components as string[]) || ['hour', 'dayofweek', 'month'];
+                      if (e.target.checked) {
+                        onChange('components', [...current, comp]);
+                      } else {
+                        onChange('components', current.filter((c) => c !== comp));
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm capitalize">{comp}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={(config.dropOriginal as boolean) ?? false}
+              onChange={(e) => onChange('dropOriginal', e.target.checked)}
+              className="rounded"
+            />
+            <span className="text-sm">Drop original column</span>
+          </label>
+        </div>
+      );
+
+    case 'geographic-distance':
+      return (
+        <div className="space-y-4">
+          <p className="text-xs text-text-muted">Calculate distance between two coordinate pairs.</p>
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.lat1Column as string) || ''}
+                onValueChange={(v) => onChange('lat1Column', v)}
+              >
+                <SelectTrigger label="Latitude 1 (Origin)">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={(config.lon1Column as string) || ''}
+                onValueChange={(v) => onChange('lon1Column', v)}
+              >
+                <SelectTrigger label="Longitude 1 (Origin)">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={(config.lat2Column as string) || ''}
+                onValueChange={(v) => onChange('lat2Column', v)}
+              >
+                <SelectTrigger label="Latitude 2 (Destination)">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={(config.lon2Column as string) || ''}
+                onValueChange={(v) => onChange('lon2Column', v)}
+              >
+                <SelectTrigger label="Longitude 2 (Destination)">
+                  <SelectValue placeholder="Select column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <Select
+            value={(config.unit as string) || 'km'}
+            onValueChange={(v) => onChange('unit', v)}
+          >
+            <SelectTrigger label="Distance Unit">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="km">Kilometers</SelectItem>
+              <SelectItem value="miles">Miles</SelectItem>
+              <SelectItem value="meters">Meters</SelectItem>
+              <SelectItem value="feet">Feet</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            label="Output Column Name"
+            value={(config.outputColumn as string) || 'distance'}
+            onChange={(e) => onChange('outputColumn', e.target.value)}
+          />
+        </div>
+      );
+
+    case 'rare-category-combiner':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Column">
+                <SelectValue placeholder="Select categorical column" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <Select
+            value={(config.method as string) || 'threshold'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="threshold">Frequency Threshold (%)</SelectItem>
+              <SelectItem value="top_n">Keep Top N</SelectItem>
+            </SelectContent>
+          </Select>
+          {(config.method as string) === 'top_n' ? (
+            <Input
+              label="Top N Categories"
+              type="number"
+              value={(config.topN as number) || 10}
+              onChange={(e) => onChange('topN', parseInt(e.target.value))}
+            />
+          ) : (
+            <div>
+              <label className="block text-xs text-text-muted mb-1">Min Frequency ({(config.threshold as number) || 1}%)</label>
+              <input
+                type="range"
+                min="0.1"
+                max="10"
+                step="0.1"
+                value={(config.threshold as number) || 1}
+                onChange={(e) => onChange('threshold', parseFloat(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          )}
+          <Input
+            label="Other Label"
+            value={(config.otherLabel as string) || 'Other'}
+            onChange={(e) => onChange('otherLabel', e.target.value)}
+          />
+        </div>
+      );
+
+    case 'smart-auto-cleaner':
+      return (
+        <div className="space-y-4">
+          <p className="text-xs text-text-muted">One-click intelligent data cleaning.</p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.handleMissing as boolean) ?? true}
+                onChange={(e) => onChange('handleMissing', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Handle missing values</span>
+            </label>
+            {(config.handleMissing as boolean) !== false && (
+              <Select
+                value={(config.missingStrategy as string) || 'smart'}
+                onValueChange={(v) => onChange('missingStrategy', v)}
+              >
+                <SelectTrigger label="Missing Strategy">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="smart">Smart (median/mode)</SelectItem>
+                  <SelectItem value="drop_rows">Drop rows</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.removeConstants as boolean) ?? true}
+                onChange={(e) => onChange('removeConstants', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Remove constant columns</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.fixTypes as boolean) ?? true}
+                onChange={(e) => onChange('fixTypes', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Auto-detect & fix data types</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.standardizeStrings as boolean) ?? true}
+                onChange={(e) => onChange('standardizeStrings', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Standardize strings</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={(config.removeDuplicates as boolean) ?? false}
+                onChange={(e) => onChange('removeDuplicates', e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm">Remove duplicate rows</span>
+            </label>
+          </div>
+        </div>
+      );
+
+    case 'interaction-generator':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <MultiSelect
+              label="Numeric Columns (select 2+)"
+              options={availableColumns.map((col) => ({ value: col, label: col }))}
+              selected={(config.columns as string[]) || []}
+              onChange={(v) => onChange('columns', v)}
+              placeholder="Select columns..."
+            />
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <div>
+            <label className="block text-xs text-text-muted mb-2">Operations</label>
+            <div className="space-y-1">
+              {[
+                { value: 'multiply', label: 'Multiply (A × B)' },
+                { value: 'divide', label: 'Divide (A ÷ B)' },
+                { value: 'add', label: 'Add (A + B)' },
+                { value: 'subtract', label: 'Subtract (A - B)' },
+                { value: 'polynomial', label: 'Polynomial (A², A³...)' },
+              ].map((op) => (
+                <label key={op.value} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={((config.operations as string[]) || ['multiply']).includes(op.value)}
+                    onChange={(e) => {
+                      const current = (config.operations as string[]) || ['multiply'];
+                      if (e.target.checked) {
+                        onChange('operations', [...current, op.value]);
+                      } else {
+                        onChange('operations', current.filter((c) => c !== op.value));
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">{op.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          {((config.operations as string[]) || []).includes('polynomial') && (
+            <Input
+              label="Max Polynomial Degree"
+              type="number"
+              min={2}
+              max={5}
+              value={(config.degree as number) || 2}
+              onChange={(e) => onChange('degree', parseInt(e.target.value))}
+            />
+          )}
+          <Input
+            label="Output Prefix"
+            value={(config.outputPrefix as string) || 'inter_'}
+            onChange={(e) => onChange('outputPrefix', e.target.value)}
+          />
+        </div>
+      );
+
+    case 'fuzzy-deduplicator':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <MultiSelect
+                label="Match Columns"
+                options={availableColumns.map((col) => ({ value: col, label: col }))}
+                selected={(config.matchColumns as string[]) || []}
+                onChange={(v) => onChange('matchColumns', v)}
+                placeholder="Select columns to match on..."
+              />
+              <Select
+                value={(config.blockingColumn as string) || ''}
+                onValueChange={(v) => onChange('blockingColumn', v)}
+              >
+                <SelectTrigger label="Blocking Column (optional)">
+                  <SelectValue placeholder="None (check all pairs)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <div>
+            <label className="block text-xs text-text-muted mb-1">Similarity Threshold ({(config.threshold as number) || 80}%)</label>
+            <input
+              type="range"
+              min="50"
+              max="100"
+              value={(config.threshold as number) || 80}
+              onChange={(e) => onChange('threshold', parseInt(e.target.value))}
+              className="w-full"
+            />
+          </div>
+          <Select
+            value={(config.mergeStrategy as string) || 'first'}
+            onValueChange={(v) => onChange('mergeStrategy', v)}
+          >
+            <SelectTrigger label="Keep Strategy">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="first">Keep First</SelectItem>
+              <SelectItem value="last">Keep Last</SelectItem>
+              <SelectItem value="most_complete">Keep Most Complete</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
+
+    case 'array-aggregator':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <Select
+              value={(config.column as string) || ''}
+              onValueChange={(v) => onChange('column', v)}
+            >
+              <SelectTrigger label="Array/List Column">
+                <SelectValue placeholder="Select column with arrays" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableColumns.map((col) => (
+                  <SelectItem key={col} value={col}>{col}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <div>
+            <label className="block text-xs text-text-muted mb-2">Aggregations</label>
+            <div className="space-y-1">
+              {['mean', 'sum', 'count', 'min', 'max', 'std', 'first', 'last'].map((agg) => (
+                <label key={agg} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={((config.aggregations as string[]) || ['mean', 'sum', 'count']).includes(agg)}
+                    onChange={(e) => {
+                      const current = (config.aggregations as string[]) || ['mean', 'sum', 'count'];
+                      if (e.target.checked) {
+                        onChange('aggregations', [...current, agg]);
+                      } else {
+                        onChange('aggregations', current.filter((c) => c !== agg));
+                      }
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm capitalize">{agg}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <Input
+            label="Output Prefix (optional)"
+            value={(config.outputPrefix as string) || ''}
+            onChange={(e) => onChange('outputPrefix', e.target.value)}
+            placeholder="Default: column name"
+          />
+        </div>
+      );
+
+    case 'target-aware-binning':
+      return (
+        <div className="space-y-4">
+          {availableColumns.length > 0 ? (
+            <>
+              <Select
+                value={(config.column as string) || ''}
+                onValueChange={(v) => onChange('column', v)}
+              >
+                <SelectTrigger label="Column to Bin">
+                  <SelectValue placeholder="Select numeric column" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={(config.targetColumn as string) || ''}
+                onValueChange={(v) => onChange('targetColumn', v)}
+              >
+                <SelectTrigger label="Target Column">
+                  <SelectValue placeholder="Select target variable" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableColumns.map((col) => (
+                    <SelectItem key={col} value={col}>{col}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <p className="text-xs text-text-muted">Run upstream blocks to see columns</p>
+          )}
+          <Input
+            label="Max Bins"
+            type="number"
+            min={2}
+            max={20}
+            value={(config.maxBins as number) || 5}
+            onChange={(e) => onChange('maxBins', parseInt(e.target.value))}
+          />
+          <Select
+            value={(config.method as string) || 'tree'}
+            onValueChange={(v) => onChange('method', v)}
+          >
+            <SelectTrigger label="Binning Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="tree">Decision Tree (optimal)</SelectItem>
+              <SelectItem value="quantile">Quantile</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      );
 
     default:
       return (
