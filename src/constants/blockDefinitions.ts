@@ -13633,6 +13633,743 @@ output = df
 `,
   },
 
+  // New Data Science Transform Blocks
+  'fuzzy-join': {
+    type: 'fuzzy-join',
+    category: 'transform',
+    label: 'Fuzzy Join',
+    description: 'Join datasets using approximate string matching (handles typos, spelling variations)',
+    icon: 'GitMerge',
+    defaultConfig: {
+      leftColumn: '',
+      rightColumn: '',
+      method: 'levenshtein',
+      threshold: 80,
+      joinType: 'left',
+    },
+    inputs: 2,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+# Get both input dataframes
+if isinstance(input_data, list) and len(input_data) >= 2:
+    df_left = pd.DataFrame(input_data[0]) if isinstance(input_data[0], list) else input_data[0]
+    df_right = pd.DataFrame(input_data[1]) if isinstance(input_data[1], list) else input_data[1]
+else:
+    raise ValueError("Fuzzy Join: This block requires exactly 2 input connections")
+
+left_col = config.get('leftColumn', '')
+right_col = config.get('rightColumn', '')
+method = config.get('method', 'levenshtein')
+threshold = config.get('threshold', 80) / 100.0
+join_type = config.get('joinType', 'left')
+
+if not left_col:
+    raise ValueError("Fuzzy Join: Please select the left join column")
+if not right_col:
+    raise ValueError("Fuzzy Join: Please select the right join column")
+
+if left_col not in df_left.columns:
+    raise ValueError(f"Fuzzy Join: Column '{left_col}' not found in left dataset. Available: {list(df_left.columns)}")
+if right_col not in df_right.columns:
+    raise ValueError(f"Fuzzy Join: Column '{right_col}' not found in right dataset. Available: {list(df_right.columns)}")
+
+def levenshtein_ratio(s1, s2):
+    if pd.isna(s1) or pd.isna(s2):
+        return 0.0
+    s1, s2 = str(s1).lower(), str(s2).lower()
+    if len(s1) == 0 or len(s2) == 0:
+        return 0.0 if s1 != s2 else 1.0
+    rows = len(s1) + 1
+    cols = len(s2) + 1
+    dist = [[0 for _ in range(cols)] for _ in range(rows)]
+    for i in range(rows):
+        dist[i][0] = i
+    for j in range(cols):
+        dist[0][j] = j
+    for i in range(1, rows):
+        for j in range(1, cols):
+            cost = 0 if s1[i-1] == s2[j-1] else 1
+            dist[i][j] = min(dist[i-1][j] + 1, dist[i][j-1] + 1, dist[i-1][j-1] + cost)
+    max_len = max(len(s1), len(s2))
+    return 1 - (dist[rows-1][cols-1] / max_len)
+
+def jaro_winkler_similarity(s1, s2, p=0.1):
+    if pd.isna(s1) or pd.isna(s2):
+        return 0.0
+    s1, s2 = str(s1).lower(), str(s2).lower()
+    if s1 == s2:
+        return 1.0
+    len1, len2 = len(s1), len(s2)
+    if len1 == 0 or len2 == 0:
+        return 0.0
+    match_distance = max(len1, len2) // 2 - 1
+    match_distance = max(0, match_distance)
+    s1_matches = [False] * len1
+    s2_matches = [False] * len2
+    matches = 0
+    transpositions = 0
+    for i in range(len1):
+        start = max(0, i - match_distance)
+        end = min(i + match_distance + 1, len2)
+        for j in range(start, end):
+            if s2_matches[j] or s1[i] != s2[j]:
+                continue
+            s1_matches[i] = True
+            s2_matches[j] = True
+            matches += 1
+            break
+    if matches == 0:
+        return 0.0
+    k = 0
+    for i in range(len1):
+        if not s1_matches[i]:
+            continue
+        while not s2_matches[k]:
+            k += 1
+        if s1[i] != s2[k]:
+            transpositions += 1
+        k += 1
+    jaro = (matches/len1 + matches/len2 + (matches - transpositions/2)/matches) / 3
+    prefix = 0
+    for i in range(min(len1, len2, 4)):
+        if s1[i] == s2[i]:
+            prefix += 1
+        else:
+            break
+    return jaro + prefix * p * (1 - jaro)
+
+if method == 'levenshtein':
+    similarity_func = levenshtein_ratio
+elif method in ['jaro', 'jaro_winkler']:
+    similarity_func = jaro_winkler_similarity
+else:
+    raise ValueError(f"Fuzzy Join: Unknown method '{method}'")
+
+matches = []
+right_suffix = '_right'
+for idx_left, row_left in df_left.iterrows():
+    best_match = None
+    best_score = 0
+    for idx_right, row_right in df_right.iterrows():
+        score = similarity_func(row_left[left_col], row_right[right_col])
+        if score >= threshold and score > best_score:
+            best_score = score
+            best_match = row_right
+    match_data = row_left.to_dict()
+    match_data['_fuzzy_score'] = best_score if best_match is not None else None
+    if best_match is not None:
+        for col in df_right.columns:
+            key = col + right_suffix if col in df_left.columns or col == right_col else col
+            match_data[key] = best_match[col]
+    elif join_type == 'left':
+        for col in df_right.columns:
+            key = col + right_suffix if col in df_left.columns or col == right_col else col
+            match_data[key] = None
+    if best_match is not None or join_type == 'left':
+        matches.append(match_data)
+
+output = pd.DataFrame(matches)
+`,
+  },
+
+  'memory-optimizer': {
+    type: 'memory-optimizer',
+    category: 'transform',
+    label: 'Memory Optimizer',
+    description: 'Automatically downcast numeric types and convert low-cardinality strings to category to reduce memory',
+    icon: 'Cpu',
+    defaultConfig: {
+      includeFloats: true,
+      includeInts: true,
+      includeStrings: true,
+      categoryThreshold: 50,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+include_floats = config.get('includeFloats', True)
+include_ints = config.get('includeInts', True)
+include_strings = config.get('includeStrings', True)
+category_threshold = config.get('categoryThreshold', 50)
+
+initial_memory = df.memory_usage(deep=True).sum()
+optimizations = []
+
+for col in df.columns:
+    col_type = df[col].dtype
+    if include_ints and np.issubdtype(col_type, np.integer):
+        c_min = df[col].min()
+        c_max = df[col].max()
+        if c_min >= 0:
+            if c_max <= np.iinfo(np.uint8).max:
+                df[col] = df[col].astype(np.uint8)
+                optimizations.append(f"{col}: {col_type} -> uint8")
+            elif c_max <= np.iinfo(np.uint16).max:
+                df[col] = df[col].astype(np.uint16)
+                optimizations.append(f"{col}: {col_type} -> uint16")
+            elif c_max <= np.iinfo(np.uint32).max:
+                df[col] = df[col].astype(np.uint32)
+                optimizations.append(f"{col}: {col_type} -> uint32")
+        else:
+            if c_min >= np.iinfo(np.int8).min and c_max <= np.iinfo(np.int8).max:
+                df[col] = df[col].astype(np.int8)
+                optimizations.append(f"{col}: {col_type} -> int8")
+            elif c_min >= np.iinfo(np.int16).min and c_max <= np.iinfo(np.int16).max:
+                df[col] = df[col].astype(np.int16)
+                optimizations.append(f"{col}: {col_type} -> int16")
+            elif c_min >= np.iinfo(np.int32).min and c_max <= np.iinfo(np.int32).max:
+                df[col] = df[col].astype(np.int32)
+                optimizations.append(f"{col}: {col_type} -> int32")
+    elif include_floats and np.issubdtype(col_type, np.floating):
+        c_min = df[col].min()
+        c_max = df[col].max()
+        if c_min >= np.finfo(np.float32).min and c_max <= np.finfo(np.float32).max:
+            df[col] = df[col].astype(np.float32)
+            optimizations.append(f"{col}: {col_type} -> float32")
+    elif include_strings and col_type == 'object':
+        num_unique = df[col].nunique()
+        num_total = len(df[col])
+        if num_unique <= category_threshold or num_unique / num_total < 0.5:
+            df[col] = df[col].astype('category')
+            optimizations.append(f"{col}: object -> category ({num_unique} unique)")
+
+final_memory = df.memory_usage(deep=True).sum()
+reduction_pct = (1 - final_memory / initial_memory) * 100
+
+output = df
+`,
+  },
+
+  'cyclical-time-encoder': {
+    type: 'cyclical-time-encoder',
+    category: 'transform',
+    label: 'Cyclical Time Encoder',
+    description: 'Encode time components (hour, day, month) as sin/cos pairs to preserve cyclical relationships for ML',
+    icon: 'Clock',
+    defaultConfig: {
+      column: '',
+      components: ['hour', 'dayofweek', 'month'],
+      dropOriginal: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+components = config.get('components', ['hour', 'dayofweek', 'month'])
+drop_original = config.get('dropOriginal', False)
+
+if not column:
+    raise ValueError("Cyclical Time Encoder: Please select a datetime column")
+if column not in df.columns:
+    raise ValueError(f"Cyclical Time Encoder: Column '{column}' not found")
+
+try:
+    df[column] = pd.to_datetime(df[column])
+except Exception as e:
+    raise ValueError(f"Cyclical Time Encoder: Could not convert '{column}' to datetime: {str(e)}")
+
+periods = {'hour': 24, 'dayofweek': 7, 'day': 31, 'dayofyear': 366, 'week': 53, 'month': 12, 'quarter': 4, 'minute': 60, 'second': 60}
+
+for comp in components:
+    if comp not in periods:
+        raise ValueError(f"Cyclical Time Encoder: Unknown component '{comp}'")
+    if comp == 'hour':
+        values = df[column].dt.hour
+    elif comp == 'dayofweek':
+        values = df[column].dt.dayofweek
+    elif comp == 'day':
+        values = df[column].dt.day
+    elif comp == 'dayofyear':
+        values = df[column].dt.dayofyear
+    elif comp == 'week':
+        values = df[column].dt.isocalendar().week.astype(int)
+    elif comp == 'month':
+        values = df[column].dt.month
+    elif comp == 'quarter':
+        values = df[column].dt.quarter
+    elif comp == 'minute':
+        values = df[column].dt.minute
+    elif comp == 'second':
+        values = df[column].dt.second
+    period = periods[comp]
+    df[f'{column}_{comp}_sin'] = np.sin(2 * np.pi * values / period)
+    df[f'{column}_{comp}_cos'] = np.cos(2 * np.pi * values / period)
+
+if drop_original:
+    df = df.drop(columns=[column])
+
+output = df
+`,
+  },
+
+  'geographic-distance': {
+    type: 'geographic-distance',
+    category: 'transform',
+    label: 'Geographic Distance',
+    description: 'Calculate distance between coordinate pairs using Haversine or Vincenty formula',
+    icon: 'MapPin',
+    defaultConfig: {
+      lat1Column: '',
+      lon1Column: '',
+      lat2Column: '',
+      lon2Column: '',
+      unit: 'km',
+      method: 'haversine',
+      outputColumn: 'distance',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+lat1_col = config.get('lat1Column', '')
+lon1_col = config.get('lon1Column', '')
+lat2_col = config.get('lat2Column', '')
+lon2_col = config.get('lon2Column', '')
+unit = config.get('unit', 'km')
+method = config.get('method', 'haversine')
+output_col = config.get('outputColumn', 'distance')
+
+if not all([lat1_col, lon1_col, lat2_col, lon2_col]):
+    raise ValueError("Geographic Distance: Please select all 4 coordinate columns")
+
+for col in [lat1_col, lon1_col, lat2_col, lon2_col]:
+    if col not in df.columns:
+        raise ValueError(f"Geographic Distance: Column '{col}' not found")
+
+radius = {'km': 6371, 'miles': 3959, 'meters': 6371000, 'feet': 20902231}
+if unit not in radius:
+    raise ValueError(f"Geographic Distance: Unknown unit '{unit}'")
+
+R = radius[unit]
+lat1 = np.radians(pd.to_numeric(df[lat1_col], errors='coerce'))
+lon1 = np.radians(pd.to_numeric(df[lon1_col], errors='coerce'))
+lat2 = np.radians(pd.to_numeric(df[lat2_col], errors='coerce'))
+lon2 = np.radians(pd.to_numeric(df[lon2_col], errors='coerce'))
+
+if method == 'haversine':
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    df[output_col] = (R * c).round(2)
+else:
+    raise ValueError(f"Geographic Distance: Unknown method '{method}'")
+
+output = df
+`,
+  },
+
+  'rare-category-combiner': {
+    type: 'rare-category-combiner',
+    category: 'transform',
+    label: 'Rare Category Combiner',
+    description: 'Group infrequent categorical values into "Other" based on frequency threshold or top-N',
+    icon: 'Layers',
+    defaultConfig: {
+      column: '',
+      method: 'threshold',
+      threshold: 1.0,
+      topN: 10,
+      otherLabel: 'Other',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+column = config.get('column', '')
+method = config.get('method', 'threshold')
+threshold = config.get('threshold', 1.0)
+top_n = config.get('topN', 10)
+other_label = config.get('otherLabel', 'Other')
+
+if not column:
+    raise ValueError("Rare Category Combiner: Please select a column")
+if column not in df.columns:
+    raise ValueError(f"Rare Category Combiner: Column '{column}' not found")
+
+value_counts = df[column].value_counts()
+total = len(df)
+
+if method == 'threshold':
+    min_count = total * (threshold / 100)
+    keep_categories = value_counts[value_counts >= min_count].index.tolist()
+elif method == 'top_n':
+    keep_categories = value_counts.head(top_n).index.tolist()
+else:
+    raise ValueError(f"Rare Category Combiner: Unknown method '{method}'")
+
+df[column] = df[column].apply(lambda x: x if x in keep_categories else other_label)
+
+output = df
+`,
+  },
+
+  'smart-auto-cleaner': {
+    type: 'smart-auto-cleaner',
+    category: 'transform',
+    label: 'Smart Auto-Cleaner',
+    description: 'One-click data cleaning: impute missing, remove constants, fix types, standardize strings',
+    icon: 'Sparkles',
+    defaultConfig: {
+      handleMissing: true,
+      missingStrategy: 'smart',
+      removeConstants: true,
+      fixTypes: true,
+      standardizeStrings: true,
+      removeDuplicates: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+handle_missing = config.get('handleMissing', True)
+missing_strategy = config.get('missingStrategy', 'smart')
+remove_constants = config.get('removeConstants', True)
+fix_types = config.get('fixTypes', True)
+standardize_strings = config.get('standardizeStrings', True)
+remove_duplicates = config.get('removeDuplicates', False)
+
+if remove_constants:
+    constant_cols = [col for col in df.columns if df[col].nunique() <= 1]
+    if constant_cols:
+        df = df.drop(columns=constant_cols)
+
+if fix_types:
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            numeric_vals = pd.to_numeric(df[col], errors='coerce')
+            non_null_original = df[col].notna().sum()
+            non_null_numeric = numeric_vals.notna().sum()
+            if non_null_numeric / max(non_null_original, 1) > 0.9:
+                df[col] = numeric_vals
+
+if standardize_strings:
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].astype(str).str.strip()
+        df[col] = df[col].replace(['nan', 'NaN', 'NULL', 'null', 'None', 'none', ''], np.nan)
+
+if handle_missing:
+    for col in df.columns:
+        if df[col].isna().sum() > 0:
+            missing_pct = df[col].isna().sum() / len(df) * 100
+            if missing_pct > 50:
+                df = df.drop(columns=[col])
+            elif missing_strategy == 'smart':
+                if pd.api.types.is_numeric_dtype(df[col]):
+                    df[col] = df[col].fillna(df[col].median())
+                else:
+                    mode_val = df[col].mode()
+                    if len(mode_val) > 0:
+                        df[col] = df[col].fillna(mode_val.iloc[0])
+
+if remove_duplicates:
+    df = df.drop_duplicates()
+
+output = df
+`,
+  },
+
+  'interaction-generator': {
+    type: 'interaction-generator',
+    category: 'transform',
+    label: 'Interaction Generator',
+    description: 'Create interaction features: A*B, A/B, A+B, A-B, and polynomial terms for ML',
+    icon: 'Sigma',
+    defaultConfig: {
+      columns: [],
+      operations: ['multiply'],
+      degree: 2,
+      outputPrefix: 'inter_',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from itertools import combinations
+
+df = input_data.copy()
+columns = config.get('columns', [])
+operations = config.get('operations', ['multiply'])
+degree = config.get('degree', 2)
+prefix = config.get('outputPrefix', 'inter_')
+
+if not columns or len(columns) < 2:
+    raise ValueError("Interaction Generator: Please select at least 2 numeric columns")
+
+for col in columns:
+    if col not in df.columns:
+        raise ValueError(f"Interaction Generator: Column '{col}' not found")
+    if not pd.api.types.is_numeric_dtype(df[col]):
+        raise ValueError(f"Interaction Generator: Column '{col}' is not numeric")
+
+for col1, col2 in combinations(columns, 2):
+    if 'multiply' in operations:
+        df[f"{prefix}{col1}_x_{col2}"] = df[col1] * df[col2]
+    if 'divide' in operations:
+        df[f"{prefix}{col1}_div_{col2}"] = df[col1] / df[col2].replace(0, np.nan)
+    if 'add' in operations:
+        df[f"{prefix}{col1}_plus_{col2}"] = df[col1] + df[col2]
+    if 'subtract' in operations:
+        df[f"{prefix}{col1}_minus_{col2}"] = df[col1] - df[col2]
+
+if 'polynomial' in operations and degree >= 2:
+    for col in columns:
+        for d in range(2, degree + 1):
+            df[f"{prefix}{col}_pow{d}"] = df[col] ** d
+
+output = df
+`,
+  },
+
+  'fuzzy-deduplicator': {
+    type: 'fuzzy-deduplicator',
+    category: 'transform',
+    label: 'Fuzzy Deduplicator',
+    description: 'Identify and merge fuzzy duplicate rows using blocking + similarity matching',
+    icon: 'Copy',
+    defaultConfig: {
+      matchColumns: [],
+      blockingColumn: '',
+      threshold: 80,
+      mergeStrategy: 'first',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+df = input_data.copy()
+match_columns = config.get('matchColumns', [])
+blocking_column = config.get('blockingColumn', '')
+threshold = config.get('threshold', 80) / 100.0
+merge_strategy = config.get('mergeStrategy', 'first')
+
+if not match_columns:
+    raise ValueError("Fuzzy Deduplicator: Please select columns to match on")
+
+for col in match_columns:
+    if col not in df.columns:
+        raise ValueError(f"Fuzzy Deduplicator: Column '{col}' not found")
+
+def levenshtein_ratio(s1, s2):
+    if pd.isna(s1) or pd.isna(s2):
+        return 0.0
+    s1, s2 = str(s1).lower().strip(), str(s2).lower().strip()
+    if s1 == s2:
+        return 1.0
+    if len(s1) == 0 or len(s2) == 0:
+        return 0.0
+    rows = len(s1) + 1
+    cols = len(s2) + 1
+    dist = [[0 for _ in range(cols)] for _ in range(rows)]
+    for i in range(rows):
+        dist[i][0] = i
+    for j in range(cols):
+        dist[0][j] = j
+    for i in range(1, rows):
+        for j in range(1, cols):
+            cost = 0 if s1[i-1] == s2[j-1] else 1
+            dist[i][j] = min(dist[i-1][j] + 1, dist[i][j-1] + 1, dist[i-1][j-1] + cost)
+    max_len = max(len(s1), len(s2))
+    return 1 - (dist[rows-1][cols-1] / max_len)
+
+def calc_similarity(row1, row2, cols):
+    scores = [levenshtein_ratio(row1[col], row2[col]) for col in cols]
+    return np.mean(scores)
+
+df['_orig_idx'] = range(len(df))
+groups = df.groupby(blocking_column) if blocking_column and blocking_column in df.columns else [(None, df)]
+
+keep_indices = set()
+for _, group in groups:
+    if len(group) <= 1:
+        keep_indices.update(group['_orig_idx'].tolist())
+        continue
+    group_indices = group['_orig_idx'].tolist()
+    matched = set()
+    for i, idx1 in enumerate(group_indices):
+        if idx1 in matched:
+            continue
+        keep_indices.add(idx1)
+        row1 = group[group['_orig_idx'] == idx1].iloc[0]
+        for idx2 in group_indices[i+1:]:
+            if idx2 in matched:
+                continue
+            row2 = group[group['_orig_idx'] == idx2].iloc[0]
+            if calc_similarity(row1, row2, match_columns) >= threshold:
+                matched.add(idx2)
+
+output = df[df['_orig_idx'].isin(keep_indices)].drop(columns=['_orig_idx']).reset_index(drop=True)
+`,
+  },
+
+  'array-aggregator': {
+    type: 'array-aggregator',
+    category: 'transform',
+    label: 'Array Aggregator',
+    description: 'Aggregate list/array columns into scalar features (mean, sum, count, min, max)',
+    icon: 'Layers',
+    defaultConfig: {
+      column: '',
+      aggregations: ['mean', 'sum', 'count'],
+      outputPrefix: '',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+import json
+
+df = input_data.copy()
+column = config.get('column', '')
+aggregations = config.get('aggregations', ['mean', 'sum', 'count'])
+prefix = config.get('outputPrefix', '')
+
+if not column:
+    raise ValueError("Array Aggregator: Please select a column containing arrays/lists")
+if column not in df.columns:
+    raise ValueError(f"Array Aggregator: Column '{column}' not found")
+
+def parse_array(val):
+    if pd.isna(val):
+        return []
+    if isinstance(val, (list, np.ndarray)):
+        return list(val)
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val.replace("'", '"'))
+            if isinstance(parsed, list):
+                return parsed
+        except:
+            pass
+        try:
+            return [float(x.strip()) for x in val.strip('[]()').split(',') if x.strip()]
+        except:
+            return []
+    return [val] if val else []
+
+arrays = df[column].apply(parse_array)
+output_prefix = prefix if prefix else f"{column}_"
+
+for agg in aggregations:
+    if agg == 'mean':
+        df[f'{output_prefix}mean'] = arrays.apply(lambda x: np.mean(x) if len(x) > 0 else np.nan)
+    elif agg == 'sum':
+        df[f'{output_prefix}sum'] = arrays.apply(lambda x: np.sum(x) if len(x) > 0 else 0)
+    elif agg == 'count':
+        df[f'{output_prefix}count'] = arrays.apply(len)
+    elif agg == 'min':
+        df[f'{output_prefix}min'] = arrays.apply(lambda x: np.min(x) if len(x) > 0 else np.nan)
+    elif agg == 'max':
+        df[f'{output_prefix}max'] = arrays.apply(lambda x: np.max(x) if len(x) > 0 else np.nan)
+    elif agg == 'std':
+        df[f'{output_prefix}std'] = arrays.apply(lambda x: np.std(x) if len(x) > 1 else np.nan)
+    elif agg == 'first':
+        df[f'{output_prefix}first'] = arrays.apply(lambda x: x[0] if len(x) > 0 else np.nan)
+    elif agg == 'last':
+        df[f'{output_prefix}last'] = arrays.apply(lambda x: x[-1] if len(x) > 0 else np.nan)
+
+output = df
+`,
+  },
+
+  'target-aware-binning': {
+    type: 'target-aware-binning',
+    category: 'transform',
+    label: 'Target-Aware Binning',
+    description: 'Create bins that maximize information gain relative to target variable (decision tree-based)',
+    icon: 'BarChart',
+    defaultConfig: {
+      column: '',
+      targetColumn: '',
+      maxBins: 5,
+      method: 'tree',
+      minSamplesPerBin: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+
+df = input_data.copy()
+column = config.get('column', '')
+target_col = config.get('targetColumn', '')
+max_bins = config.get('maxBins', 5)
+method = config.get('method', 'tree')
+min_samples_pct = config.get('minSamplesPerBin', 0.05)
+
+if not column:
+    raise ValueError("Target-Aware Binning: Please select a column to bin")
+if not target_col:
+    raise ValueError("Target-Aware Binning: Please select a target column")
+if column not in df.columns:
+    raise ValueError(f"Target-Aware Binning: Column '{column}' not found")
+if target_col not in df.columns:
+    raise ValueError(f"Target-Aware Binning: Target column '{target_col}' not found")
+
+mask = df[column].notna() & df[target_col].notna()
+X = df.loc[mask, column].values.reshape(-1, 1)
+y = df.loc[mask, target_col].values
+
+if len(X) == 0:
+    raise ValueError("Target-Aware Binning: No valid data after removing missing values")
+
+min_samples_leaf = max(int(len(X) * min_samples_pct), 1)
+is_classification = df[target_col].nunique() <= 10 or df[target_col].dtype == 'object'
+
+if method == 'tree':
+    if is_classification:
+        tree = DecisionTreeClassifier(max_leaf_nodes=max_bins, min_samples_leaf=min_samples_leaf, random_state=42)
+    else:
+        tree = DecisionTreeRegressor(max_leaf_nodes=max_bins, min_samples_leaf=min_samples_leaf, random_state=42)
+    tree.fit(X, y)
+    thresholds = []
+    def get_thresholds(node_id=0):
+        if tree.tree_.feature[node_id] != -2:
+            thresholds.append(tree.tree_.threshold[node_id])
+            get_thresholds(tree.tree_.children_left[node_id])
+            get_thresholds(tree.tree_.children_right[node_id])
+    get_thresholds()
+    thresholds = sorted(set(thresholds))
+    bins = [-np.inf] + thresholds + [np.inf]
+else:
+    bins = df[column].quantile(np.linspace(0, 1, max_bins + 1)).unique().tolist()
+    bins[0] = -np.inf
+    bins[-1] = np.inf
+    bins = sorted(bins)
+
+bin_labels = [f'bin_{i+1}' for i in range(len(bins) - 1)]
+df[f'{column}_binned'] = pd.cut(df[column], bins=bins, labels=bin_labels, include_lowest=True)
+
+output = df
+`,
+  },
+
   // New Visualization Blocks
   'funnel-chart': {
     type: 'funnel-chart',
@@ -18327,6 +19064,16 @@ export const blockCategories = [
       'filter-expression',
       'number-format',
       'extract-pattern',
+      'fuzzy-join',
+      'memory-optimizer',
+      'cyclical-time-encoder',
+      'geographic-distance',
+      'rare-category-combiner',
+      'smart-auto-cleaner',
+      'interaction-generator',
+      'fuzzy-deduplicator',
+      'array-aggregator',
+      'target-aware-binning',
     ] as BlockType[],
   },
   {
