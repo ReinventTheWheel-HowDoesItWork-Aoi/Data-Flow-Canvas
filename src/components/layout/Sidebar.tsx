@@ -40,6 +40,12 @@ import {
   Activity,
   Search,
   X,
+  Cpu,
+  Clock,
+  MapPin,
+  Sparkles,
+  Sigma,
+  BarChart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils/cn';
@@ -78,6 +84,12 @@ const icons: Record<string, React.ElementType> = {
   AlertTriangle,
   GitFork,
   Activity,
+  Cpu,
+  Clock,
+  MapPin,
+  Sparkles,
+  Sigma,
+  BarChart,
 };
 
 const categoryIcons: Record<string, React.ElementType> = {
@@ -188,6 +200,17 @@ const blockTranslationKeys: Record<string, string> = {
   'add-unique-id': 'blocks.addUniqueId',
   'missing-indicator': 'blocks.missingIndicator',
   'quantile-transform': 'blocks.quantileTransform',
+  // New Data Science Transform Blocks
+  'fuzzy-join': 'blocks.fuzzyJoin',
+  'memory-optimizer': 'blocks.memoryOptimizer',
+  'cyclical-time-encoder': 'blocks.cyclicalTimeEncoder',
+  'geographic-distance': 'blocks.geographicDistance',
+  'rare-category-combiner': 'blocks.rareCategoryCombiner',
+  'smart-auto-cleaner': 'blocks.smartAutoCleaner',
+  'interaction-generator': 'blocks.interactionGenerator',
+  'fuzzy-deduplicator': 'blocks.fuzzyDeduplicator',
+  'array-aggregator': 'blocks.arrayAggregator',
+  'target-aware-binning': 'blocks.targetAwareBinning',
   // Analysis
   'statistics': 'blocks.statistics',
   'regression': 'blocks.regression',
