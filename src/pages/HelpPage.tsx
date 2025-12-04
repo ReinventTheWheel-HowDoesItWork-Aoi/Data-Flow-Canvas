@@ -165,7 +165,7 @@ const blocks: BlockInfo[] = [
   { icon: Medal, name: 'Rank', description: 'Assign rank positions with optional grouping', category: 'Transform' },
   { icon: RefreshCw, name: 'Type Conversion', description: 'Convert column types (string, int, float, datetime)', category: 'Transform' },
   { icon: ArrowLeftRight, name: 'Fill Forward/Backward', description: 'Fill missing values with previous or next values', category: 'Transform' },
-  { icon: MoveHorizontal, name: 'Lag/Lead', description: 'Create columns with shifted values (lag or lead)', category: 'Transform' },
+  { icon: MoveHorizontal, name: 'Lag/Lead Column', description: 'Create columns with shifted values (lag or lead)', category: 'Transform' },
   { icon: Hash, name: 'Row Number', description: 'Add a unique row number column', category: 'Transform' },
   { icon: CalendarRange, name: 'Date Difference', description: 'Calculate difference between two date columns', category: 'Transform' },
   { icon: FlipHorizontal, name: 'Transpose', description: 'Flip rows and columns', category: 'Transform' },
@@ -228,7 +228,7 @@ const blocks: BlockInfo[] = [
   { icon: Layers, name: 'Array Aggregator', description: 'Aggregate list/array columns into scalar features (mean, sum, count, min, max) for handling nested/JSON data', category: 'Transform' },
   { icon: BarChart, name: 'Target-Aware Binning', description: 'Create optimal bins using decision tree that maximize information gain relative to target variable for better ML features', category: 'Transform' },
 
-  // Analysis (95 blocks)
+  // Analysis (106 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -271,7 +271,7 @@ const blocks: BlockInfo[] = [
   { icon: GitMerge, name: 'Similarity Analysis', description: 'Calculate similarity between rows or find similar items', category: 'Analysis' },
   { icon: Target, name: 'SVM', description: 'Support Vector Machine for classification and regression', category: 'Analysis' },
   { icon: TrendingUp, name: 'XGBoost', description: 'Extreme Gradient Boosting for high-performance ML', category: 'Analysis' },
-  { icon: Lightbulb, name: 'Model Explainability', description: 'Explain model predictions with SHAP and feature importance', category: 'Analysis' },
+  { icon: Lightbulb, name: 'Model Explainability (SHAP)', description: 'Explain model predictions with SHAP and feature importance', category: 'Analysis' },
   { icon: FileSearch, name: 'Regression Diagnostics', description: 'Analyze regression model assumptions and residuals', category: 'Analysis' },
   { icon: Scale, name: 'VIF Analysis', description: 'Detect multicollinearity with Variance Inflation Factor', category: 'Analysis' },
   { icon: Filter, name: 'Funnel Analysis', description: 'Analyze conversion funnels and drop-off rates', category: 'Analysis' },
@@ -332,8 +332,8 @@ const blocks: BlockInfo[] = [
   { icon: Sparkles, name: 'Auto Feature Engineering', description: 'Automatically generate features: interactions, polynomials, date decomposition, binning, and lag features', category: 'Analysis' },
   { icon: Lightbulb, name: 'SHAP Interpretation', description: 'Explain model predictions with SHAP values - global importance, individual explanations, dependence plots', category: 'Analysis' },
   { icon: Wand2, name: 'AutoML', description: 'Automatically train and compare multiple models with hyperparameter tuning and cross-validation', category: 'Analysis' },
-  { icon: ScanSearch, name: 'Multivariate Anomaly Detection', description: 'Detect anomalies considering multiple features together using Isolation Forest, One-Class SVM, or Mahalanobis distance', category: 'Analysis' },
-  { icon: TrendingUp, name: 'Causal Impact Analysis', description: 'Measure causal effect of interventions using Difference-in-Differences or synthetic control methods', category: 'Analysis' },
+  { icon: ScanSearch, name: 'Multivariate Anomaly', description: 'Detect anomalies considering multiple features together using Isolation Forest, One-Class SVM, or Mahalanobis distance', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Causal Impact', description: 'Measure causal effect of interventions using Difference-in-Differences or synthetic control methods', category: 'Analysis' },
   { icon: Save, name: 'Model Registry', description: 'Save trained models to IndexedDB with versioning and metadata, or load previously saved models for inference', category: 'Analysis' },
 
   // Visualization (70 blocks)
@@ -405,7 +405,7 @@ const blocks: BlockInfo[] = [
   { icon: BarChart3, name: 'Distribution Comparison Plot', description: 'Compare distributions between groups or time periods', category: 'Visualization' },
   { icon: TrendingUp, name: 'ECDF Plot', description: 'Empirical Cumulative Distribution Function for distribution analysis', category: 'Visualization' },
   { icon: Activity, name: 'Andrews Curves', description: 'Multivariate data visualization using Fourier series representation', category: 'Visualization' },
-  { icon: BarChart3, name: 'CV Results Plot', description: 'Visualize cross-validation scores across folds with confidence intervals', category: 'Visualization' },
+  { icon: BarChart3, name: 'Cross-Validation Results Plot', description: 'Visualize cross-validation scores across folds with confidence intervals', category: 'Visualization' },
   { icon: Grid3x3, name: 'Hyperparameter Heatmap', description: 'Display grid search results as heatmap for parameter tuning', category: 'Visualization' },
 
   // Output (2 blocks)
@@ -496,7 +496,7 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Rank': { name: 'blocks.rank', description: 'blockDescriptions.rank' },
   'Type Conversion': { name: 'blocks.typeConversion', description: 'blockDescriptions.typeConversion' },
   'Fill Forward/Backward': { name: 'blocks.fillForwardBackward', description: 'blockDescriptions.fillForwardBackward' },
-  'Lag/Lead': { name: 'blocks.lagLead', description: 'blockDescriptions.lagLead' },
+  'Lag/Lead Column': { name: 'blocks.lagLead', description: 'blockDescriptions.lagLead' },
   'Row Number': { name: 'blocks.rowNumber', description: 'blockDescriptions.rowNumber' },
   'Date Difference': { name: 'blocks.dateDifference', description: 'blockDescriptions.dateDifference' },
   'Transpose': { name: 'blocks.transpose', description: 'blockDescriptions.transpose' },
@@ -578,7 +578,7 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Similarity Analysis': { name: 'blocks.similarityAnalysis', description: 'blockDescriptions.similarityAnalysis' },
   'SVM': { name: 'blocks.svm', description: 'blockDescriptions.svm' },
   'XGBoost': { name: 'blocks.xgboost', description: 'blockDescriptions.xgboost' },
-  'Model Explainability': { name: 'blocks.modelExplainability', description: 'blockDescriptions.modelExplainability' },
+  'Model Explainability (SHAP)': { name: 'blocks.modelExplainability', description: 'blockDescriptions.modelExplainability' },
   'Regression Diagnostics': { name: 'blocks.regressionDiagnostics', description: 'blockDescriptions.regressionDiagnostics' },
   'VIF Analysis': { name: 'blocks.vifAnalysis', description: 'blockDescriptions.vifAnalysis' },
   'Funnel Analysis': { name: 'blocks.funnelAnalysis', description: 'blockDescriptions.funnelAnalysis' },
@@ -639,8 +639,8 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Auto Feature Engineering': { name: 'blocks.autoFeatureEngineering', description: 'blockDescriptions.autoFeatureEngineering' },
   'SHAP Interpretation': { name: 'blocks.shapInterpretation', description: 'blockDescriptions.shapInterpretation' },
   'AutoML': { name: 'blocks.automl', description: 'blockDescriptions.automl' },
-  'Multivariate Anomaly Detection': { name: 'blocks.multivariateAnomaly', description: 'blockDescriptions.multivariateAnomaly' },
-  'Causal Impact Analysis': { name: 'blocks.causalImpact', description: 'blockDescriptions.causalImpact' },
+  'Multivariate Anomaly': { name: 'blocks.multivariateAnomaly', description: 'blockDescriptions.multivariateAnomaly' },
+  'Causal Impact': { name: 'blocks.causalImpact', description: 'blockDescriptions.causalImpact' },
   'Model Registry': { name: 'blocks.modelRegistry', description: 'blockDescriptions.modelRegistry' },
   'Pipeline Export': { name: 'blocks.pipelineExport', description: 'blockDescriptions.pipelineExport' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
@@ -711,7 +711,7 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Distribution Comparison Plot': { name: 'blocks.distributionComparisonPlot', description: 'blockDescriptions.distributionComparisonPlot' },
   'ECDF Plot': { name: 'blocks.ecdfPlot', description: 'blockDescriptions.ecdfPlot' },
   'Andrews Curves': { name: 'blocks.andrewsCurves', description: 'blockDescriptions.andrewsCurves' },
-  'CV Results Plot': { name: 'blocks.cvResultsPlot', description: 'blockDescriptions.cvResultsPlot' },
+  'Cross-Validation Results Plot': { name: 'blocks.cvResultsPlot', description: 'blockDescriptions.cvResultsPlot' },
   'Hyperparameter Heatmap': { name: 'blocks.hyperparameterHeatmap', description: 'blockDescriptions.hyperparameterHeatmap' },
   'Export CSV': { name: 'blocks.export', description: 'blockDescriptions.export' },
 };
@@ -868,7 +868,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">257</p>
+                <p className="text-h2 font-bold text-text-primary">267</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
