@@ -4,6 +4,8 @@
 
 🌐 **Live Website**: [https://dataflowcanvas.com](https://dataflowcanvas.com)
 
+🚀 **Product Hunt**: [https://www.producthunt.com/products/data-flow-canvas](https://www.producthunt.com/products/data-flow-canvas)
+
 ![Data Flow Canvas](https://img.shields.io/badge/version-1.0.0-blue)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-green)
 ![React](https://img.shields.io/badge/react-18.3-61DAFB)
