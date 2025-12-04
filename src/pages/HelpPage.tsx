@@ -117,6 +117,8 @@ import {
   FileBarChart,
   ShieldCheck,
   Cpu,
+  MapPin,
+  Sigma,
   Wand2,
   FileCode,
   ScanSearch,
@@ -138,7 +140,7 @@ const blocks: BlockInfo[] = [
   { icon: Database, name: 'Sample Data', description: 'Use built-in sample datasets (Iris, Wine, Diabetes)', category: 'Data Input' },
   { icon: PenLine, name: 'Create Dataset', description: 'Manually enter data in CSV format', category: 'Data Input' },
 
-  // Transform (76 blocks)
+  // Transform (86 blocks)
   { icon: Filter, name: 'Filter Rows', description: 'Filter data based on conditions (equals, greater than, contains, etc.)', category: 'Transform' },
   { icon: Columns, name: 'Select Columns', description: 'Choose, reorder, or rename specific columns', category: 'Transform' },
   { icon: ArrowUpDown, name: 'Sort', description: 'Sort data by one or more columns', category: 'Transform' },
@@ -215,6 +217,16 @@ const blocks: BlockInfo[] = [
   { icon: Hash, name: 'Add Unique ID', description: 'Generate unique identifiers for each row (sequential, UUID, or hash-based)', category: 'Transform' },
   { icon: AlertTriangle, name: 'Missing Value Indicator', description: 'Create binary columns indicating where values are missing (1=missing, 0=present)', category: 'Transform' },
   { icon: BarChart3, name: 'Quantile Transform', description: 'Transform values to their quantile rank, then to uniform or normal distribution', category: 'Transform' },
+  { icon: GitMerge, name: 'Fuzzy Join', description: 'Join datasets using approximate string matching (Levenshtein, Jaro-Winkler) to handle typos and spelling variations', category: 'Transform' },
+  { icon: Cpu, name: 'Memory Optimizer', description: 'Automatically downcast numeric types (int64→int8, float64→float32) and convert low-cardinality strings to reduce memory 50-80%', category: 'Transform' },
+  { icon: Clock, name: 'Cyclical Time Encoder', description: 'Encode time components (hour, day, month, weekday) as sin/cos pairs to preserve cyclical relationships for ML models', category: 'Transform' },
+  { icon: MapPin, name: 'Geographic Distance', description: 'Calculate real-world distance between coordinate pairs using Haversine formula for location-based features', category: 'Transform' },
+  { icon: Layers, name: 'Rare Category Combiner', description: 'Group infrequent categorical values into Other based on frequency threshold or top-N to prevent one-hot encoding explosion', category: 'Transform' },
+  { icon: Sparkles, name: 'Smart Auto-Cleaner', description: 'One-click data cleaning: smart imputation, remove constant columns, auto-detect and fix types, standardize strings, remove duplicates', category: 'Transform' },
+  { icon: Sigma, name: 'Interaction Generator', description: 'Create interaction features (A×B, A/B, A+B, A-B) and polynomial terms for ML feature engineering', category: 'Transform' },
+  { icon: Copy, name: 'Fuzzy Deduplicator', description: 'Identify and remove fuzzy duplicate rows using string similarity matching with optional blocking for performance', category: 'Transform' },
+  { icon: Layers, name: 'Array Aggregator', description: 'Aggregate list/array columns into scalar features (mean, sum, count, min, max) for handling nested/JSON data', category: 'Transform' },
+  { icon: BarChart, name: 'Target-Aware Binning', description: 'Create optimal bins using decision tree that maximize information gain relative to target variable for better ML features', category: 'Transform' },
 
   // Analysis (95 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
