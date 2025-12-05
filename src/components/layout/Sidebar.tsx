@@ -52,6 +52,12 @@ import { cn } from '@/lib/utils/cn';
 import { blockCategories, blockDefinitions } from '@/constants';
 import type { BlockType, BlockCategory } from '@/types';
 import { useUIStore } from '@/stores/uiStore';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/Tooltip';
 
 const icons: Record<string, React.ElementType> = {
   FileUp,
@@ -552,37 +558,53 @@ export function Sidebar() {
                     className="overflow-hidden"
                   >
                     <div className="pl-4 pr-2 py-1 space-y-1">
-                      {category.blocks.map((blockType) => {
-                        const definition = blockDefinitions[blockType];
-                        const IconComponent =
-                          icons[definition.icon] || Database;
+                      <TooltipProvider delayDuration={400}>
+                        {category.blocks.map((blockType) => {
+                          const definition = blockDefinitions[blockType];
+                          const IconComponent =
+                            icons[definition.icon] || Database;
+                          // Derive description translation key from block translation key
+                          const blockKey = blockTranslationKeys[blockType];
+                          const descriptionKey = blockKey
+                            ? blockKey.replace('blocks.', 'blockDescriptions.')
+                            : null;
+                          const translatedDescription = descriptionKey
+                            ? t(descriptionKey)
+                            : definition.description;
 
-                        return (
-                          <div
-                            key={blockType}
-                            draggable
-                            onDragStart={(e) => onDragStart(e, blockType)}
-                            className={cn(
-                              'flex items-center gap-2 px-3 py-2 rounded-lg',
-                              'bg-bg-tertiary hover:bg-border-default',
-                              'cursor-grab active:cursor-grabbing',
-                              'transition-colors duration-100'
-                            )}
-                          >
-                            <IconComponent
-                              size={14}
-                              className={
-                                categoryColors[category.id as BlockCategory]
-                              }
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-small text-text-primary truncate">
-                                {t(blockTranslationKeys[blockType] || definition.label)}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          return (
+                            <Tooltip key={blockType}>
+                              <TooltipTrigger asChild>
+                                <div
+                                  draggable
+                                  onDragStart={(e) => onDragStart(e, blockType)}
+                                  className={cn(
+                                    'flex items-center gap-2 px-3 py-2 rounded-lg',
+                                    'bg-bg-tertiary hover:bg-border-default',
+                                    'cursor-grab active:cursor-grabbing',
+                                    'transition-colors duration-100'
+                                  )}
+                                >
+                                  <IconComponent
+                                    size={14}
+                                    className={
+                                      categoryColors[category.id as BlockCategory]
+                                    }
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-small text-text-primary truncate">
+                                      {t(blockTranslationKeys[blockType] || definition.label)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-xs">
+                                {translatedDescription}
+                              </TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
+                      </TooltipProvider>
                     </div>
                   </motion.div>
                 )}
