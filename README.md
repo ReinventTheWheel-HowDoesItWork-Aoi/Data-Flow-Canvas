@@ -77,7 +77,7 @@ npm run preview
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Frontend**: React 19, TypeScript, Tailwind CSS 4
 - **Canvas**: React Flow (@xyflow/react)
 - **State Management**: Zustand with Zundo (undo/redo)
 - **Python Runtime**: Pyodide (WebAssembly)
