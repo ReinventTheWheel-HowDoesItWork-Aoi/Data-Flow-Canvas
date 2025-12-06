@@ -4,7 +4,7 @@
  */
 
 import { memo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface CursorData {
   userId: string;
