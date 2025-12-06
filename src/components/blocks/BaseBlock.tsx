@@ -5,7 +5,7 @@
 
 import { memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils/cn';
 import type { BlockData, BlockCategory, BlockState } from '@/types';
 import { BlockHeader } from './BlockHeader';
