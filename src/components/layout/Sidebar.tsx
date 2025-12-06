@@ -47,7 +47,7 @@ import {
   Sigma,
   BarChart,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils/cn';
 import { blockCategories, blockDefinitions } from '@/constants';
 import type { BlockType, BlockCategory } from '@/types';
