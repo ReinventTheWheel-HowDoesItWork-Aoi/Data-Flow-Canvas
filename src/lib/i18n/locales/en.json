@@ -726,6 +726,14 @@
       }
     }
   },
+  "jumpToBlock": {
+    "title": "Jump to Block",
+    "searchPlaceholder": "Search blocks by name or type...",
+    "noBlocks": "No blocks on canvas",
+    "noResults": "No matching blocks found",
+    "hint": "Use arrow keys to navigate, Enter to select",
+    "blocks": "block(s)"
+  },
   "collaboration": {
     "title": "Collaborate",
     "subtitle": "Work together in real-time",
