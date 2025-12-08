@@ -1,5 +1,7 @@
 # Data Flow Canvas
 
+English | [日本語](README.ja.md)
+
 **Canvas for Data Science** — A browser-based visual data science platform that enables users to build, execute, and share data transformation and analysis pipelines through an intuitive drag-and-drop interface.
 
 🌐 **Live Website**: [https://dataflowcanvas.com](https://dataflowcanvas.com)
