@@ -18,6 +18,7 @@ interface UIState {
   isSettingsModalOpen: boolean;
   isNewProjectModalOpen: boolean;
   isExportModalOpen: boolean;
+  isJumpToBlockOpen: boolean;
 
   // Theme
   isDarkMode: boolean;
@@ -36,6 +37,8 @@ interface UIState {
   closeNewProjectModal: () => void;
   openExportModal: () => void;
   closeExportModal: () => void;
+  openJumpToBlock: () => void;
+  closeJumpToBlock: () => void;
   toggleDarkMode: () => void;
   setDarkMode: (isDark: boolean) => void;
 }
@@ -53,6 +56,7 @@ export const useUIStore = create<UIState>((set) => ({
   isSettingsModalOpen: false,
   isNewProjectModalOpen: false,
   isExportModalOpen: false,
+  isJumpToBlockOpen: false,
 
   // Theme - default to dark, respect explicit light preference
   isDarkMode: typeof window !== 'undefined'
@@ -73,6 +77,8 @@ export const useUIStore = create<UIState>((set) => ({
   closeNewProjectModal: () => set({ isNewProjectModalOpen: false }),
   openExportModal: () => set({ isExportModalOpen: true }),
   closeExportModal: () => set({ isExportModalOpen: false }),
+  openJumpToBlock: () => set({ isJumpToBlockOpen: true }),
+  closeJumpToBlock: () => set({ isJumpToBlockOpen: false }),
   toggleDarkMode: () => set((state) => {
     const newMode = !state.isDarkMode;
     if (typeof document !== 'undefined') {
