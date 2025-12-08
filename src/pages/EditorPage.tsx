@@ -23,6 +23,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { cn } from '@/lib/utils/cn';
 import { AuthModal, ProfileCompletionModal } from '@/components/auth';
 import { CollaborationModal } from '@/components/collaboration';
+import { JumpToBlockDialog } from '@/components/canvas/JumpToBlockDialog';
 
 export default function EditorPage() {
   const { projectId } = useParams<{ projectId?: string }>();
@@ -103,6 +104,9 @@ export default function EditorPage() {
 
             {/* Collaboration Modal - shows when collaborate button is clicked */}
             <CollaborationModal />
+
+            {/* Jump to Block Dialog - shows when Ctrl+G is pressed */}
+            <JumpToBlockDialog />
           </ReactFlowProvider>
         </TooltipProvider>
       </PyodideProvider>
