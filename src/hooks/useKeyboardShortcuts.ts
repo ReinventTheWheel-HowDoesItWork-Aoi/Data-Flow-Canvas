@@ -26,6 +26,7 @@ export function useKeyboardShortcuts() {
   const startExecution = useExecutionStore((state) => state.startExecution);
   const stopExecution = useExecutionStore((state) => state.stopExecution);
   const toggleBottomPanel = useUIStore((state) => state.toggleBottomPanel);
+  const openJumpToBlock = useUIStore((state) => state.openJumpToBlock);
 
   const shortcuts: ShortcutHandler[] = useMemo(
     () => [
@@ -91,8 +92,14 @@ export function useKeyboardShortcuts() {
         handler: toggleBottomPanel,
         description: 'Toggle bottom panel',
       },
+      {
+        key: 'g',
+        ctrl: true,
+        handler: openJumpToBlock,
+        description: 'Jump to block',
+      },
     ],
-    [undo, redo, startExecution, stopExecution, removeBlock, clearSelection, toggleBottomPanel]
+    [undo, redo, startExecution, stopExecution, removeBlock, clearSelection, toggleBottomPanel, openJumpToBlock]
   );
 
   const handleKeyDown = useCallback(
