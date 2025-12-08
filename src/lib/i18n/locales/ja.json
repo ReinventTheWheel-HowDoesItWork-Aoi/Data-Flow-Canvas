@@ -726,6 +726,14 @@
       }
     }
   },
+  "jumpToBlock": {
+    "title": "ブロックへ移動",
+    "searchPlaceholder": "ブロック名またはタイプで検索...",
+    "noBlocks": "キャンバスにブロックがありません",
+    "noResults": "一致するブロックが見つかりません",
+    "hint": "矢印キーで移動、Enterで選択",
+    "blocks": "ブロック"
+  },
   "collaboration": {
     "title": "コラボレーション",
     "subtitle": "リアルタイムで共同作業",
