@@ -18976,6 +18976,657 @@ if action == 'save':
 output = df
 `,
   },
+
+  // ============================================
+  // New Advanced Analysis Blocks for Data Scientists
+  // ============================================
+
+  'comprehensive-eda': {
+    type: 'comprehensive-eda',
+    category: 'analysis',
+    label: 'Comprehensive EDA',
+    description: 'Generate comprehensive exploratory data analysis with statistical summaries, distributions, correlations, missing values, outliers, and data quality insights',
+    icon: 'FileBarChart',
+    defaultConfig: {
+      includeStatistics: true,
+      includeCorrelations: true,
+      includeMissing: true,
+      includeOutliers: true,
+      correlationThreshold: 0.7,
+      outlierMethod: 'iqr',
+      maxCategories: 20,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+import json
+
+df = input_data.copy()
+include_stats = config.get('includeStatistics', True)
+include_corr = config.get('includeCorrelations', True)
+include_missing = config.get('includeMissing', True)
+include_outliers = config.get('includeOutliers', True)
+corr_threshold = config.get('correlationThreshold', 0.7)
+outlier_method = config.get('outlierMethod', 'iqr')
+max_categories = config.get('maxCategories', 20)
+
+eda_report = {
+    'summary': {'rows': len(df), 'columns': len(df.columns), 'memory_mb': round(df.memory_usage(deep=True).sum() / 1024 / 1024, 2), 'duplicates': int(df.duplicated().sum())},
+    'columns': {}, 'warnings': [], 'recommendations': []
+}
+
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+
+for col in df.columns:
+    col_info = {'dtype': str(df[col].dtype), 'null_count': int(df[col].isna().sum()), 'null_pct': round(df[col].isna().mean() * 100, 2), 'unique_count': int(df[col].nunique())}
+    if include_stats and col in numeric_cols:
+        col_info['stats'] = {'mean': float(df[col].mean()) if pd.notna(df[col].mean()) else None, 'median': float(df[col].median()) if pd.notna(df[col].median()) else None, 'std': float(df[col].std()) if pd.notna(df[col].std()) else None, 'min': float(df[col].min()) if pd.notna(df[col].min()) else None, 'max': float(df[col].max()) if pd.notna(df[col].max()) else None}
+        if include_outliers:
+            Q1, Q3 = df[col].quantile(0.25), df[col].quantile(0.75)
+            IQR = Q3 - Q1
+            outliers = ((df[col] < Q1 - 1.5 * IQR) | (df[col] > Q3 + 1.5 * IQR)).sum()
+            col_info['outliers'] = {'count': int(outliers), 'pct': round(outliers / len(df) * 100, 2)}
+    if col in categorical_cols:
+        col_info['top_values'] = df[col].value_counts().head(max_categories).to_dict()
+        if df[col].nunique() > max_categories:
+            eda_report['warnings'].append(f"High cardinality: {col} ({df[col].nunique()} unique)")
+    eda_report['columns'][col] = col_info
+
+if include_corr and len(numeric_cols) > 1:
+    corr_matrix = df[numeric_cols].corr()
+    high_corr = []
+    for i in range(len(corr_matrix.columns)):
+        for j in range(i+1, len(corr_matrix.columns)):
+            if abs(corr_matrix.iloc[i, j]) >= corr_threshold:
+                high_corr.append({'col1': corr_matrix.columns[i], 'col2': corr_matrix.columns[j], 'corr': round(float(corr_matrix.iloc[i, j]), 4)})
+    eda_report['high_correlations'] = high_corr
+
+df['_eda_report'] = json.dumps(eda_report)
+df['_eda_warnings'] = len(eda_report['warnings'])
+output = df
+`,
+  },
+
+  'shap-deep-explainer': {
+    type: 'shap-deep-explainer',
+    category: 'analysis',
+    label: 'SHAP Deep Explainer',
+    description: 'Compute SHAP values for model interpretability with global feature importance and interaction effects',
+    icon: 'Lightbulb',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      nSamples: 100,
+      includeInteractions: false,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor, GradientBoostingClassifier, GradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+model_type = config.get('modelType', 'random_forest')
+task_type = config.get('taskType', 'auto')
+include_interactions = config.get('includeInteractions', False)
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+if not target:
+    raise ValueError("SHAP: Please specify a target column")
+
+X = df[features].dropna()
+y = df.loc[X.index, target]
+task_type = 'classification' if task_type == 'auto' and y.nunique() <= 10 else ('regression' if task_type == 'auto' else task_type)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+if task_type == 'classification':
+    model = GradientBoostingClassifier(n_estimators=100, random_state=42) if model_type == 'gradient_boosting' else RandomForestClassifier(n_estimators=100, random_state=42)
+else:
+    model = GradientBoostingRegressor(n_estimators=100, random_state=42) if model_type == 'gradient_boosting' else RandomForestRegressor(n_estimators=100, random_state=42)
+
+model.fit(X_train, y_train)
+importance = pd.DataFrame({'feature': features, 'importance': model.feature_importances_}).sort_values('importance', ascending=False)
+
+shap_summary = {'model_type': model_type, 'task_type': task_type, 'feature_importance': importance.to_dict('records'), 'train_score': float(model.score(X_train, y_train)), 'test_score': float(model.score(X_test, y_test))}
+
+if include_interactions:
+    interactions = [{'f1': f1, 'f2': f2, 'corr': round(float(df[f1].corr(df[f2])), 4)} for i, f1 in enumerate(importance['feature'].head(5)) for f2 in importance['feature'].head(5).tolist()[i+1:]]
+    shap_summary['interactions'] = interactions
+
+df['_shap_summary'] = json.dumps(shap_summary)
+df['_shap_top_feature'] = importance['feature'].iloc[0]
+output = df
+`,
+  },
+
+  'stl-decomposition': {
+    type: 'stl-decomposition',
+    category: 'analysis',
+    label: 'STL Decomposition',
+    description: 'Decompose time series into trend, seasonal, and residual components using STL',
+    icon: 'Waves',
+    defaultConfig: {
+      dateColumn: '',
+      valueColumn: '',
+      period: 12,
+      seasonal: 7,
+      robust: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.seasonal import STL
+import json
+
+df = input_data.copy()
+date_col = config.get('dateColumn', '')
+value_col = config.get('valueColumn', '')
+period = config.get('period', 12)
+seasonal = config.get('seasonal', 7)
+robust = config.get('robust', True)
+
+if not date_col or not value_col:
+    raise ValueError("STL: Please specify date and value columns")
+
+df_sorted = df.sort_values(date_col).copy()
+df_sorted[date_col] = pd.to_datetime(df_sorted[date_col])
+df_sorted = df_sorted.set_index(date_col)
+ts = df_sorted[value_col].interpolate(method='linear').dropna()
+
+if len(ts) < 2 * period:
+    raise ValueError(f"STL: Need at least {2 * period} observations")
+
+stl = STL(ts, period=period, seasonal=seasonal, robust=robust)
+result = stl.fit()
+
+decomp_df = pd.DataFrame({date_col: ts.index, value_col: ts.values, 'trend': result.trend, 'seasonal': result.seasonal, 'residual': result.resid}).reset_index(drop=True)
+trend_strength = max(0, 1 - np.var(result.resid) / np.var(result.trend + result.resid))
+seasonal_strength = max(0, 1 - np.var(result.resid) / np.var(result.seasonal + result.resid))
+
+decomp_df['_stl_stats'] = json.dumps({'period': period, 'trend_strength': round(float(trend_strength), 4), 'seasonal_strength': round(float(seasonal_strength), 4)})
+output = decomp_df
+`,
+  },
+
+  'multi-algorithm-anomaly': {
+    type: 'multi-algorithm-anomaly',
+    category: 'analysis',
+    label: 'Multi-Algorithm Anomaly Detection',
+    description: 'Detect anomalies using ensemble of algorithms (Isolation Forest, LOF, Z-score, IQR) with voting',
+    icon: 'AlertTriangle',
+    defaultConfig: {
+      features: [],
+      algorithms: ['isolation_forest', 'lof', 'zscore', 'iqr'],
+      contamination: 0.1,
+      votingThreshold: 0.5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
+from scipy import stats
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+algorithms = config.get('algorithms', ['isolation_forest', 'lof', 'zscore', 'iqr'])
+contamination = config.get('contamination', 0.1)
+voting_threshold = config.get('votingThreshold', 0.5)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].fillna(df[features].median())
+votes = pd.DataFrame(index=df.index)
+
+if 'isolation_forest' in algorithms:
+    votes['iso'] = (IsolationForest(contamination=contamination, random_state=42).fit_predict(X) == -1).astype(int)
+if 'lof' in algorithms:
+    votes['lof'] = (LocalOutlierFactor(contamination=contamination).fit_predict(X) == -1).astype(int)
+if 'zscore' in algorithms:
+    votes['zscore'] = (np.max(np.abs(stats.zscore(X, nan_policy='omit')), axis=1) > 3).astype(int)
+if 'iqr' in algorithms:
+    Q1, Q3, IQR = X.quantile(0.25), X.quantile(0.75), X.quantile(0.75) - X.quantile(0.25)
+    votes['iqr'] = ((X < Q1 - 1.5 * IQR) | (X > Q3 + 1.5 * IQR)).any(axis=1).astype(int)
+
+df['_anomaly_votes'] = votes.sum(axis=1)
+df['_is_anomaly'] = (votes.sum(axis=1) / len(votes.columns) >= voting_threshold).astype(int)
+df['_anomaly_summary'] = json.dumps({'algorithms': algorithms, 'total_anomalies': int(df['_is_anomaly'].sum()), 'pct': round(df['_is_anomaly'].mean() * 100, 2)})
+output = df
+`,
+  },
+
+  'automated-feature-pipeline': {
+    type: 'automated-feature-pipeline',
+    category: 'analysis',
+    label: 'Automated Feature Pipeline',
+    description: 'Automated feature engineering with generation, selection, and transformation',
+    icon: 'Sparkles',
+    defaultConfig: {
+      features: [],
+      target: '',
+      generateInteractions: true,
+      generatePolynomials: true,
+      nFeaturesToSelect: 20,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import SelectKBest, mutual_info_classif, mutual_info_regression
+from sklearn.preprocessing import PolynomialFeatures
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+gen_interactions = config.get('generateInteractions', True)
+gen_poly = config.get('generatePolynomials', True)
+n_select = config.get('nFeaturesToSelect', 20)
+
+if not features:
+    features = [c for c in df.columns if c != target]
+
+numeric_features = df[features].select_dtypes(include=[np.number]).columns.tolist()
+generated = []
+result_df = df.copy()
+
+if gen_poly and len(numeric_features) >= 2:
+    top = numeric_features[:5]
+    poly = PolynomialFeatures(degree=2, include_bias=False, interaction_only=False)
+    poly_data = poly.fit_transform(result_df[top])
+    for i, name in enumerate(poly.get_feature_names_out(top)):
+        if name not in top:
+            clean = name.replace(' ', '_').replace('^', '_pow')
+            result_df[clean] = poly_data[:, i]
+            generated.append(clean)
+
+if gen_interactions and len(numeric_features) >= 2:
+    for i, f1 in enumerate(numeric_features[:5]):
+        for f2 in numeric_features[:5][i+1:]:
+            result_df[f'{f1}_div_{f2}'] = result_df[f1] / (result_df[f2] + 1e-10)
+            generated.append(f'{f1}_div_{f2}')
+
+all_features = numeric_features + generated
+if target and target in result_df.columns:
+    X, y = result_df[all_features].fillna(0), result_df[target]
+    score_func = mutual_info_classif if y.nunique() <= 10 else mutual_info_regression
+    selector = SelectKBest(score_func=score_func, k=min(n_select, len(all_features)))
+    selector.fit(X, y)
+    selected = [f for f, s in zip(all_features, selector.get_support()) if s]
+    result_df = result_df[selected + [target]]
+
+result_df['_feature_summary'] = json.dumps({'original': len(features), 'generated': len(generated), 'selected': len(result_df.columns) - 1})
+output = result_df
+`,
+  },
+
+  'distribution-drift-monitor': {
+    type: 'distribution-drift-monitor',
+    category: 'analysis',
+    label: 'Distribution Drift Monitor',
+    description: 'Detect distribution drift using statistical tests (KS, PSI, Chi-square)',
+    icon: 'GitCompare',
+    defaultConfig: {
+      referenceColumn: '',
+      referenceValue: '',
+      features: [],
+      tests: ['ks', 'psi'],
+      psiThreshold: 0.2,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+import json
+
+df = input_data.copy()
+ref_col = config.get('referenceColumn', '')
+ref_value = config.get('referenceValue', '')
+features = config.get('features', [])
+tests = config.get('tests', ['ks', 'psi'])
+psi_threshold = config.get('psiThreshold', 0.2)
+
+if ref_col and ref_value:
+    ref_df = df[df[ref_col] == ref_value]
+    curr_df = df[df[ref_col] != ref_value]
+else:
+    mid = len(df) // 2
+    ref_df, curr_df = df.iloc[:mid], df.iloc[mid:]
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+def calc_psi(ref, curr, bins=10):
+    edges = np.linspace(min(ref.min(), curr.min()), max(ref.max(), curr.max()), bins + 1)
+    ref_h = (np.histogram(ref, bins=edges)[0] + 0.001) / (len(ref) + 0.001 * bins)
+    curr_h = (np.histogram(curr, bins=edges)[0] + 0.001) / (len(curr) + 0.001 * bins)
+    return np.sum((curr_h - ref_h) * np.log(curr_h / ref_h))
+
+results, drifted = {}, []
+for f in features:
+    if f not in ref_df.columns:
+        continue
+    ref_data, curr_data = ref_df[f].dropna(), curr_df[f].dropna()
+    if len(ref_data) < 10 or len(curr_data) < 10:
+        continue
+    drift = {'feature': f, 'drifted': False}
+    if 'ks' in tests:
+        ks_stat, pval = stats.ks_2samp(ref_data, curr_data)
+        drift['ks'] = {'stat': round(float(ks_stat), 4), 'pval': round(float(pval), 4)}
+        if pval < 0.05:
+            drift['drifted'] = True
+    if 'psi' in tests:
+        psi = calc_psi(ref_data, curr_data)
+        drift['psi'] = round(float(psi), 4)
+        if psi >= psi_threshold:
+            drift['drifted'] = True
+    if drift['drifted']:
+        drifted.append(f)
+    results[f] = drift
+
+df['_drift_summary'] = json.dumps({'n_analyzed': len(results), 'n_drifted': len(drifted), 'drifted': drifted})
+df['_drift_detected'] = int(len(drifted) > 0)
+output = df
+`,
+  },
+
+  'smart-resampling': {
+    type: 'smart-resampling',
+    category: 'analysis',
+    label: 'Smart Resampling',
+    description: 'Intelligent class imbalance handling with auto strategy selection',
+    icon: 'Scale',
+    defaultConfig: {
+      targetColumn: '',
+      strategy: 'auto',
+      samplingRatio: 1.0,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.utils import resample
+import json
+
+df = input_data.copy()
+target = config.get('targetColumn', '')
+strategy = config.get('strategy', 'auto')
+ratio = config.get('samplingRatio', 1.0)
+seed = config.get('randomState', 42)
+
+if not target:
+    raise ValueError("Smart Resampling: Please specify target column")
+
+np.random.seed(seed)
+counts = df[target].value_counts()
+imbalance = counts.max() / counts.min()
+
+if strategy == 'auto':
+    strategy = 'oversample' if counts.min() < 100 else ('hybrid' if imbalance > 10 else 'undersample')
+
+if strategy == 'undersample':
+    n = int(counts.min() * ratio)
+    result = pd.concat([df[df[target] == c].sample(n=min(n, len(df[df[target] == c])), random_state=seed) for c in counts.index])
+elif strategy == 'oversample':
+    n = int(counts.max() * ratio)
+    result = pd.concat([resample(df[df[target] == c], n_samples=n, replace=True, random_state=seed) if len(df[df[target] == c]) < n else df[df[target] == c] for c in counts.index])
+elif strategy == 'hybrid':
+    med = int(counts.median())
+    parts = []
+    for c in counts.index:
+        sub = df[df[target] == c]
+        if len(sub) > med * 2:
+            sub = sub.sample(n=med * 2, random_state=seed)
+        elif len(sub) < med:
+            sub = resample(sub, n_samples=med, replace=True, random_state=seed)
+        parts.append(sub)
+    result = pd.concat(parts)
+else:
+    result = df.copy()
+
+result = result.sample(frac=1, random_state=seed).reset_index(drop=True)
+result['_resampling_summary'] = json.dumps({'strategy': strategy, 'original': len(df), 'resampled': len(result)})
+output = result
+`,
+  },
+
+  'collinearity-diagnostics': {
+    type: 'collinearity-diagnostics',
+    category: 'analysis',
+    label: 'Collinearity Diagnostics',
+    description: 'Multicollinearity analysis using VIF and correlation clustering',
+    icon: 'GitMerge',
+    defaultConfig: {
+      features: [],
+      vifThreshold: 5,
+      correlationThreshold: 0.8,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+vif_thresh = config.get('vifThreshold', 5)
+corr_thresh = config.get('correlationThreshold', 0.8)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].dropna()
+X_scaled = pd.DataFrame(StandardScaler().fit_transform(X), columns=features)
+
+def calc_vif(X_df, f):
+    others = [c for c in X_df.columns if c != f]
+    if not others:
+        return 1.0
+    r2 = X_df[others].corrwith(X_df[f]).pow(2).max()
+    return 1 / (1 - r2 + 1e-10)
+
+vif_results = [{'feature': f, 'vif': round(float(calc_vif(X_scaled, f)), 4)} for f in features]
+vif_df = pd.DataFrame(vif_results)
+vif_df['problematic'] = vif_df['vif'] > vif_thresh
+
+corr = X_scaled.corr()
+high_corr = []
+for i in range(len(features)):
+    for j in range(i+1, len(features)):
+        if abs(corr.iloc[i, j]) >= corr_thresh:
+            high_corr.append({'f1': features[i], 'f2': features[j], 'corr': round(float(corr.iloc[i, j]), 4)})
+
+summary = {'n_features': len(features), 'n_problematic': int(vif_df['problematic'].sum()), 'vif_results': vif_results, 'high_correlations': high_corr}
+df['_collinearity_summary'] = json.dumps(summary)
+df['_collinearity_status'] = 'Problematic' if vif_df['problematic'].any() else 'OK'
+output = df
+`,
+  },
+
+  'bayesian-ab-calculator': {
+    type: 'bayesian-ab-calculator',
+    category: 'analysis',
+    label: 'Bayesian A/B Calculator',
+    description: 'Bayesian A/B testing with posterior distributions and credible intervals',
+    icon: 'FlaskConical',
+    defaultConfig: {
+      groupColumn: '',
+      metricColumn: '',
+      metricType: 'conversion',
+      controlGroup: '',
+      treatmentGroup: '',
+      credibleLevel: 0.95,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+import json
+
+df = input_data.copy()
+group_col = config.get('groupColumn', '')
+metric_col = config.get('metricColumn', '')
+metric_type = config.get('metricType', 'conversion')
+control = config.get('controlGroup', '')
+treatment = config.get('treatmentGroup', '')
+cred_level = config.get('credibleLevel', 0.95)
+
+if not group_col or not metric_col:
+    raise ValueError("Bayesian AB: Please specify group and metric columns")
+
+groups = df[group_col].unique()
+control = control or groups[0]
+treatment = treatment or (groups[1] if len(groups) > 1 else groups[0])
+
+ctrl_data = df[df[group_col] == control][metric_col]
+treat_data = df[df[group_col] == treatment][metric_col]
+
+np.random.seed(42)
+n_sim = 10000
+
+if metric_type == 'conversion':
+    ctrl_a, ctrl_b = 1 + int(ctrl_data.sum()), 1 + len(ctrl_data) - int(ctrl_data.sum())
+    treat_a, treat_b = 1 + int(treat_data.sum()), 1 + len(treat_data) - int(treat_data.sum())
+    ctrl_samples = np.random.beta(ctrl_a, ctrl_b, n_sim)
+    treat_samples = np.random.beta(treat_a, treat_b, n_sim)
+    ctrl_mean = ctrl_a / (ctrl_a + ctrl_b)
+    treat_mean = treat_a / (treat_a + treat_b)
+    ctrl_ci = stats.beta.interval(cred_level, ctrl_a, ctrl_b)
+    treat_ci = stats.beta.interval(cred_level, treat_a, treat_b)
+else:
+    ctrl_mean, ctrl_std, ctrl_n = ctrl_data.mean(), ctrl_data.std(), len(ctrl_data)
+    treat_mean, treat_std, treat_n = treat_data.mean(), treat_data.std(), len(treat_data)
+    ctrl_samples = stats.t.rvs(df=ctrl_n-1, loc=ctrl_mean, scale=ctrl_std/np.sqrt(ctrl_n), size=n_sim)
+    treat_samples = stats.t.rvs(df=treat_n-1, loc=treat_mean, scale=treat_std/np.sqrt(treat_n), size=n_sim)
+    ctrl_ci = stats.t.interval(cred_level, df=ctrl_n-1, loc=ctrl_mean, scale=ctrl_std/np.sqrt(ctrl_n))
+    treat_ci = stats.t.interval(cred_level, df=treat_n-1, loc=treat_mean, scale=treat_std/np.sqrt(treat_n))
+
+prob_better = np.mean(treat_samples > ctrl_samples)
+lift = np.mean((treat_samples - ctrl_samples) / (ctrl_samples + 1e-10))
+
+results = {
+    'control': {'group': control, 'value': round(float(ctrl_mean), 4), 'ci': [round(float(ctrl_ci[0]), 4), round(float(ctrl_ci[1]), 4)]},
+    'treatment': {'group': treatment, 'value': round(float(treat_mean), 4), 'ci': [round(float(treat_ci[0]), 4), round(float(treat_ci[1]), 4)]},
+    'prob_treatment_better': round(float(prob_better), 4),
+    'mean_lift_pct': round(float(lift * 100), 2),
+    'recommendation': 'Treatment wins' if prob_better > 0.95 else ('Control wins' if prob_better < 0.05 else 'Inconclusive')
+}
+
+df['_bayesian_ab'] = json.dumps(results)
+df['_prob_treatment_better'] = prob_better
+output = df
+`,
+  },
+
+  'nested-cross-validation': {
+    type: 'nested-cross-validation',
+    category: 'analysis',
+    label: 'Nested Cross-Validation',
+    description: 'Nested CV for unbiased model evaluation with hyperparameter tuning',
+    icon: 'Repeat',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      outerFolds: 5,
+      innerFolds: 3,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import KFold, StratifiedKFold, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+import json
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+task_type = config.get('taskType', 'auto')
+outer_k = config.get('outerFolds', 5)
+inner_k = config.get('innerFolds', 3)
+
+if not target:
+    raise ValueError("Nested CV: Please specify target column")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+X = df[features].dropna()
+y = df.loc[X.index, target]
+task_type = 'classification' if (task_type == 'auto' and y.nunique() <= 10) else ('regression' if task_type == 'auto' else task_type)
+
+if task_type == 'classification':
+    model = RandomForestClassifier(random_state=42)
+    outer_cv = StratifiedKFold(n_splits=outer_k, shuffle=True, random_state=42)
+    inner_cv = StratifiedKFold(n_splits=inner_k, shuffle=True, random_state=42)
+    scoring = 'accuracy'
+else:
+    model = RandomForestRegressor(random_state=42)
+    outer_cv = KFold(n_splits=outer_k, shuffle=True, random_state=42)
+    inner_cv = KFold(n_splits=inner_k, shuffle=True, random_state=42)
+    scoring = 'neg_mean_squared_error'
+
+pipe = Pipeline([('scaler', StandardScaler()), ('model', model)])
+params = {'model__n_estimators': [50, 100], 'model__max_depth': [5, 10, None]}
+
+scores = []
+for train_idx, test_idx in outer_cv.split(X, y):
+    X_tr, X_te = X.iloc[train_idx], X.iloc[test_idx]
+    y_tr, y_te = y.iloc[train_idx], y.iloc[test_idx]
+    gs = GridSearchCV(pipe, params, cv=inner_cv, scoring=scoring)
+    gs.fit(X_tr, y_tr)
+    scores.append(gs.score(X_te, y_te))
+
+scores = np.array(scores)
+mean_score, std_score = float(np.mean(scores)), float(np.std(scores))
+
+results = {
+    'task_type': task_type,
+    'outer_folds': outer_k,
+    'inner_folds': inner_k,
+    'scores': [round(float(s), 4) for s in scores],
+    'mean_score': round(mean_score, 4),
+    'std_score': round(std_score, 4),
+    'ci_95': [round(mean_score - 1.96 * std_score / np.sqrt(outer_k), 4), round(mean_score + 1.96 * std_score / np.sqrt(outer_k), 4)]
+}
+
+df['_nested_cv'] = json.dumps(results)
+df['_nested_cv_score'] = mean_score
+output = df
+`,
+  },
 };
 
 export const blockCategories = [
@@ -19186,6 +19837,17 @@ export const blockCategories = [
       'uplift-modeling',
       'quantile-regression',
       'adversarial-validation',
+      // New Advanced Analysis Blocks for Data Scientists
+      'comprehensive-eda',
+      'shap-deep-explainer',
+      'stl-decomposition',
+      'multi-algorithm-anomaly',
+      'automated-feature-pipeline',
+      'distribution-drift-monitor',
+      'smart-resampling',
+      'collinearity-diagnostics',
+      'bayesian-ab-calculator',
+      'nested-cross-validation',
     ] as BlockType[],
   },
   {
