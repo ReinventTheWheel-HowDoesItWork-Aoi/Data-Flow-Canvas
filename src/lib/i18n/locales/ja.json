@@ -308,6 +308,16 @@
     "andrewsCurves": "アンドリュース曲線",
     "cvResultsPlot": "交差検証結果プロット",
     "hyperparameterHeatmap": "ハイパーパラメータヒートマップ",
+    "comprehensiveEda": "包括的EDAレポート",
+    "shapDeepExplainer": "SHAPディープエクスプレイナー",
+    "stlDecomposition": "STL時系列分解",
+    "multiAlgorithmAnomaly": "マルチアルゴリズム異常検出",
+    "automatedFeaturePipeline": "自動特徴量エンジニアリングパイプライン",
+    "distributionDriftMonitor": "分布ドリフトモニター",
+    "smartResampling": "不均衡データのスマートリサンプリング",
+    "collinearityDiagnostics": "多重共線性診断",
+    "bayesianAbCalculator": "ベイジアンA/Bテスト計算機",
+    "nestedCrossValidation": "ネステッド交差検証",
     "export": "エクスポート"
   },
   "blockDescriptions": {
@@ -577,6 +587,16 @@
     "andrewsCurves": "各観測値をクラス別に色分けしたフーリエ級数曲線としてプロット",
     "cvResultsPlot": "交差検証フォールド間のスコア分布を表示する箱ひげ図/バイオリンプロット",
     "hyperparameterHeatmap": "ハイパーパラメータグリッドの組み合わせにわたる性能を表示する2Dヒートマップ",
+    "comprehensiveEda": "統計、分布、相関、欠損値分析、外れ値検出を含む完全な自動EDAレポートをワンクリックで生成",
+    "shapDeepExplainer": "任意のモデルのSHAP値を計算し、特徴量の寄与度、重要度ランキング、相互作用効果を理解してモデルを解釈",
+    "stlDecomposition": "設定可能な季節性で時系列をトレンド、季節、残差成分に分解するSTL分析",
+    "multiAlgorithmAnomaly": "Isolation Forest、Local Outlier Factor、Zスコアのアンサンブルを使用した堅牢な異常検出",
+    "automatedFeaturePipeline": "列タイプに基づいて多項式、相互作用、日付特徴、ビニング、テキスト統計を含む新しい特徴量を自動生成",
+    "distributionDriftMonitor": "KS検定、PSI、Jensen-Shannon発散を使用してベースラインと現在のデータセットの分布を比較し、データドリフトを検出",
+    "smartResampling": "設定可能なパラメータでSMOTE、ADASYN、ランダムオーバーサンプリング、アンダーサンプリング技術を使用した不均衡データセットの処理",
+    "collinearityDiagnostics": "VIF、条件数、相関行列を使用して多重共線性を分析し、特徴量除去の自動推奨を提供",
+    "bayesianAbCalculator": "ベータ二項モデルでベイジアンA/Bテストを実行し、改善確率、期待リフト、信用区間を計算",
+    "nestedCrossValidation": "ネステッドCVによる偏りのないモデル評価 - 外側ループで評価、内側ループでハイパーパラメータチューニング",
     "export": "データをファイルにエクスポート"
   },
   "landing": {
