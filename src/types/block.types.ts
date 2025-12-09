@@ -213,6 +213,17 @@ export type BlockType =
   | 'multivariate-anomaly'
   | 'causal-impact'
   | 'model-registry'
+  // New Advanced Analysis Blocks for Data Scientists
+  | 'comprehensive-eda'
+  | 'shap-deep-explainer'
+  | 'stl-decomposition'
+  | 'multi-algorithm-anomaly'
+  | 'automated-feature-pipeline'
+  | 'distribution-drift-monitor'
+  | 'smart-resampling'
+  | 'collinearity-diagnostics'
+  | 'bayesian-ab-calculator'
+  | 'nested-cross-validation'
   // Visualization
   | 'chart'
   | 'table'
