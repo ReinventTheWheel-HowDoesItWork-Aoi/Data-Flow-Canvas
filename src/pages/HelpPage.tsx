@@ -124,6 +124,7 @@ import {
   ScanSearch,
   Save,
   DatabaseZap,
+  Waves,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -335,6 +336,16 @@ const blocks: BlockInfo[] = [
   { icon: ScanSearch, name: 'Multivariate Anomaly', description: 'Detect anomalies considering multiple features together using Isolation Forest, One-Class SVM, or Mahalanobis distance', category: 'Analysis' },
   { icon: TrendingUp, name: 'Causal Impact', description: 'Measure causal effect of interventions using Difference-in-Differences or synthetic control methods', category: 'Analysis' },
   { icon: Save, name: 'Model Registry', description: 'Save trained models to IndexedDB with versioning and metadata, or load previously saved models for inference', category: 'Analysis' },
+  { icon: FileBarChart, name: 'Comprehensive EDA Report', description: 'Generate complete automated EDA report with statistics, distributions, correlations, missing value analysis, and outlier detection', category: 'Analysis' },
+  { icon: Lightbulb, name: 'SHAP Deep Explainer', description: 'Calculate SHAP values for any model to understand feature contributions, importance rankings, and interaction effects', category: 'Analysis' },
+  { icon: Waves, name: 'STL Time Series Decomposition', description: 'Decompose time series into trend, seasonal, and residual components using STL with configurable seasonality', category: 'Analysis' },
+  { icon: AlertTriangle, name: 'Multi-Algorithm Anomaly Detection', description: 'Detect anomalies using ensemble of Isolation Forest, Local Outlier Factor, and Z-score methods with voting', category: 'Analysis' },
+  { icon: Sparkles, name: 'Automated Feature Engineering Pipeline', description: 'Automatically generate new features including polynomials, interactions, date features, binning, and text stats', category: 'Analysis' },
+  { icon: GitCompare, name: 'Distribution Drift Monitor', description: 'Compare data distributions between baseline and current datasets using KS test, PSI, and Jensen-Shannon divergence', category: 'Analysis' },
+  { icon: Scale, name: 'Smart Resampling for Imbalanced Data', description: 'Handle imbalanced datasets with SMOTE, ADASYN, random oversampling, or undersampling techniques', category: 'Analysis' },
+  { icon: GitMerge, name: 'Collinearity Diagnostics', description: 'Analyze multicollinearity using VIF, condition number, and correlation matrix with automatic recommendations', category: 'Analysis' },
+  { icon: FlaskConical, name: 'Bayesian A/B Test Calculator', description: 'Run Bayesian A/B tests with Beta-Binomial models to calculate probability of improvement and credible intervals', category: 'Analysis' },
+  { icon: Repeat, name: 'Nested Cross-Validation', description: 'Perform unbiased model evaluation with nested CV - outer loop for evaluation, inner loop for hyperparameter tuning', category: 'Analysis' },
 
   // Visualization (70 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -664,6 +675,16 @@ const blockTranslationKeys: Record<string, { name: string; description: string }
   'Multivariate Anomaly': { name: 'blocks.multivariateAnomaly', description: 'blockDescriptions.multivariateAnomaly' },
   'Causal Impact': { name: 'blocks.causalImpact', description: 'blockDescriptions.causalImpact' },
   'Model Registry': { name: 'blocks.modelRegistry', description: 'blockDescriptions.modelRegistry' },
+  'Comprehensive EDA Report': { name: 'blocks.comprehensiveEda', description: 'blockDescriptions.comprehensiveEda' },
+  'SHAP Deep Explainer': { name: 'blocks.shapDeepExplainer', description: 'blockDescriptions.shapDeepExplainer' },
+  'STL Time Series Decomposition': { name: 'blocks.stlDecomposition', description: 'blockDescriptions.stlDecomposition' },
+  'Multi-Algorithm Anomaly Detection': { name: 'blocks.multiAlgorithmAnomaly', description: 'blockDescriptions.multiAlgorithmAnomaly' },
+  'Automated Feature Engineering Pipeline': { name: 'blocks.automatedFeaturePipeline', description: 'blockDescriptions.automatedFeaturePipeline' },
+  'Distribution Drift Monitor': { name: 'blocks.distributionDriftMonitor', description: 'blockDescriptions.distributionDriftMonitor' },
+  'Smart Resampling for Imbalanced Data': { name: 'blocks.smartResampling', description: 'blockDescriptions.smartResampling' },
+  'Collinearity Diagnostics': { name: 'blocks.collinearityDiagnostics', description: 'blockDescriptions.collinearityDiagnostics' },
+  'Bayesian A/B Test Calculator': { name: 'blocks.bayesianAbCalculator', description: 'blockDescriptions.bayesianAbCalculator' },
+  'Nested Cross-Validation': { name: 'blocks.nestedCrossValidation', description: 'blockDescriptions.nestedCrossValidation' },
   'Pipeline Export': { name: 'blocks.pipelineExport', description: 'blockDescriptions.pipelineExport' },
   'Chart': { name: 'blocks.chart', description: 'blockDescriptions.chart' },
   'Table': { name: 'blocks.table', description: 'blockDescriptions.table' },
@@ -890,7 +911,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">267</p>
+                <p className="text-h2 font-bold text-text-primary">277</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
