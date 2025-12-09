@@ -61,8 +61,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // This is critical for handling magic link callbacks
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          console.log('Auth state changed:', event);
-
           if (session?.user) {
             const profile = extractProfile(session.user);
             const needsProfile = !profile.firstName || !profile.lastName;
@@ -97,7 +95,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data: { session }, error } = await supabase.auth.getSession();
 
       if (error) {
-        console.error('Error getting session:', error);
         set({ isInitialized: true, isLoading: false });
         return;
       }
@@ -117,7 +114,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isInitialized: true, isLoading: false });
       }
     } catch (error) {
-      console.error('Error initializing auth:', error);
       set({ isInitialized: true, isLoading: false });
     }
   },
@@ -247,7 +243,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
     } catch (error) {
-      console.error('Error signing out:', error);
       set({ isLoading: false });
     }
   },
@@ -291,9 +286,9 @@ async function syncProfileToDatabase(user: User): Promise<void> {
       });
 
     if (error) {
-      console.error('Error syncing profile to database:', error);
+      // Profile sync failed silently
     }
   } catch (error) {
-    console.error('Error syncing profile to database:', error);
+    // Profile sync failed silently
   }
 }
