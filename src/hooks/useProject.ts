@@ -57,7 +57,7 @@ export function useProject() {
       const projects = await getAllProjects();
       setProjectList(projects);
     } catch (error) {
-      console.error('Failed to load projects:', error);
+      // Failed to load projects silently
     }
   }, [setProjectList]);
 
@@ -98,7 +98,6 @@ export function useProject() {
           return createNewProject();
         }
       } catch (error) {
-        console.error('Failed to load project:', error);
         return null;
       } finally {
         setLoading(false);
@@ -141,7 +140,6 @@ export function useProject() {
 
       return true;
     } catch (error) {
-      console.error('Failed to save project:', error);
       return false;
     } finally {
       setSaving(false);
@@ -173,7 +171,6 @@ export function useProject() {
 
         return true;
       } catch (error) {
-        console.error('Failed to delete project:', error);
         return false;
       }
     },
