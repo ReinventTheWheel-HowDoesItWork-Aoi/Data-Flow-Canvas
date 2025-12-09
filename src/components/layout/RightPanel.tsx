@@ -297,6 +297,17 @@ const blockTranslationKeys: Record<BlockType, string> = {
   'andrews-curves': 'blocks.andrewsCurves',
   'cv-results-plot': 'blocks.cvResultsPlot',
   'hyperparameter-heatmap': 'blocks.hyperparameterHeatmap',
+  // New Advanced Analysis Blocks for Data Scientists
+  'comprehensive-eda': 'blocks.comprehensiveEda',
+  'shap-deep-explainer': 'blocks.shapDeepExplainer',
+  'stl-decomposition': 'blocks.stlDecomposition',
+  'multi-algorithm-anomaly': 'blocks.multiAlgorithmAnomaly',
+  'automated-feature-pipeline': 'blocks.automatedFeaturePipeline',
+  'distribution-drift-monitor': 'blocks.distributionDriftMonitor',
+  'smart-resampling': 'blocks.smartResampling',
+  'collinearity-diagnostics': 'blocks.collinearityDiagnostics',
+  'bayesian-ab-calculator': 'blocks.bayesianAbCalculator',
+  'nested-cross-validation': 'blocks.nestedCrossValidation',
   'export': 'blocks.export',
 };
 
@@ -570,6 +581,17 @@ const blockDescriptionKeys: Record<BlockType, string> = {
   'andrews-curves': 'blockDescriptions.andrewsCurves',
   'cv-results-plot': 'blockDescriptions.cvResultsPlot',
   'hyperparameter-heatmap': 'blockDescriptions.hyperparameterHeatmap',
+  // New Advanced Analysis Blocks for Data Scientists
+  'comprehensive-eda': 'blockDescriptions.comprehensiveEda',
+  'shap-deep-explainer': 'blockDescriptions.shapDeepExplainer',
+  'stl-decomposition': 'blockDescriptions.stlDecomposition',
+  'multi-algorithm-anomaly': 'blockDescriptions.multiAlgorithmAnomaly',
+  'automated-feature-pipeline': 'blockDescriptions.automatedFeaturePipeline',
+  'distribution-drift-monitor': 'blockDescriptions.distributionDriftMonitor',
+  'smart-resampling': 'blockDescriptions.smartResampling',
+  'collinearity-diagnostics': 'blockDescriptions.collinearityDiagnostics',
+  'bayesian-ab-calculator': 'blockDescriptions.bayesianAbCalculator',
+  'nested-cross-validation': 'blockDescriptions.nestedCrossValidation',
   'export': 'blockDescriptions.export',
 };
 
