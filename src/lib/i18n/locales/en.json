@@ -308,6 +308,16 @@
     "andrewsCurves": "Andrews Curves",
     "cvResultsPlot": "CV Results Plot",
     "hyperparameterHeatmap": "Hyperparameter Heatmap",
+    "comprehensiveEda": "Comprehensive EDA Report",
+    "shapDeepExplainer": "SHAP Deep Explainer",
+    "stlDecomposition": "STL Time Series Decomposition",
+    "multiAlgorithmAnomaly": "Multi-Algorithm Anomaly Detection",
+    "automatedFeaturePipeline": "Automated Feature Engineering Pipeline",
+    "distributionDriftMonitor": "Distribution Drift Monitor",
+    "smartResampling": "Smart Resampling for Imbalanced Data",
+    "collinearityDiagnostics": "Collinearity Diagnostics",
+    "bayesianAbCalculator": "Bayesian A/B Test Calculator",
+    "nestedCrossValidation": "Nested Cross-Validation",
     "export": "Export"
   },
   "blockDescriptions": {
@@ -577,6 +587,16 @@
     "andrewsCurves": "Plot each observation as a Fourier series curve colored by class for multivariate visualization",
     "cvResultsPlot": "Box/violin plots showing score distribution across cross-validation folds",
     "hyperparameterHeatmap": "2D heatmap showing performance across hyperparameter grid combinations",
+    "comprehensiveEda": "Generate a complete automated EDA report with statistics, distributions, correlations, missing value analysis, and outlier detection in one click",
+    "shapDeepExplainer": "Calculate SHAP values for any model to understand feature contributions, importance rankings, and interaction effects for model interpretability",
+    "stlDecomposition": "Decompose time series into trend, seasonal, and residual components using STL with configurable seasonality for pattern analysis",
+    "multiAlgorithmAnomaly": "Detect anomalies using ensemble of Isolation Forest, Local Outlier Factor, and Z-score methods with voting for robust detection",
+    "automatedFeaturePipeline": "Automatically generate new features including polynomials, interactions, date features, binning, and text stats based on column types",
+    "distributionDriftMonitor": "Compare data distributions between baseline and current datasets using KS test, PSI, and Jensen-Shannon divergence to detect data drift",
+    "smartResampling": "Handle imbalanced datasets with SMOTE, ADASYN, random oversampling, or undersampling techniques with configurable parameters",
+    "collinearityDiagnostics": "Analyze multicollinearity using VIF, condition number, and correlation matrix with automatic recommendations for feature removal",
+    "bayesianAbCalculator": "Run Bayesian A/B tests with Beta-Binomial models to calculate probability of improvement, expected lift, and credible intervals",
+    "nestedCrossValidation": "Perform unbiased model evaluation with nested CV - outer loop for evaluation, inner loop for hyperparameter tuning",
     "export": "Export data to file"
   },
   "landing": {
