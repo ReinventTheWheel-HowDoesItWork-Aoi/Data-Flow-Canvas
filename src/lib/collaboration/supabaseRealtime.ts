@@ -108,7 +108,6 @@ export class SupabaseCollaborationManager {
     });
 
     if (error) {
-      console.error('Error joining session:', error);
       return {
         success: false,
         error: 'DATABASE_ERROR',
@@ -149,11 +148,11 @@ export class SupabaseCollaborationManager {
       .on('presence', { event: 'sync' }, () => {
         this.handlePresenceSync();
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('User joined:', key, newPresences);
+      .on('presence', { event: 'join' }, () => {
+        // User joined - handled by presence sync
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('User left:', key, leftPresences);
+      .on('presence', { event: 'leave' }, () => {
+        // User left - handled by presence sync
       })
       // Canvas sync events
       .on('broadcast', { event: 'cursor' }, ({ payload }) => {
