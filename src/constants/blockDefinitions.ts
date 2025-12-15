@@ -19627,6 +19627,2062 @@ df['_nested_cv_score'] = mean_score
 output = df
 `,
   },
+
+  // New Pyodide-Compatible Analysis Blocks (December 2025)
+  'gaussian-mixture-model': {
+    type: 'gaussian-mixture-model',
+    category: 'analysis',
+    label: 'Gaussian Mixture Model',
+    description: 'Soft clustering with probability assignments using GMM',
+    icon: 'Circle',
+    defaultConfig: {
+      features: [],
+      nComponents: 3,
+      covarianceType: 'full',
+      maxIter: 100,
+      randomState: 42,
+      outputProbabilities: true,
+      outputCluster: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.mixture import GaussianMixture
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+n_components = int(config.get('nComponents', 3))
+cov_type = config.get('covarianceType', 'full')
+max_iter = int(config.get('maxIter', 100))
+random_state = int(config.get('randomState', 42))
+output_probs = config.get('outputProbabilities', True)
+output_cluster = config.get('outputCluster', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].dropna()
+valid_idx = X.index
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+gmm = GaussianMixture(
+    n_components=n_components,
+    covariance_type=cov_type,
+    max_iter=max_iter,
+    random_state=random_state
+)
+gmm.fit(X_scaled)
+
+if output_cluster:
+    df.loc[valid_idx, 'gmm_cluster'] = gmm.predict(X_scaled)
+
+if output_probs:
+    probs = gmm.predict_proba(X_scaled)
+    for i in range(n_components):
+        df.loc[valid_idx, f'gmm_prob_cluster_{i}'] = probs[:, i]
+
+df.loc[valid_idx, 'gmm_anomaly_score'] = -gmm.score_samples(X_scaled)
+
+bic = gmm.bic(X_scaled)
+aic = gmm.aic(X_scaled)
+df['_gmm_bic'] = bic
+df['_gmm_aic'] = aic
+df['_gmm_n_components'] = n_components
+
+output = df
+`,
+  },
+
+  'dynamic-time-warping': {
+    type: 'dynamic-time-warping',
+    category: 'analysis',
+    label: 'Dynamic Time Warping',
+    description: 'Measure similarity between time series using DTW distance',
+    icon: 'Activity',
+    defaultConfig: {
+      series1Column: '',
+      series2Column: '',
+      groupColumn: '',
+      windowSize: 0,
+      outputDistance: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+
+def dtw_distance(s1, s2, window=None):
+    n, m = len(s1), len(s2)
+    if window is None or window <= 0:
+        window = max(n, m)
+
+    dtw = np.full((n + 1, m + 1), np.inf)
+    dtw[0, 0] = 0
+
+    for i in range(1, n + 1):
+        for j in range(max(1, i - window), min(m + 1, i + window + 1)):
+            cost = abs(s1[i-1] - s2[j-1])
+            dtw[i, j] = cost + min(dtw[i-1, j], dtw[i, j-1], dtw[i-1, j-1])
+
+    return dtw[n, m]
+
+df = input_data.copy()
+series1_col = config.get('series1Column', '')
+series2_col = config.get('series2Column', '')
+group_col = config.get('groupColumn', '')
+window = int(config.get('windowSize', 0))
+
+if not series1_col or not series2_col:
+    raise ValueError("DTW: Please specify two series columns")
+
+if group_col and group_col in df.columns:
+    results = []
+    groups = df[group_col].unique()
+    for i, g1 in enumerate(groups):
+        for g2 in groups[i:]:
+            s1 = df[df[group_col] == g1][series1_col].values
+            s2 = df[df[group_col] == g2][series2_col].values
+            dist = dtw_distance(s1, s2, window if window > 0 else None)
+            results.append({'group1': g1, 'group2': g2, 'dtw_distance': dist})
+    output = pd.DataFrame(results)
+else:
+    s1 = df[series1_col].dropna().values
+    s2 = df[series2_col].dropna().values
+    dist = dtw_distance(s1, s2, window if window > 0 else None)
+    df['dtw_distance'] = dist
+    output = df
+`,
+  },
+
+  'lime-explainer': {
+    type: 'lime-explainer',
+    category: 'analysis',
+    label: 'LIME Explainer',
+    description: 'Local Interpretable Model-agnostic Explanations for predictions',
+    icon: 'Lightbulb',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      instanceIndex: 0,
+      nFeatures: 10,
+      nSamples: 500,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import Ridge
+
+def lime_explain(X_train, y_train, instance, model, feature_names, n_samples=500, n_features=10, is_classifier=True):
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_train)
+    instance_scaled = scaler.transform(instance.reshape(1, -1))
+
+    model.fit(X_scaled, y_train)
+
+    perturbations = np.random.normal(0, 1, (n_samples, X_train.shape[1]))
+    perturbed = instance_scaled + perturbations * 0.5
+
+    if is_classifier:
+        predictions = model.predict_proba(perturbed)[:, 1] if hasattr(model, 'predict_proba') else model.predict(perturbed)
+    else:
+        predictions = model.predict(perturbed)
+
+    distances = np.sqrt(np.sum((perturbed - instance_scaled) ** 2, axis=1))
+    weights = np.exp(-distances ** 2)
+
+    explainer = Ridge(alpha=1.0)
+    explainer.fit(perturbed, predictions, sample_weight=weights)
+
+    importances = explainer.coef_
+    sorted_idx = np.argsort(np.abs(importances))[::-1][:n_features]
+
+    return [(feature_names[i], float(importances[i])) for i in sorted_idx]
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+task_type = config.get('taskType', 'auto')
+instance_idx = int(config.get('instanceIndex', 0))
+n_features = int(config.get('nFeatures', 10))
+n_samples = int(config.get('nSamples', 500))
+
+if not target:
+    raise ValueError("LIME: Please specify target column")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+X = df[features].dropna()
+y = df.loc[X.index, target]
+
+is_classifier = task_type == 'classification' or (task_type == 'auto' and y.nunique() <= 10)
+
+if is_classifier:
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+else:
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+
+instance = X.iloc[instance_idx].values
+explanations = lime_explain(X.values, y.values, instance, model, features, n_samples, n_features, is_classifier)
+
+result_df = pd.DataFrame(explanations, columns=['feature', 'importance'])
+result_df['instance_index'] = instance_idx
+result_df['abs_importance'] = result_df['importance'].abs()
+result_df = result_df.sort_values('abs_importance', ascending=False)
+
+output = result_df
+`,
+  },
+
+  'bayesian-optimization': {
+    type: 'bayesian-optimization',
+    category: 'analysis',
+    label: 'Bayesian Optimization',
+    description: 'Smart hyperparameter optimization using Gaussian Process',
+    icon: 'Target',
+    defaultConfig: {
+      features: [],
+      target: '',
+      modelType: 'random_forest',
+      taskType: 'auto',
+      nIterations: 20,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import Matern
+from scipy.optimize import minimize
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+task_type = config.get('taskType', 'auto')
+n_iter = int(config.get('nIterations', 20))
+random_state = int(config.get('randomState', 42))
+
+if not target:
+    raise ValueError("Bayesian Opt: Please specify target column")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+X = df[features].dropna()
+y = df.loc[X.index, target]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+is_classifier = task_type == 'classification' or (task_type == 'auto' and y.nunique() <= 10)
+scoring = 'accuracy' if is_classifier else 'neg_mean_squared_error'
+
+def objective(params):
+    n_est, max_depth = int(params[0]), int(params[1])
+    if is_classifier:
+        model = RandomForestClassifier(n_estimators=n_est, max_depth=max_depth, random_state=random_state)
+    else:
+        model = RandomForestRegressor(n_estimators=n_est, max_depth=max_depth, random_state=random_state)
+    score = cross_val_score(model, X_scaled, y, cv=3, scoring=scoring).mean()
+    return -score if is_classifier else score
+
+np.random.seed(random_state)
+bounds = [(10, 200), (2, 20)]
+X_samples = np.random.uniform([b[0] for b in bounds], [b[1] for b in bounds], (5, 2))
+y_samples = np.array([objective(x) for x in X_samples])
+
+results = []
+for i, (x, y_val) in enumerate(zip(X_samples, y_samples)):
+    results.append({'iteration': i+1, 'n_estimators': int(x[0]), 'max_depth': int(x[1]), 'score': float(-y_val if is_classifier else -y_val)})
+
+for i in range(min(n_iter - 5, 15)):
+    gp = GaussianProcessRegressor(kernel=Matern(nu=2.5), random_state=random_state)
+    gp.fit(X_samples, y_samples)
+
+    def acquisition(x):
+        mu, sigma = gp.predict(x.reshape(1, -1), return_std=True)
+        return -(mu[0] - 0.01 * sigma[0])
+
+    best_x = None
+    best_acq = float('inf')
+    for _ in range(10):
+        x0 = np.random.uniform([b[0] for b in bounds], [b[1] for b in bounds])
+        res = minimize(acquisition, x0, bounds=bounds, method='L-BFGS-B')
+        if res.fun < best_acq:
+            best_acq = res.fun
+            best_x = res.x
+
+    y_new = objective(best_x)
+    X_samples = np.vstack([X_samples, best_x])
+    y_samples = np.append(y_samples, y_new)
+    results.append({'iteration': len(results)+1, 'n_estimators': int(best_x[0]), 'max_depth': int(best_x[1]), 'score': float(-y_new if is_classifier else -y_new)})
+
+best_idx = np.argmin(y_samples) if is_classifier else np.argmax(-y_samples)
+best_params = X_samples[best_idx]
+
+output = pd.DataFrame(results)
+output['best_n_estimators'] = int(best_params[0])
+output['best_max_depth'] = int(best_params[1])
+output['best_score'] = float(-y_samples[best_idx] if is_classifier else -y_samples[best_idx])
+`,
+  },
+
+  'time-series-features': {
+    type: 'time-series-features',
+    category: 'analysis',
+    label: 'Time Series Features',
+    description: 'Auto-extract statistical features from time series data',
+    icon: 'Clock',
+    defaultConfig: {
+      valueColumn: '',
+      groupColumn: '',
+      includeBasic: true,
+      includeAutocorrelation: true,
+      includeEntropy: true,
+      includeTrend: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+def extract_ts_features(series):
+    s = np.array(series).astype(float)
+    s = s[~np.isnan(s)]
+
+    if len(s) < 3:
+        return {}
+
+    features = {}
+    features['mean'] = float(np.mean(s))
+    features['std'] = float(np.std(s))
+    features['min'] = float(np.min(s))
+    features['max'] = float(np.max(s))
+    features['median'] = float(np.median(s))
+    features['range'] = float(np.max(s) - np.min(s))
+    features['iqr'] = float(np.percentile(s, 75) - np.percentile(s, 25))
+    features['skewness'] = float(stats.skew(s)) if len(s) > 2 else 0.0
+    features['kurtosis'] = float(stats.kurtosis(s)) if len(s) > 3 else 0.0
+    features['coefficient_of_variation'] = float(np.std(s) / np.mean(s)) if np.mean(s) != 0 else 0.0
+
+    for p in [5, 25, 75, 95]:
+        features[f'percentile_{p}'] = float(np.percentile(s, p))
+
+    x = np.arange(len(s))
+    if len(s) > 1:
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, s)
+        features['trend_slope'] = float(slope)
+        features['trend_r_squared'] = float(r_value ** 2)
+
+    diff = np.diff(s)
+    if len(diff) > 0:
+        features['mean_abs_change'] = float(np.mean(np.abs(diff)))
+        features['max_abs_change'] = float(np.max(np.abs(diff)))
+        features['n_peaks'] = int(np.sum((s[1:-1] > s[:-2]) & (s[1:-1] > s[2:]))) if len(s) > 2 else 0
+        features['n_valleys'] = int(np.sum((s[1:-1] < s[:-2]) & (s[1:-1] < s[2:]))) if len(s) > 2 else 0
+
+    if len(s) > 5:
+        for lag in [1, 2, 3, 5]:
+            if lag < len(s):
+                autocorr = np.corrcoef(s[:-lag], s[lag:])[0, 1]
+                features[f'autocorr_lag_{lag}'] = float(autocorr) if not np.isnan(autocorr) else 0.0
+
+    mean_centered = s - np.mean(s)
+    features['zero_crossings'] = int(np.sum(np.diff(np.sign(mean_centered)) != 0))
+
+    hist, _ = np.histogram(s, bins=10)
+    hist = hist / hist.sum()
+    hist = hist[hist > 0]
+    features['entropy'] = float(-np.sum(hist * np.log2(hist))) if len(hist) > 0 else 0.0
+
+    return features
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+group_col = config.get('groupColumn', '')
+
+if not value_col:
+    raise ValueError("Time Series Features: Please specify value column")
+
+if group_col and group_col in df.columns:
+    results = []
+    for group_val in df[group_col].unique():
+        group_data = df[df[group_col] == group_val][value_col]
+        feats = extract_ts_features(group_data)
+        feats['group'] = group_val
+        results.append(feats)
+    output = pd.DataFrame(results)
+else:
+    feats = extract_ts_features(df[value_col])
+    output = pd.DataFrame([feats])
+`,
+  },
+
+  'robust-regression': {
+    type: 'robust-regression',
+    category: 'analysis',
+    label: 'Robust Regression',
+    description: 'Regression resistant to outliers (RANSAC, Huber, Theil-Sen)',
+    icon: 'Shield',
+    defaultConfig: {
+      features: [],
+      target: '',
+      method: 'huber',
+      testSize: 0.2,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import RANSACRegressor, HuberRegressor, TheilSenRegressor, LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+
+df = input_data.copy()
+features = config.get('features', [])
+target = config.get('target', '')
+method = config.get('method', 'huber')
+test_size = float(config.get('testSize', 0.2))
+random_state = int(config.get('randomState', 42))
+
+if not target:
+    raise ValueError("Robust Regression: Please specify target column")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target]
+
+X = df[features].dropna()
+y = df.loc[X.index, target]
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
+
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+if method == 'ransac':
+    model = RANSACRegressor(random_state=random_state)
+elif method == 'huber':
+    model = HuberRegressor(max_iter=1000)
+elif method == 'theilsen':
+    model = TheilSenRegressor(random_state=random_state)
+else:
+    model = LinearRegression()
+
+model.fit(X_train_scaled, y_train)
+y_pred = model.predict(X_test_scaled)
+
+r2 = r2_score(y_test, y_pred)
+rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+mae = mean_absolute_error(y_test, y_pred)
+
+coef_dict = {f: float(c) for f, c in zip(features, model.coef_)} if hasattr(model, 'coef_') else {}
+
+X_all_scaled = scaler.transform(df[features].fillna(df[features].mean()))
+df['robust_prediction'] = model.predict(X_all_scaled)
+df['robust_residual'] = df[target] - df['robust_prediction']
+df['_robust_method'] = method
+df['_robust_r2'] = r2
+df['_robust_rmse'] = rmse
+df['_robust_mae'] = mae
+
+output = df
+`,
+  },
+
+  'kernel-density-estimation': {
+    type: 'kernel-density-estimation',
+    category: 'analysis',
+    label: 'Kernel Density Estimation',
+    description: 'Non-parametric density estimation for distributions',
+    icon: 'Waves',
+    defaultConfig: {
+      columns: [],
+      kernel: 'gaussian',
+      bandwidth: 'auto',
+      nPoints: 100,
+      outputDensity: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.neighbors import KernelDensity
+from sklearn.model_selection import GridSearchCV
+
+df = input_data.copy()
+columns = config.get('columns', [])
+kernel = config.get('kernel', 'gaussian')
+bandwidth = config.get('bandwidth', 'auto')
+n_points = int(config.get('nPoints', 100))
+output_density = config.get('outputDensity', True)
+
+if not columns:
+    columns = df.select_dtypes(include=[np.number]).columns.tolist()[:1]
+
+results = []
+for col in columns:
+    data = df[col].dropna().values.reshape(-1, 1)
+
+    if bandwidth == 'auto':
+        grid = GridSearchCV(KernelDensity(kernel=kernel), {'bandwidth': np.logspace(-1, 1, 20)}, cv=5)
+        grid.fit(data)
+        bw = grid.best_params_['bandwidth']
+    else:
+        bw = float(bandwidth)
+
+    kde = KernelDensity(kernel=kernel, bandwidth=bw)
+    kde.fit(data)
+
+    x_range = np.linspace(data.min(), data.max(), n_points).reshape(-1, 1)
+    log_density = kde.score_samples(x_range)
+    density = np.exp(log_density)
+
+    for x, d in zip(x_range.flatten(), density):
+        results.append({'column': col, 'x': float(x), 'density': float(d), 'bandwidth': float(bw)})
+
+    if output_density:
+        sample_log_density = kde.score_samples(data)
+        df[f'{col}_density'] = np.nan
+        df.loc[df[col].notna(), f'{col}_density'] = np.exp(sample_log_density)
+        threshold = np.percentile(np.exp(sample_log_density), 5)
+        df[f'{col}_low_density'] = df[f'{col}_density'] < threshold
+
+if output_density:
+    output = df
+else:
+    output = pd.DataFrame(results)
+`,
+  },
+
+  'spectral-clustering': {
+    type: 'spectral-clustering',
+    category: 'analysis',
+    label: 'Spectral Clustering',
+    description: 'Graph-based clustering for complex cluster shapes',
+    icon: 'Network',
+    defaultConfig: {
+      features: [],
+      nClusters: 3,
+      affinity: 'rbf',
+      nNeighbors: 10,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.cluster import SpectralClustering
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import silhouette_score, calinski_harabasz_score
+
+df = input_data.copy()
+features = config.get('features', [])
+n_clusters = int(config.get('nClusters', 3))
+affinity = config.get('affinity', 'rbf')
+n_neighbors = int(config.get('nNeighbors', 10))
+random_state = int(config.get('randomState', 42))
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].dropna()
+valid_idx = X.index
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+spectral = SpectralClustering(
+    n_clusters=n_clusters,
+    affinity=affinity,
+    n_neighbors=n_neighbors,
+    random_state=random_state,
+    assign_labels='kmeans'
+)
+
+labels = spectral.fit_predict(X_scaled)
+df.loc[valid_idx, 'spectral_cluster'] = labels
+
+silhouette = silhouette_score(X_scaled, labels)
+calinski = calinski_harabasz_score(X_scaled, labels)
+
+df['_spectral_silhouette'] = silhouette
+df['_spectral_calinski_harabasz'] = calinski
+df['_spectral_n_clusters'] = n_clusters
+
+cluster_sizes = pd.Series(labels).value_counts().to_dict()
+for cluster_id, size in cluster_sizes.items():
+    df[f'_cluster_{cluster_id}_size'] = size
+
+output = df
+`,
+  },
+
+  'cross-correlation': {
+    type: 'cross-correlation',
+    category: 'analysis',
+    label: 'Cross-Correlation Analysis',
+    description: 'Find lagged relationships between time series',
+    icon: 'ArrowRightLeft',
+    defaultConfig: {
+      series1Column: '',
+      series2Column: '',
+      maxLag: 20,
+      normalize: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import signal
+
+df = input_data.copy()
+series1_col = config.get('series1Column', '')
+series2_col = config.get('series2Column', '')
+max_lag = int(config.get('maxLag', 20))
+normalize = config.get('normalize', True)
+
+if not series1_col or not series2_col:
+    raise ValueError("Cross-Correlation: Please specify two series columns")
+
+s1 = df[series1_col].dropna().values
+s2 = df[series2_col].dropna().values
+
+min_len = min(len(s1), len(s2))
+s1 = s1[:min_len]
+s2 = s2[:min_len]
+
+if normalize:
+    s1 = (s1 - np.mean(s1)) / (np.std(s1) + 1e-10)
+    s2 = (s2 - np.mean(s2)) / (np.std(s2) + 1e-10)
+
+correlation = signal.correlate(s1, s2, mode='full')
+lags = signal.correlation_lags(len(s1), len(s2), mode='full')
+
+if normalize:
+    correlation = correlation / len(s1)
+
+mask = np.abs(lags) <= max_lag
+lags = lags[mask]
+correlation = correlation[mask]
+
+results = pd.DataFrame({
+    'lag': lags,
+    'correlation': correlation
+})
+
+max_corr_idx = np.argmax(np.abs(correlation))
+results['optimal_lag'] = lags[max_corr_idx]
+results['max_correlation'] = correlation[max_corr_idx]
+results['series1'] = series1_col
+results['series2'] = series2_col
+
+if lags[max_corr_idx] > 0:
+    results['interpretation'] = f'{series1_col} leads {series2_col} by {abs(lags[max_corr_idx])} periods'
+elif lags[max_corr_idx] < 0:
+    results['interpretation'] = f'{series2_col} leads {series1_col} by {abs(lags[max_corr_idx])} periods'
+else:
+    results['interpretation'] = 'Series are synchronous (no lag)'
+
+output = results
+`,
+  },
+
+  'manifold-learning': {
+    type: 'manifold-learning',
+    category: 'analysis',
+    label: 'Manifold Learning',
+    description: 'Non-linear dimensionality reduction (Isomap, MDS, LLE)',
+    icon: 'Minimize2',
+    defaultConfig: {
+      features: [],
+      method: 'isomap',
+      nComponents: 2,
+      nNeighbors: 10,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.manifold import Isomap, MDS, LocallyLinearEmbedding
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+method = config.get('method', 'isomap')
+n_components = int(config.get('nComponents', 2))
+n_neighbors = int(config.get('nNeighbors', 10))
+random_state = int(config.get('randomState', 42))
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].dropna()
+valid_idx = X.index
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+if method == 'isomap':
+    model = Isomap(n_components=n_components, n_neighbors=n_neighbors)
+elif method == 'mds':
+    model = MDS(n_components=n_components, random_state=random_state, normalized_stress='auto')
+elif method == 'lle':
+    model = LocallyLinearEmbedding(n_components=n_components, n_neighbors=n_neighbors, random_state=random_state)
+else:
+    model = Isomap(n_components=n_components, n_neighbors=n_neighbors)
+
+embedding = model.fit_transform(X_scaled)
+
+for i in range(n_components):
+    df.loc[valid_idx, f'{method}_dim_{i+1}'] = embedding[:, i]
+
+df['_manifold_method'] = method
+df['_manifold_n_components'] = n_components
+
+if hasattr(model, 'reconstruction_error_'):
+    df['_manifold_reconstruction_error'] = model.reconstruction_error_
+
+output = df
+`,
+  },
+
+  // ============================================
+  // New Advanced Analysis Blocks (December 2025 - Batch 2)
+  // ============================================
+
+  'semi-supervised-learning': {
+    type: 'semi-supervised-learning',
+    category: 'analysis',
+    label: 'Semi-Supervised Learning',
+    description: 'Leverage unlabeled data using Label Propagation or Self-Training',
+    icon: 'Users',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      method: 'label-propagation',
+      kernel: 'rbf',
+      gamma: 20,
+      nNeighbors: 7,
+      maxIter: 1000,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.semi_supervised import LabelPropagation, LabelSpreading, SelfTrainingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+method = config.get('method', 'label-propagation')
+kernel = config.get('kernel', 'rbf')
+gamma = float(config.get('gamma', 20))
+n_neighbors = int(config.get('nNeighbors', 7))
+max_iter = int(config.get('maxIter', 1000))
+
+if not target_col or target_col not in df.columns:
+    raise ValueError("Target column must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target_col]
+
+X = df[features].copy()
+y = df[target_col].copy()
+
+le = LabelEncoder()
+y_encoded = y.copy()
+labeled_mask = y.notna()
+if labeled_mask.sum() > 0:
+    le.fit(y[labeled_mask].astype(str))
+    y_encoded[labeled_mask] = le.transform(y[labeled_mask].astype(str))
+y_encoded[~labeled_mask] = -1
+y_encoded = y_encoded.astype(int)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X.fillna(X.mean()))
+
+if method == 'label-propagation':
+    model = LabelPropagation(kernel=kernel, gamma=gamma, n_neighbors=n_neighbors, max_iter=max_iter)
+elif method == 'label-spreading':
+    model = LabelSpreading(kernel=kernel, gamma=gamma, n_neighbors=n_neighbors, max_iter=max_iter)
+elif method == 'self-training':
+    base_clf = RandomForestClassifier(n_estimators=100, random_state=42)
+    model = SelfTrainingClassifier(base_clf, threshold=0.75)
+else:
+    model = LabelPropagation(kernel=kernel, gamma=gamma, n_neighbors=n_neighbors, max_iter=max_iter)
+
+model.fit(X_scaled, y_encoded)
+predictions = model.predict(X_scaled)
+df['_ssl_predicted_label'] = le.inverse_transform(predictions)
+
+if hasattr(model, 'predict_proba'):
+    proba = model.predict_proba(X_scaled)
+    df['_ssl_confidence'] = proba.max(axis=1)
+
+df['_ssl_was_labeled'] = labeled_mask
+df['_ssl_method'] = method
+
+output = df
+`,
+  },
+
+  'multi-label-classification': {
+    type: 'multi-label-classification',
+    category: 'analysis',
+    label: 'Multi-Label Classification',
+    description: 'Predict multiple labels per sample using Classifier Chains',
+    icon: 'Tags',
+    defaultConfig: {
+      features: [],
+      targetColumns: [],
+      method: 'classifier-chain',
+      baseEstimator: 'logistic',
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.multioutput import ClassifierChain, MultiOutputClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+target_cols = config.get('targetColumns', [])
+method = config.get('method', 'classifier-chain')
+base_estimator = config.get('baseEstimator', 'logistic')
+random_state = int(config.get('randomState', 42))
+
+if not target_cols:
+    raise ValueError("Target columns must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c not in target_cols]
+
+X = df[features].fillna(0)
+Y = df[target_cols].fillna(0).astype(int)
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+if base_estimator == 'logistic':
+    base_clf = LogisticRegression(random_state=random_state, max_iter=1000)
+else:
+    base_clf = RandomForestClassifier(n_estimators=100, random_state=random_state)
+
+if method == 'classifier-chain':
+    model = ClassifierChain(base_clf, random_state=random_state)
+else:
+    model = MultiOutputClassifier(base_clf)
+
+model.fit(X_scaled, Y)
+predictions = model.predict(X_scaled)
+
+for i, col in enumerate(target_cols):
+    df[f'_mlc_pred_{col}'] = predictions[:, i]
+
+if hasattr(model, 'predict_proba'):
+    try:
+        probas = model.predict_proba(X_scaled)
+        for i, col in enumerate(target_cols):
+            if isinstance(probas, list) and len(probas) > i:
+                df[f'_mlc_proba_{col}'] = probas[i][:, 1] if probas[i].shape[1] > 1 else probas[i][:, 0]
+    except:
+        pass
+
+df['_mlc_method'] = method
+df['_mlc_n_labels'] = len(target_cols)
+
+output = df
+`,
+  },
+
+  'conformal-prediction': {
+    type: 'conformal-prediction',
+    category: 'analysis',
+    label: 'Conformal Prediction',
+    description: 'Prediction sets with guaranteed coverage probability',
+    icon: 'Shield',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      coverageLevel: 0.9,
+      method: 'split',
+      calibrationSize: 0.2,
+      taskType: 'classification',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+coverage = float(config.get('coverageLevel', 0.9))
+calibration_size = float(config.get('calibrationSize', 0.2))
+task_type = config.get('taskType', 'classification')
+
+if not target_col or target_col not in df.columns:
+    raise ValueError("Target column must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target_col]
+
+valid_idx = df[features + [target_col]].dropna().index
+X = df.loc[valid_idx, features]
+y = df.loc[valid_idx, target_col]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_calib, y_train, y_calib = train_test_split(
+    X_scaled, y, test_size=calibration_size, random_state=42
+)
+
+if task_type == 'classification':
+    le = LabelEncoder()
+    y_train_enc = le.fit_transform(y_train)
+    y_calib_enc = le.transform(y_calib)
+
+    model = RandomForestClassifier(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train_enc)
+
+    calib_proba = model.predict_proba(X_calib)
+    calib_scores = 1 - calib_proba[np.arange(len(y_calib_enc)), y_calib_enc]
+
+    alpha = 1 - coverage
+    q_level = np.ceil((len(calib_scores) + 1) * (1 - alpha)) / len(calib_scores)
+    threshold = np.quantile(calib_scores, min(q_level, 1.0))
+
+    test_proba = model.predict_proba(X_scaled)
+    prediction_sets = test_proba >= (1 - threshold)
+
+    df.loc[valid_idx, '_cp_prediction'] = le.inverse_transform(model.predict(X_scaled))
+    df.loc[valid_idx, '_cp_set_size'] = prediction_sets.sum(axis=1)
+    df.loc[valid_idx, '_cp_confidence'] = test_proba.max(axis=1)
+
+    set_labels = []
+    for i, row in enumerate(prediction_sets):
+        labels = le.inverse_transform(np.where(row)[0])
+        set_labels.append(','.join(map(str, labels)))
+    df.loc[valid_idx, '_cp_prediction_set'] = set_labels
+
+else:
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    calib_pred = model.predict(X_calib)
+    calib_scores = np.abs(y_calib.values - calib_pred)
+
+    alpha = 1 - coverage
+    q_level = np.ceil((len(calib_scores) + 1) * (1 - alpha)) / len(calib_scores)
+    threshold = np.quantile(calib_scores, min(q_level, 1.0))
+
+    test_pred = model.predict(X_scaled)
+    df.loc[valid_idx, '_cp_prediction'] = test_pred
+    df.loc[valid_idx, '_cp_lower_bound'] = test_pred - threshold
+    df.loc[valid_idx, '_cp_upper_bound'] = test_pred + threshold
+    df.loc[valid_idx, '_cp_interval_width'] = 2 * threshold
+
+df['_cp_coverage_level'] = coverage
+df['_cp_method'] = 'split-conformal'
+
+output = df
+`,
+  },
+
+  'one-class-svm': {
+    type: 'one-class-svm',
+    category: 'analysis',
+    label: 'One-Class SVM',
+    description: 'Novelty detection learning boundary of normal data',
+    icon: 'ShieldAlert',
+    defaultConfig: {
+      features: [],
+      kernel: 'rbf',
+      nu: 0.1,
+      gamma: 'scale',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.svm import OneClassSVM
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+kernel = config.get('kernel', 'rbf')
+nu = float(config.get('nu', 0.1))
+gamma = config.get('gamma', 'scale')
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].copy()
+valid_idx = X.dropna().index
+X_clean = X.loc[valid_idx]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+if gamma != 'scale' and gamma != 'auto':
+    gamma = float(gamma)
+
+model = OneClassSVM(kernel=kernel, nu=nu, gamma=gamma)
+model.fit(X_scaled)
+
+predictions = model.predict(X_scaled)
+scores = model.decision_function(X_scaled)
+
+df.loc[valid_idx, '_ocsvm_prediction'] = predictions
+df.loc[valid_idx, '_ocsvm_is_novelty'] = (predictions == -1).astype(int)
+df.loc[valid_idx, '_ocsvm_score'] = scores
+df.loc[valid_idx, '_ocsvm_normalized_score'] = (scores - scores.min()) / (scores.max() - scores.min() + 1e-10)
+
+novelty_count = (predictions == -1).sum()
+df['_ocsvm_novelty_ratio'] = novelty_count / len(predictions)
+df['_ocsvm_kernel'] = kernel
+df['_ocsvm_nu'] = nu
+
+output = df
+`,
+  },
+
+  'elliptic-envelope': {
+    type: 'elliptic-envelope',
+    category: 'analysis',
+    label: 'Elliptic Envelope',
+    description: 'Outlier detection assuming Gaussian distribution',
+    icon: 'Circle',
+    defaultConfig: {
+      features: [],
+      contamination: 0.1,
+      supportFraction: null,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.covariance import EllipticEnvelope
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+contamination = float(config.get('contamination', 0.1))
+support_fraction = config.get('supportFraction')
+random_state = int(config.get('randomState', 42))
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].copy()
+valid_idx = X.dropna().index
+X_clean = X.loc[valid_idx]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+kwargs = {
+    'contamination': contamination,
+    'random_state': random_state,
+}
+if support_fraction is not None:
+    kwargs['support_fraction'] = float(support_fraction)
+
+model = EllipticEnvelope(**kwargs)
+model.fit(X_scaled)
+
+predictions = model.predict(X_scaled)
+scores = model.decision_function(X_scaled)
+mahal_dist = model.mahalanobis(X_scaled)
+
+df.loc[valid_idx, '_ee_prediction'] = predictions
+df.loc[valid_idx, '_ee_is_outlier'] = (predictions == -1).astype(int)
+df.loc[valid_idx, '_ee_score'] = scores
+df.loc[valid_idx, '_ee_mahalanobis_distance'] = mahal_dist
+
+outlier_count = (predictions == -1).sum()
+df['_ee_outlier_ratio'] = outlier_count / len(predictions)
+df['_ee_contamination'] = contamination
+
+output = df
+`,
+  },
+
+  'isotonic-regression': {
+    type: 'isotonic-regression',
+    category: 'analysis',
+    label: 'Isotonic Regression',
+    description: 'Monotonic regression for calibration and dose-response',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      featureColumn: '',
+      targetColumn: '',
+      increasing: 'auto',
+      outOfBounds: 'clip',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.isotonic import IsotonicRegression
+
+df = input_data.copy()
+feature_col = config.get('featureColumn', '')
+target_col = config.get('targetColumn', '')
+increasing = config.get('increasing', 'auto')
+out_of_bounds = config.get('outOfBounds', 'clip')
+
+if not feature_col or not target_col:
+    raise ValueError("Feature and target columns must be specified")
+
+X = df[feature_col].values
+y = df[target_col].values
+
+valid_mask = ~(np.isnan(X) | np.isnan(y))
+X_valid = X[valid_mask]
+y_valid = y[valid_mask]
+
+sort_idx = np.argsort(X_valid)
+X_sorted = X_valid[sort_idx]
+y_sorted = y_valid[sort_idx]
+
+if increasing == 'auto':
+    model = IsotonicRegression(increasing='auto', out_of_bounds=out_of_bounds)
+else:
+    model = IsotonicRegression(increasing=(increasing == 'true'), out_of_bounds=out_of_bounds)
+
+model.fit(X_sorted, y_sorted)
+predictions = model.predict(X)
+
+df['_isotonic_prediction'] = predictions
+df['_isotonic_residual'] = df[target_col] - predictions
+df['_isotonic_increasing'] = str(model.increasing_)
+
+boundaries = np.array(model.X_thresholds_)
+df['_isotonic_n_segments'] = len(boundaries) - 1 if len(boundaries) > 1 else 1
+
+output = df
+`,
+  },
+
+  'power-transform': {
+    type: 'power-transform',
+    category: 'analysis',
+    label: 'Power Transform',
+    description: 'Yeo-Johnson or Box-Cox transformation for normality',
+    icon: 'Zap',
+    defaultConfig: {
+      features: [],
+      method: 'yeo-johnson',
+      standardize: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import PowerTransformer
+
+df = input_data.copy()
+features = config.get('features', [])
+method = config.get('method', 'yeo-johnson')
+standardize = config.get('standardize', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].copy()
+valid_idx = X.dropna().index
+X_clean = X.loc[valid_idx]
+
+if method == 'box-cox':
+    min_vals = X_clean.min()
+    if (min_vals <= 0).any():
+        shift = abs(min_vals.min()) + 1
+        X_clean = X_clean + shift
+        df['_pt_shift_applied'] = shift
+    else:
+        df['_pt_shift_applied'] = 0
+
+pt = PowerTransformer(method=method, standardize=standardize)
+X_transformed = pt.fit_transform(X_clean)
+
+for i, col in enumerate(features):
+    df.loc[valid_idx, f'{col}_power_transformed'] = X_transformed[:, i]
+    df[f'_pt_lambda_{col}'] = pt.lambdas_[i]
+
+df['_pt_method'] = method
+df['_pt_standardize'] = standardize
+
+output = df
+`,
+  },
+
+  'mutual-information-selection': {
+    type: 'mutual-information-selection',
+    category: 'analysis',
+    label: 'Mutual Information Selection',
+    description: 'Feature selection using mutual information scores',
+    icon: 'Sparkles',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      taskType: 'classification',
+      nNeighbors: 3,
+      topK: 10,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import mutual_info_classif, mutual_info_regression
+from sklearn.preprocessing import LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+task_type = config.get('taskType', 'classification')
+n_neighbors = int(config.get('nNeighbors', 3))
+top_k = int(config.get('topK', 10))
+random_state = int(config.get('randomState', 42))
+
+if not target_col or target_col not in df.columns:
+    raise ValueError("Target column must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target_col]
+
+valid_idx = df[features + [target_col]].dropna().index
+X = df.loc[valid_idx, features]
+y = df.loc[valid_idx, target_col]
+
+if task_type == 'classification':
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y.astype(str))
+    mi_scores = mutual_info_classif(X, y_enc, n_neighbors=n_neighbors, random_state=random_state)
+else:
+    mi_scores = mutual_info_regression(X, y, n_neighbors=n_neighbors, random_state=random_state)
+
+mi_df = pd.DataFrame({
+    'feature': features,
+    'mi_score': mi_scores
+}).sort_values('mi_score', ascending=False)
+
+top_features = mi_df.head(top_k)['feature'].tolist()
+
+for feat in features:
+    score = mi_df[mi_df['feature'] == feat]['mi_score'].values[0]
+    df[f'_mi_score_{feat}'] = score
+    df[f'_mi_selected_{feat}'] = feat in top_features
+
+df['_mi_top_features'] = ','.join(top_features)
+df['_mi_task_type'] = task_type
+
+output = df
+`,
+  },
+
+  'sequential-feature-selection': {
+    type: 'sequential-feature-selection',
+    category: 'analysis',
+    label: 'Sequential Feature Selection',
+    description: 'Greedy forward/backward feature selection',
+    icon: 'ListFilter',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      direction: 'forward',
+      nFeaturesToSelect: 'auto',
+      taskType: 'classification',
+      cv: 5,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+direction = config.get('direction', 'forward')
+n_features = config.get('nFeaturesToSelect', 'auto')
+task_type = config.get('taskType', 'classification')
+cv = int(config.get('cv', 5))
+
+if not target_col or target_col not in df.columns:
+    raise ValueError("Target column must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target_col]
+
+valid_idx = df[features + [target_col]].dropna().index
+X = df.loc[valid_idx, features]
+y = df.loc[valid_idx, target_col]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+if task_type == 'classification':
+    le = LabelEncoder()
+    y_enc = le.fit_transform(y.astype(str))
+    estimator = RandomForestClassifier(n_estimators=50, random_state=42)
+else:
+    y_enc = y.values
+    estimator = RandomForestRegressor(n_estimators=50, random_state=42)
+
+if n_features == 'auto':
+    n_features = max(1, len(features) // 2)
+else:
+    n_features = int(n_features)
+
+sfs = SequentialFeatureSelector(
+    estimator,
+    n_features_to_select=n_features,
+    direction=direction,
+    cv=cv,
+    n_jobs=-1
+)
+sfs.fit(X_scaled, y_enc)
+
+selected_mask = sfs.get_support()
+selected_features = [features[i] for i in range(len(features)) if selected_mask[i]]
+
+for i, feat in enumerate(features):
+    df[f'_sfs_selected_{feat}'] = selected_mask[i]
+
+df['_sfs_selected_features'] = ','.join(selected_features)
+df['_sfs_n_selected'] = len(selected_features)
+df['_sfs_direction'] = direction
+
+output = df
+`,
+  },
+
+  'permutation-importance': {
+    type: 'permutation-importance',
+    category: 'analysis',
+    label: 'Permutation Importance',
+    description: 'Model-agnostic feature importance via permutation',
+    icon: 'Shuffle',
+    defaultConfig: {
+      features: [],
+      targetColumn: '',
+      taskType: 'classification',
+      nRepeats: 10,
+      randomState: 42,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.inspection import permutation_importance
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+
+df = input_data.copy()
+features = config.get('features', [])
+target_col = config.get('targetColumn', '')
+task_type = config.get('taskType', 'classification')
+n_repeats = int(config.get('nRepeats', 10))
+random_state = int(config.get('randomState', 42))
+
+if not target_col or target_col not in df.columns:
+    raise ValueError("Target column must be specified")
+
+if not features:
+    features = [c for c in df.select_dtypes(include=[np.number]).columns if c != target_col]
+
+valid_idx = df[features + [target_col]].dropna().index
+X = df.loc[valid_idx, features]
+y = df.loc[valid_idx, target_col]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X_scaled, y, test_size=0.2, random_state=random_state
+)
+
+if task_type == 'classification':
+    le = LabelEncoder()
+    y_train_enc = le.fit_transform(y_train.astype(str))
+    y_test_enc = le.transform(y_test.astype(str))
+    model = RandomForestClassifier(n_estimators=100, random_state=random_state)
+    model.fit(X_train, y_train_enc)
+    result = permutation_importance(model, X_test, y_test_enc, n_repeats=n_repeats, random_state=random_state, n_jobs=-1)
+else:
+    model = RandomForestRegressor(n_estimators=100, random_state=random_state)
+    model.fit(X_train, y_train)
+    result = permutation_importance(model, X_test, y_test, n_repeats=n_repeats, random_state=random_state, n_jobs=-1)
+
+importance_df = pd.DataFrame({
+    'feature': features,
+    'importance_mean': result.importances_mean,
+    'importance_std': result.importances_std
+}).sort_values('importance_mean', ascending=False)
+
+for feat in features:
+    row = importance_df[importance_df['feature'] == feat].iloc[0]
+    df[f'_pi_importance_{feat}'] = row['importance_mean']
+    df[f'_pi_std_{feat}'] = row['importance_std']
+
+df['_pi_top_features'] = ','.join(importance_df.head(5)['feature'].tolist())
+df['_pi_n_repeats'] = n_repeats
+
+output = df
+`,
+  },
+
+  'acf-pacf-analysis': {
+    type: 'acf-pacf-analysis',
+    category: 'analysis',
+    label: 'ACF/PACF Analysis',
+    description: 'Autocorrelation and Partial Autocorrelation analysis',
+    icon: 'Activity',
+    defaultConfig: {
+      valueColumn: '',
+      maxLags: 40,
+      alpha: 0.05,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+max_lags = int(config.get('maxLags', 40))
+alpha = float(config.get('alpha', 0.05))
+
+if not value_col or value_col not in df.columns:
+    raise ValueError("Value column must be specified")
+
+series = df[value_col].dropna().values
+n = len(series)
+max_lags = min(max_lags, n - 1)
+
+mean = np.mean(series)
+var = np.var(series)
+
+acf_values = []
+for lag in range(max_lags + 1):
+    if lag == 0:
+        acf_values.append(1.0)
+    else:
+        cov = np.mean((series[lag:] - mean) * (series[:-lag] - mean))
+        acf_values.append(cov / var if var > 0 else 0)
+
+pacf_values = [1.0]
+for k in range(1, max_lags + 1):
+    if k == 1:
+        pacf_values.append(acf_values[1])
+    else:
+        phi = np.zeros((k, k))
+        for i in range(k):
+            for j in range(k):
+                phi[i, j] = acf_values[abs(i - j)]
+        rhs = np.array(acf_values[1:k+1])
+        try:
+            coeffs = np.linalg.solve(phi, rhs)
+            pacf_values.append(coeffs[-1])
+        except:
+            pacf_values.append(0)
+
+conf_bound = stats.norm.ppf(1 - alpha/2) / np.sqrt(n)
+
+acf_df = pd.DataFrame({
+    'lag': range(max_lags + 1),
+    'acf': acf_values,
+    'pacf': pacf_values,
+    'acf_significant': [abs(acf_values[i]) > conf_bound if i > 0 else False for i in range(max_lags + 1)],
+    'pacf_significant': [abs(pacf_values[i]) > conf_bound if i > 0 else False for i in range(max_lags + 1)],
+    'confidence_bound': conf_bound
+})
+
+significant_acf_lags = acf_df[acf_df['acf_significant']]['lag'].tolist()
+significant_pacf_lags = acf_df[acf_df['pacf_significant']]['lag'].tolist()
+
+for col in acf_df.columns:
+    if col != 'lag':
+        for i, row in acf_df.iterrows():
+            df.loc[i if i < len(df) else len(df)-1, f'_acf_{col}_lag{int(row["lag"])}'] = row[col]
+
+df['_acf_significant_lags'] = ','.join(map(str, significant_acf_lags[:10]))
+df['_pacf_significant_lags'] = ','.join(map(str, significant_pacf_lags[:10]))
+df['_acf_max_lags'] = max_lags
+df['_acf_confidence_level'] = 1 - alpha
+
+output = df
+`,
+  },
+
+  'stationarity-testing': {
+    type: 'stationarity-testing',
+    category: 'analysis',
+    label: 'Stationarity Testing',
+    description: 'ADF and KPSS tests for time series stationarity',
+    icon: 'Scale',
+    defaultConfig: {
+      valueColumn: '',
+      testType: 'both',
+      regressionType: 'c',
+      maxLags: 'auto',
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+test_type = config.get('testType', 'both')
+regression = config.get('regressionType', 'c')
+max_lags = config.get('maxLags', 'auto')
+
+if not value_col or value_col not in df.columns:
+    raise ValueError("Value column must be specified")
+
+series = df[value_col].dropna().values
+n = len(series)
+
+if max_lags == 'auto':
+    max_lags = int(np.floor(12 * (n / 100) ** 0.25))
+else:
+    max_lags = int(max_lags)
+
+def adf_test(y, maxlag, regression='c'):
+    n = len(y)
+    dy = np.diff(y)
+    y_lag = y[:-1]
+
+    if regression == 'c':
+        X = np.column_stack([np.ones(len(dy)), y_lag])
+    elif regression == 'ct':
+        X = np.column_stack([np.ones(len(dy)), np.arange(len(dy)), y_lag])
+    else:
+        X = y_lag.reshape(-1, 1)
+
+    for lag in range(1, min(maxlag + 1, len(dy) - 1)):
+        X = np.column_stack([X, np.roll(dy, lag)[lag:]])
+        if lag == 1:
+            dy = dy[lag:]
+            X = X[lag:]
+
+    try:
+        coeffs = np.linalg.lstsq(X, dy[:len(X)], rcond=None)[0]
+        residuals = dy[:len(X)] - X @ coeffs
+        gamma_idx = 1 if regression == 'n' else (2 if regression == 'c' else 3)
+        gamma_idx = min(gamma_idx, len(coeffs)) - 1
+        gamma = coeffs[gamma_idx]
+        se = np.sqrt(np.sum(residuals**2) / (len(residuals) - len(coeffs)) * np.linalg.inv(X.T @ X)[gamma_idx, gamma_idx])
+        t_stat = gamma / se
+
+        critical_values = {'1%': -3.43, '5%': -2.86, '10%': -2.57}
+        return t_stat, critical_values
+    except:
+        return np.nan, {}
+
+def kpss_test(y, regression='c'):
+    n = len(y)
+
+    if regression == 'c':
+        X = np.ones((n, 1))
+    else:
+        X = np.column_stack([np.ones(n), np.arange(n)])
+
+    try:
+        coeffs = np.linalg.lstsq(X, y, rcond=None)[0]
+        residuals = y - X @ coeffs
+
+        cum_residuals = np.cumsum(residuals)
+        s2 = np.sum(residuals**2) / n
+
+        lags = int(np.floor(4 * (n / 100) ** 0.25))
+        for lag in range(1, lags + 1):
+            weight = 1 - lag / (lags + 1)
+            gamma = np.sum(residuals[lag:] * residuals[:-lag]) / n
+            s2 += 2 * weight * gamma
+
+        kpss_stat = np.sum(cum_residuals**2) / (n**2 * s2) if s2 > 0 else np.nan
+
+        critical_values = {'10%': 0.347, '5%': 0.463, '1%': 0.739}
+        return kpss_stat, critical_values
+    except:
+        return np.nan, {}
+
+results = {}
+
+if test_type in ['adf', 'both']:
+    adf_stat, adf_cv = adf_test(series, max_lags, regression)
+    results['adf_statistic'] = adf_stat
+    results['adf_critical_1pct'] = adf_cv.get('1%', np.nan)
+    results['adf_critical_5pct'] = adf_cv.get('5%', np.nan)
+    results['adf_critical_10pct'] = adf_cv.get('10%', np.nan)
+    results['adf_is_stationary_5pct'] = adf_stat < adf_cv.get('5%', -np.inf) if not np.isnan(adf_stat) else False
+
+if test_type in ['kpss', 'both']:
+    kpss_stat, kpss_cv = kpss_test(series, regression)
+    results['kpss_statistic'] = kpss_stat
+    results['kpss_critical_1pct'] = kpss_cv.get('1%', np.nan)
+    results['kpss_critical_5pct'] = kpss_cv.get('5%', np.nan)
+    results['kpss_critical_10pct'] = kpss_cv.get('10%', np.nan)
+    results['kpss_is_stationary_5pct'] = kpss_stat < kpss_cv.get('5%', np.inf) if not np.isnan(kpss_stat) else False
+
+for key, value in results.items():
+    df[f'_stationarity_{key}'] = value
+
+if test_type == 'both' and 'adf_is_stationary_5pct' in results and 'kpss_is_stationary_5pct' in results:
+    if results['adf_is_stationary_5pct'] and results['kpss_is_stationary_5pct']:
+        df['_stationarity_conclusion'] = 'stationary'
+    elif not results['adf_is_stationary_5pct'] and not results['kpss_is_stationary_5pct']:
+        df['_stationarity_conclusion'] = 'non-stationary'
+    else:
+        df['_stationarity_conclusion'] = 'inconclusive'
+
+output = df
+`,
+  },
+
+  'exponential-smoothing': {
+    type: 'exponential-smoothing',
+    category: 'analysis',
+    label: 'Exponential Smoothing',
+    description: 'Holt-Winters forecasting with trend and seasonality',
+    icon: 'TrendingUp',
+    defaultConfig: {
+      valueColumn: '',
+      trend: 'add',
+      seasonal: 'none',
+      seasonalPeriods: 12,
+      forecastPeriods: 10,
+      alpha: 0.3,
+      beta: 0.1,
+      gamma: 0.1,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy.optimize import minimize
+
+df = input_data.copy()
+value_col = config.get('valueColumn', '')
+trend = config.get('trend', 'add')
+seasonal = config.get('seasonal', 'none')
+seasonal_periods = int(config.get('seasonalPeriods', 12))
+forecast_periods = int(config.get('forecastPeriods', 10))
+alpha = float(config.get('alpha', 0.3))
+beta = float(config.get('beta', 0.1))
+gamma = float(config.get('gamma', 0.1))
+
+if not value_col or value_col not in df.columns:
+    raise ValueError("Value column must be specified")
+
+series = df[value_col].dropna().values
+n = len(series)
+
+def simple_exp_smoothing(y, alpha):
+    result = np.zeros(len(y))
+    result[0] = y[0]
+    for t in range(1, len(y)):
+        result[t] = alpha * y[t] + (1 - alpha) * result[t-1]
+    return result
+
+def holt_linear(y, alpha, beta):
+    n = len(y)
+    level = np.zeros(n)
+    trend_comp = np.zeros(n)
+    fitted = np.zeros(n)
+
+    level[0] = y[0]
+    trend_comp[0] = y[1] - y[0] if n > 1 else 0
+    fitted[0] = level[0]
+
+    for t in range(1, n):
+        level[t] = alpha * y[t] + (1 - alpha) * (level[t-1] + trend_comp[t-1])
+        trend_comp[t] = beta * (level[t] - level[t-1]) + (1 - beta) * trend_comp[t-1]
+        fitted[t] = level[t-1] + trend_comp[t-1]
+
+    return fitted, level, trend_comp
+
+def holt_winters(y, alpha, beta, gamma, m, trend_type='add', seasonal_type='add'):
+    n = len(y)
+    level = np.zeros(n)
+    trend_comp = np.zeros(n)
+    seasonal_comp = np.zeros(n + m)
+    fitted = np.zeros(n)
+
+    level[0] = np.mean(y[:m]) if n >= m else y[0]
+    trend_comp[0] = (np.mean(y[m:2*m]) - np.mean(y[:m])) / m if n >= 2*m else 0
+
+    for i in range(m):
+        if seasonal_type == 'add':
+            seasonal_comp[i] = y[i] - level[0] if i < n else 0
+        else:
+            seasonal_comp[i] = y[i] / level[0] if level[0] != 0 and i < n else 1
+
+    for t in range(1, n):
+        if seasonal_type == 'add':
+            level[t] = alpha * (y[t] - seasonal_comp[t % m]) + (1 - alpha) * (level[t-1] + trend_comp[t-1])
+            trend_comp[t] = beta * (level[t] - level[t-1]) + (1 - beta) * trend_comp[t-1]
+            seasonal_comp[t + m] = gamma * (y[t] - level[t]) + (1 - gamma) * seasonal_comp[t % m]
+            fitted[t] = level[t-1] + trend_comp[t-1] + seasonal_comp[t % m]
+        else:
+            level[t] = alpha * (y[t] / seasonal_comp[t % m]) + (1 - alpha) * (level[t-1] + trend_comp[t-1])
+            trend_comp[t] = beta * (level[t] - level[t-1]) + (1 - beta) * trend_comp[t-1]
+            seasonal_comp[t + m] = gamma * (y[t] / level[t]) + (1 - gamma) * seasonal_comp[t % m]
+            fitted[t] = (level[t-1] + trend_comp[t-1]) * seasonal_comp[t % m]
+
+    return fitted, level, trend_comp, seasonal_comp
+
+if seasonal == 'none':
+    if trend == 'none':
+        fitted = simple_exp_smoothing(series, alpha)
+        level = fitted.copy()
+        trend_comp = np.zeros(n)
+        last_level = level[-1]
+        last_trend = 0
+        forecast = np.array([last_level] * forecast_periods)
+    else:
+        fitted, level, trend_comp = holt_linear(series, alpha, beta)
+        last_level = level[-1]
+        last_trend = trend_comp[-1]
+        forecast = np.array([last_level + (i+1) * last_trend for i in range(forecast_periods)])
+else:
+    fitted, level, trend_comp, seasonal_comp = holt_winters(series, alpha, beta, gamma, seasonal_periods, trend, seasonal)
+    last_level = level[-1]
+    last_trend = trend_comp[-1]
+    forecast = []
+    for i in range(forecast_periods):
+        s_idx = (n + i) % seasonal_periods
+        if seasonal == 'add':
+            forecast.append(last_level + (i+1) * last_trend + seasonal_comp[s_idx])
+        else:
+            forecast.append((last_level + (i+1) * last_trend) * seasonal_comp[s_idx])
+    forecast = np.array(forecast)
+
+df['_es_fitted'] = np.nan
+df.loc[:len(fitted)-1, '_es_fitted'] = fitted
+df['_es_level'] = np.nan
+df.loc[:len(level)-1, '_es_level'] = level
+df['_es_trend'] = np.nan
+df.loc[:len(trend_comp)-1, '_es_trend'] = trend_comp
+
+residuals = series - fitted
+df['_es_residual'] = np.nan
+df.loc[:len(residuals)-1, '_es_residual'] = residuals
+df['_es_mape'] = np.mean(np.abs(residuals / series)) * 100
+
+forecast_df = pd.DataFrame({
+    'forecast_period': range(1, forecast_periods + 1),
+    'forecast_value': forecast
+})
+df['_es_forecast'] = str(forecast.tolist())
+df['_es_method'] = f'trend={trend}, seasonal={seasonal}'
+
+output = df
+`,
+  },
+
+  'copula-analysis': {
+    type: 'copula-analysis',
+    category: 'analysis',
+    label: 'Copula Analysis',
+    description: 'Model dependency structure between variables',
+    icon: 'Link',
+    defaultConfig: {
+      column1: '',
+      column2: '',
+      copulaType: 'gaussian',
+      nSamples: 1000,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+df = input_data.copy()
+col1 = config.get('column1', '')
+col2 = config.get('column2', '')
+copula_type = config.get('copulaType', 'gaussian')
+n_samples = int(config.get('nSamples', 1000))
+
+if not col1 or not col2:
+    raise ValueError("Two columns must be specified")
+
+x = df[col1].dropna().values
+y = df[col2].dropna().values
+n = min(len(x), len(y))
+x, y = x[:n], y[:n]
+
+u = stats.rankdata(x) / (n + 1)
+v = stats.rankdata(y) / (n + 1)
+
+if copula_type == 'gaussian':
+    rho = np.corrcoef(stats.norm.ppf(u), stats.norm.ppf(v))[0, 1]
+
+    z = np.column_stack([stats.norm.ppf(u), stats.norm.ppf(v)])
+    cov_matrix = np.array([[1, rho], [rho, 1]])
+
+    log_likelihood = -n/2 * np.log(1 - rho**2) - 1/(2*(1-rho**2)) * np.sum(
+        z[:, 0]**2 + z[:, 1]**2 - 2*rho*z[:, 0]*z[:, 1]
+    ) + n/2 * np.sum(z**2, axis=1).mean()
+
+    df['_copula_rho'] = rho
+    df['_copula_type'] = 'gaussian'
+
+elif copula_type == 'clayton':
+    def clayton_likelihood(theta, u, v):
+        if theta <= 0:
+            return 1e10
+        c = (1 + theta) * (u * v) ** (-theta - 1) * (u ** (-theta) + v ** (-theta) - 1) ** (-2 - 1/theta)
+        c = np.clip(c, 1e-10, 1e10)
+        return -np.sum(np.log(c))
+
+    from scipy.optimize import minimize_scalar
+    result = minimize_scalar(lambda t: clayton_likelihood(t, u, v), bounds=(0.01, 20), method='bounded')
+    theta = result.x
+
+    lower_tail_dep = 2 ** (-1/theta) if theta > 0 else 0
+
+    df['_copula_theta'] = theta
+    df['_copula_lower_tail_dep'] = lower_tail_dep
+    df['_copula_type'] = 'clayton'
+
+elif copula_type == 'frank':
+    def frank_likelihood(theta, u, v):
+        if abs(theta) < 0.01:
+            return 1e10
+        num = -theta * (np.exp(-theta) - 1) * np.exp(-theta * (u + v))
+        denom = ((np.exp(-theta * u) - 1) * (np.exp(-theta * v) - 1) + (np.exp(-theta) - 1)) ** 2
+        c = num / (denom + 1e-10)
+        c = np.clip(np.abs(c), 1e-10, 1e10)
+        return -np.sum(np.log(c))
+
+    from scipy.optimize import minimize_scalar
+    result = minimize_scalar(lambda t: frank_likelihood(t, u, v), bounds=(-20, 20), method='bounded')
+    theta = result.x
+
+    df['_copula_theta'] = theta
+    df['_copula_type'] = 'frank'
+
+tau = stats.kendalltau(x, y)[0]
+spearman = stats.spearmanr(x, y)[0]
+
+df['_copula_kendall_tau'] = tau
+df['_copula_spearman_rho'] = spearman
+
+df.loc[:n-1, '_copula_u'] = u
+df.loc[:n-1, '_copula_v'] = v
+
+output = df
+`,
+  },
+
+  'variance-threshold': {
+    type: 'variance-threshold',
+    category: 'analysis',
+    label: 'Variance Threshold',
+    description: 'Remove low-variance features',
+    icon: 'Filter',
+    defaultConfig: {
+      features: [],
+      threshold: 0.0,
+      normalizeFirst: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.feature_selection import VarianceThreshold
+from sklearn.preprocessing import StandardScaler
+
+df = input_data.copy()
+features = config.get('features', [])
+threshold = float(config.get('threshold', 0.0))
+normalize_first = config.get('normalizeFirst', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].copy()
+valid_idx = X.dropna().index
+X_clean = X.loc[valid_idx]
+
+if normalize_first:
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_clean)
+else:
+    X_scaled = X_clean.values
+
+variances = np.var(X_scaled, axis=0)
+
+selector = VarianceThreshold(threshold=threshold)
+selector.fit(X_scaled)
+selected_mask = selector.get_support()
+
+selected_features = [features[i] for i in range(len(features)) if selected_mask[i]]
+removed_features = [features[i] for i in range(len(features)) if not selected_mask[i]]
+
+for i, feat in enumerate(features):
+    df[f'_vt_variance_{feat}'] = variances[i]
+    df[f'_vt_selected_{feat}'] = selected_mask[i]
+
+df['_vt_selected_features'] = ','.join(selected_features)
+df['_vt_removed_features'] = ','.join(removed_features)
+df['_vt_n_selected'] = len(selected_features)
+df['_vt_n_removed'] = len(removed_features)
+df['_vt_threshold'] = threshold
+
+output = df
+`,
+  },
+
+  'hierarchical-clustering': {
+    type: 'hierarchical-clustering',
+    category: 'analysis',
+    label: 'Hierarchical Clustering',
+    description: 'Agglomerative clustering with custom distance metrics',
+    icon: 'GitMerge',
+    defaultConfig: {
+      features: [],
+      nClusters: 3,
+      linkage: 'ward',
+      metric: 'euclidean',
+      computeDistances: true,
+    },
+    inputs: 1,
+    outputs: 1,
+    pythonTemplate: `
+import pandas as pd
+import numpy as np
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.preprocessing import StandardScaler
+from scipy.spatial.distance import pdist, squareform
+from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
+
+df = input_data.copy()
+features = config.get('features', [])
+n_clusters = int(config.get('nClusters', 3))
+linkage_type = config.get('linkage', 'ward')
+metric = config.get('metric', 'euclidean')
+compute_distances = config.get('computeDistances', True)
+
+if not features:
+    features = df.select_dtypes(include=[np.number]).columns.tolist()
+
+X = df[features].copy()
+valid_idx = X.dropna().index
+X_clean = X.loc[valid_idx]
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X_clean)
+
+if linkage_type == 'ward':
+    metric = 'euclidean'
+
+model = AgglomerativeClustering(
+    n_clusters=n_clusters,
+    linkage=linkage_type,
+    metric=metric if linkage_type != 'ward' else 'euclidean',
+    compute_distances=compute_distances
+)
+labels = model.fit_predict(X_scaled)
+
+df.loc[valid_idx, '_hc_cluster'] = labels
+
+if compute_distances and hasattr(model, 'distances_'):
+    distances = model.distances_
+    df['_hc_merge_distances'] = str(distances.tolist()[:10])
+
+condensed_dist = pdist(X_scaled, metric=metric if linkage_type != 'ward' else 'euclidean')
+Z = linkage(condensed_dist, method=linkage_type)
+
+cluster_sizes = pd.Series(labels).value_counts().sort_index()
+for cluster_id in range(n_clusters):
+    df[f'_hc_cluster_{cluster_id}_size'] = cluster_sizes.get(cluster_id, 0)
+
+centroids = []
+for cluster_id in range(n_clusters):
+    mask = labels == cluster_id
+    if mask.sum() > 0:
+        centroid = X_scaled[mask].mean(axis=0)
+        centroids.append(centroid)
+
+if centroids:
+    for i, feat in enumerate(features):
+        for cluster_id in range(n_clusters):
+            if cluster_id < len(centroids):
+                df[f'_hc_centroid_{cluster_id}_{feat}'] = centroids[cluster_id][i]
+
+df['_hc_n_clusters'] = n_clusters
+df['_hc_linkage'] = linkage_type
+df['_hc_metric'] = metric
+
+output = df
+`,
+  },
 };
 
 export const blockCategories = [
@@ -19848,6 +21904,33 @@ export const blockCategories = [
       'collinearity-diagnostics',
       'bayesian-ab-calculator',
       'nested-cross-validation',
+      // New Pyodide-Compatible Analysis Blocks (December 2025)
+      'gaussian-mixture-model',
+      'dynamic-time-warping',
+      'lime-explainer',
+      'bayesian-optimization',
+      'time-series-features',
+      'robust-regression',
+      'kernel-density-estimation',
+      'spectral-clustering',
+      'cross-correlation',
+      'manifold-learning',
+      'semi-supervised-learning',
+      'multi-label-classification',
+      'conformal-prediction',
+      'one-class-svm',
+      'elliptic-envelope',
+      'isotonic-regression',
+      'power-transform',
+      'mutual-information-selection',
+      'sequential-feature-selection',
+      'permutation-importance',
+      'acf-pacf-analysis',
+      'stationarity-testing',
+      'exponential-smoothing',
+      'copula-analysis',
+      'variance-threshold',
+      'hierarchical-clustering',
     ] as BlockType[],
   },
   {
