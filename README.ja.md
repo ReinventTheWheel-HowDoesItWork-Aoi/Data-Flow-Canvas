@@ -8,7 +8,7 @@
 
 🚀 **Product Hunt**: [https://www.producthunt.com/products/data-flow-canvas](https://www.producthunt.com/products/data-flow-canvas)
 
-![Data Flow Canvas](https://img.shields.io/badge/version-1.1.4-blue)
+![Data Flow Canvas](https://img.shields.io/badge/version-1.1.5-blue)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-green)
 ![React](https://img.shields.io/badge/react-19.2-61DAFB)
 ![TypeScript](https://img.shields.io/badge/typescript-5.9-3178C6)
