@@ -28,7 +28,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Error details are captured in state for debugging but not logged to console
+    // to prevent sensitive information disclosure in production
+    // Consider integrating with error tracking services (e.g., Sentry) for production monitoring
   }
 
   handleReset = () => {
@@ -60,7 +62,7 @@ export class ErrorBoundary extends Component<Props, State> {
             {this.state.error && (
               <div className="bg-bg-tertiary rounded-lg p-4 mb-6 text-left">
                 <p className="text-small font-mono text-warm-coral break-all">
-                  {this.state.error.message}
+                  A rendering error occurred. Please refresh the page or try again.
                 </p>
               </div>
             )}
