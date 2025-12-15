@@ -125,6 +125,9 @@ import {
   Save,
   DatabaseZap,
   Waves,
+  Shield,
+  ShieldAlert,
+  Tags,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -229,7 +232,7 @@ const blocks: BlockInfo[] = [
   { icon: Layers, name: 'Array Aggregator', description: 'Aggregate list/array columns into scalar features (mean, sum, count, min, max) for handling nested/JSON data', category: 'Transform' },
   { icon: BarChart, name: 'Target-Aware Binning', description: 'Create optimal bins using decision tree that maximize information gain relative to target variable for better ML features', category: 'Transform' },
 
-  // Analysis (106 blocks)
+  // Analysis (142 blocks)
   { icon: BarChart3, name: 'Statistics', description: 'Calculate descriptive statistics and correlations', category: 'Analysis' },
   { icon: TrendingUp, name: 'Regression', description: 'Perform linear or logistic regression', category: 'Analysis' },
   { icon: Network, name: 'Clustering', description: 'K-means or hierarchical clustering', category: 'Analysis' },
@@ -346,6 +349,32 @@ const blocks: BlockInfo[] = [
   { icon: GitMerge, name: 'Collinearity Diagnostics', description: 'Analyze multicollinearity using VIF, condition number, and correlation matrix with automatic recommendations', category: 'Analysis' },
   { icon: FlaskConical, name: 'Bayesian A/B Test Calculator', description: 'Run Bayesian A/B tests with Beta-Binomial models to calculate probability of improvement and credible intervals', category: 'Analysis' },
   { icon: Repeat, name: 'Nested Cross-Validation', description: 'Perform unbiased model evaluation with nested CV - outer loop for evaluation, inner loop for hyperparameter tuning', category: 'Analysis' },
+  { icon: Circle, name: 'Gaussian Mixture Model', description: 'Soft clustering with probability assignments using GMM, includes BIC/AIC for model selection and anomaly detection', category: 'Analysis' },
+  { icon: Activity, name: 'Dynamic Time Warping', description: 'Measure similarity between time series with different lengths or speeds using elastic distance metrics', category: 'Analysis' },
+  { icon: Lightbulb, name: 'LIME Explainer', description: 'Generate local interpretable explanations for any model prediction by approximating locally with simple models', category: 'Analysis' },
+  { icon: Target, name: 'Bayesian Optimization', description: 'Optimize hyperparameters or functions efficiently using probabilistic surrogate models and acquisition functions', category: 'Analysis' },
+  { icon: Clock, name: 'Time Series Features', description: 'Extract comprehensive statistical features from time series including autocorrelation, entropy, and trend measures', category: 'Analysis' },
+  { icon: Shield, name: 'Robust Regression', description: 'Regression resistant to outliers using Huber, RANSAC, or Theil-Sen estimators for noisy data', category: 'Analysis' },
+  { icon: Waves, name: 'Kernel Density Estimation', description: 'Non-parametric density estimation to understand data distribution and identify modes or anomalies', category: 'Analysis' },
+  { icon: Network, name: 'Spectral Clustering', description: 'Graph-based clustering using eigenvalues of similarity matrix - effective for non-convex cluster shapes', category: 'Analysis' },
+  { icon: ArrowLeftRight, name: 'Cross-Correlation Analysis', description: 'Analyze lead-lag relationships between time series to find optimal alignment and correlation at different lags', category: 'Analysis' },
+  { icon: Minimize2, name: 'Manifold Learning', description: 'Non-linear dimensionality reduction using Isomap, MDS, or LLE to preserve local structure in data', category: 'Analysis' },
+  { icon: Users, name: 'Semi-Supervised Learning', description: 'Train classifiers with limited labeled data using Label Propagation, Label Spreading, or Self-Training', category: 'Analysis' },
+  { icon: Tags, name: 'Multi-Label Classification', description: 'Predict multiple labels per sample using Classifier Chains or Multi-Output classifiers', category: 'Analysis' },
+  { icon: Shield, name: 'Conformal Prediction', description: 'Generate prediction intervals with guaranteed coverage probability for classification and regression', category: 'Analysis' },
+  { icon: ShieldAlert, name: 'One-Class SVM', description: 'Novelty detection using Support Vector Machine trained on normal data only', category: 'Analysis' },
+  { icon: Circle, name: 'Elliptic Envelope', description: 'Detect outliers assuming Gaussian distribution using Mahalanobis distance', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Isotonic Regression', description: 'Non-parametric monotonic regression for probability calibration and trend fitting', category: 'Analysis' },
+  { icon: Zap, name: 'Power Transform', description: 'Make data more Gaussian-like using Box-Cox or Yeo-Johnson transformations', category: 'Analysis' },
+  { icon: Sparkles, name: 'Mutual Information Selection', description: 'Select features based on mutual information with target variable', category: 'Analysis' },
+  { icon: ListFilter, name: 'Sequential Feature Selection', description: 'Greedy forward or backward feature selection with cross-validation', category: 'Analysis' },
+  { icon: Shuffle, name: 'Permutation Importance', description: 'Model-agnostic feature importance by measuring performance drop when shuffling features', category: 'Analysis' },
+  { icon: Activity, name: 'ACF/PACF Analysis', description: 'Analyze autocorrelation and partial autocorrelation for time series model identification', category: 'Analysis' },
+  { icon: Scale, name: 'Stationarity Testing', description: 'Test time series stationarity using ADF, KPSS, and Phillips-Perron tests', category: 'Analysis' },
+  { icon: TrendingUp, name: 'Exponential Smoothing', description: 'Forecast with Holt-Winters method handling trend and seasonality', category: 'Analysis' },
+  { icon: LinkIcon, name: 'Copula Analysis', description: 'Model complex dependencies between variables using Gaussian, Clayton, or Frank copulas', category: 'Analysis' },
+  { icon: Filter, name: 'Variance Threshold', description: 'Remove low-variance features that provide little predictive power', category: 'Analysis' },
+  { icon: GitMerge, name: 'Hierarchical Clustering', description: 'Agglomerative clustering with dendrogram visualization for hierarchical groupings', category: 'Analysis' },
 
   // Visualization (70 blocks)
   { icon: PieChart, name: 'Chart', description: 'Create bar, line, scatter, pie, and histogram charts', category: 'Visualization' },
@@ -911,7 +940,7 @@ export default function HelpPage() {
                 <Box size={22} className="text-electric-indigo" />
               </div>
               <div>
-                <p className="text-h2 font-bold text-text-primary">277</p>
+                <p className="text-h2 font-bold text-text-primary">303</p>
                 <p className="text-small text-text-muted">{t('help.hero.availableBlocks')}</p>
               </div>
             </div>
