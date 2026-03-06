@@ -8,14 +8,12 @@ import { useUIStore } from './uiStore';
 
 describe('uiStore', () => {
   beforeEach(() => {
-    // Reset store to default values
     useUIStore.setState({
       isSidebarOpen: true,
       isRightPanelOpen: true,
       isBottomPanelOpen: false,
       rightPanelTab: 'config',
       bottomPanelTab: 'logs',
-      isCollaborationModalOpen: false,
       isSettingsModalOpen: false,
       isNewProjectModalOpen: false,
       isExportModalOpen: false,
@@ -76,17 +74,6 @@ describe('uiStore', () => {
   });
 
   describe('modals', () => {
-    it('should open and close collaboration modal', () => {
-      const store = useUIStore.getState();
-      expect(store.isCollaborationModalOpen).toBe(false);
-
-      store.openCollaborationModal();
-      expect(useUIStore.getState().isCollaborationModalOpen).toBe(true);
-
-      store.closeCollaborationModal();
-      expect(useUIStore.getState().isCollaborationModalOpen).toBe(false);
-    });
-
     it('should open and close settings modal', () => {
       const store = useUIStore.getState();
       expect(store.isSettingsModalOpen).toBe(false);
