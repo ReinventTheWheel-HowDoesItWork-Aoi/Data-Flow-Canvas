@@ -18,7 +18,7 @@ English | [日本語](README.ja.md)
 ### 🔒 Privacy First
 - **100% client-side processing** — All data transformation and analysis happens in your browser using WebAssembly
 - **Your data stays local** — CSV files and pipeline data are processed entirely in your browser and never uploaded to any server
-- **Secure authentication** — Account powered by Supabase; only your profile info is stored, not your data
+- **No account required** — Open the app and start building immediately, no sign-up needed
 
 ### 🎨 Visual Pipeline Builder
 - **Drag-and-drop interface** — Build pipelines visually with React Flow
@@ -28,11 +28,6 @@ English | [日本語](README.ja.md)
 ### 🐍 Python Powered
 - **Pyodide integration** — Full Python data science stack (pandas, numpy, scikit-learn) running in WebAssembly
 - **No installation** — Everything runs in your browser
-
-### 👥 Real-time Collaboration
-- **Secure server-relayed connections** — Work together through Supabase Realtime (IP addresses hidden)
-- **Authentication required** — Only signed-in users can collaborate
-- **Smart limits** — 30 max concurrent collaborators globally, 3 per session
 
 ### 🌍 Internationalization
 - **Multi-language support** — Available in English and Japanese
@@ -54,7 +49,6 @@ English | [日本語](README.ja.md)
 - npm 9+
 
 ### Installation
-
 ```bash
 # Clone the repository
 git clone https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas.git
@@ -68,7 +62,6 @@ npm run dev
 ```
 
 ### Building for Production
-
 ```bash
 # Build the application
 npm run build
@@ -83,13 +76,10 @@ npm run preview
 - **Canvas**: React Flow (@xyflow/react)
 - **State Management**: Zustand with Zundo (undo/redo)
 - **Python Runtime**: Pyodide (WebAssembly)
-- **Authentication**: Supabase
 - **Storage**: IndexedDB via Dexie.js
-- **Collaboration**: Supabase Realtime (Broadcast + Presence)
 - **Build Tool**: Vite
 
 ## 📁 Project Structure
-
 ```
 src/
 ├── components/
@@ -97,8 +87,7 @@ src/
 │   ├── blocks/        # Pipeline block components
 │   ├── canvas/        # React Flow canvas
 │   ├── visualization/ # Chart and table renderers
-│   ├── layout/        # Layout components
-│   └── auth/          # Authentication components
+│   └── layout/        # Layout components
 ├── pages/             # Route pages
 ├── stores/            # Zustand stores
 ├── hooks/             # Custom React hooks
@@ -106,10 +95,8 @@ src/
 │   ├── pyodide/       # Pyodide integration
 │   ├── execution/     # Pipeline execution engine
 │   ├── storage/       # IndexedDB storage
-│   ├── collaboration/ # Supabase Realtime collaboration
 │   ├── utils/         # Utility functions
-│   ├── i18n/          # Internationalization
-│   └── supabase/      # Supabase client
+│   └── i18n/          # Internationalization
 ├── types/             # TypeScript type definitions
 ├── constants/         # Block definitions, etc.
 └── test/              # Test utilities
@@ -149,5 +136,4 @@ The AGPL-3.0 license requires that any modifications or derivative works also be
 
 - [Pyodide](https://pyodide.org/) — Python in the browser
 - [React Flow](https://reactflow.dev/) — Node-based graph library
-- [Supabase](https://supabase.com/) — Authentication, database, and real-time collaboration
 - [Tailwind CSS](https://tailwindcss.com/) — Utility-first CSS framework
