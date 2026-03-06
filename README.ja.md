@@ -18,7 +18,7 @@
 ### 🔒 プライバシー第一
 - **100%クライアントサイド処理** — すべてのデータ変換と分析はWebAssemblyを使用してブラウザ内で行われます
 - **データはローカルに保存** — CSVファイルとパイプラインデータは完全にブラウザ内で処理され、サーバーにアップロードされることはありません
-- **セキュアな認証** — Supabaseによるアカウント管理。プロフィール情報のみが保存され、データは保存されません
+- **アカウント不要** — アプリを開いてすぐに使い始められます。サインアップ不要
 
 ### 🎨 ビジュアルパイプラインビルダー
 - **ドラッグ＆ドロップインターフェース** — React Flowでパイプラインを視覚的に構築
@@ -28,11 +28,6 @@
 ### 🐍 Python対応
 - **Pyodide統合** — 完全なPythonデータサイエンススタック（pandas、numpy、scikit-learn）がWebAssemblyで動作
 - **インストール不要** — すべてがブラウザで動作
-
-### 👥 リアルタイムコラボレーション
-- **セキュアなサーバー中継接続** — Supabase Realtimeを通じて共同作業（IPアドレスは非公開）
-- **認証必須** — サインインしたユーザーのみがコラボレーション可能
-- **スマートな制限** — グローバルで最大30人、セッションあたり最大3人の同時コラボレーター
 
 ### 🌍 国際化
 - **多言語対応** — 英語と日本語で利用可能
@@ -54,7 +49,6 @@
 - npm 9以上
 
 ### インストール
-
 ```bash
 # リポジトリをクローン
 git clone https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas.git
@@ -68,7 +62,6 @@ npm run dev
 ```
 
 ### 本番用ビルド
-
 ```bash
 # アプリケーションをビルド
 npm run build
@@ -83,13 +76,10 @@ npm run preview
 - **キャンバス**: React Flow (@xyflow/react)
 - **状態管理**: Zustand と Zundo（元に戻す/やり直し）
 - **Pythonランタイム**: Pyodide（WebAssembly）
-- **認証**: Supabase
 - **ストレージ**: Dexie.jsによるIndexedDB
-- **コラボレーション**: Supabase Realtime（Broadcast + Presence）
 - **ビルドツール**: Vite
 
 ## 📁 プロジェクト構成
-
 ```
 src/
 ├── components/
@@ -97,8 +87,7 @@ src/
 │   ├── blocks/        # パイプラインブロックコンポーネント
 │   ├── canvas/        # React Flowキャンバス
 │   ├── visualization/ # チャートとテーブルレンダラー
-│   ├── layout/        # レイアウトコンポーネント
-│   └── auth/          # 認証コンポーネント
+│   └── layout/        # レイアウトコンポーネント
 ├── pages/             # ルートページ
 ├── stores/            # Zustandストア
 ├── hooks/             # カスタムReactフック
@@ -106,10 +95,8 @@ src/
 │   ├── pyodide/       # Pyodide統合
 │   ├── execution/     # パイプライン実行エンジン
 │   ├── storage/       # IndexedDBストレージ
-│   ├── collaboration/ # Supabase Realtimeコラボレーション
 │   ├── utils/         # ユーティリティ関数
-│   ├── i18n/          # 国際化
-│   └── supabase/      # Supabaseクライアント
+│   └── i18n/          # 国際化
 ├── types/             # TypeScript型定義
 ├── constants/         # ブロック定義など
 └── test/              # テストユーティリティ
@@ -149,5 +136,4 @@ AGPL-3.0ライセンスでは、変更や派生作品も同じライセンスの
 
 - [Pyodide](https://pyodide.org/) — ブラウザでのPython
 - [React Flow](https://reactflow.dev/) — ノードベースのグラフライブラリ
-- [Supabase](https://supabase.com/) — 認証、データベース、リアルタイムコラボレーション
 - [Tailwind CSS](https://tailwindcss.com/) — ユーティリティファーストCSSフレームワーク
