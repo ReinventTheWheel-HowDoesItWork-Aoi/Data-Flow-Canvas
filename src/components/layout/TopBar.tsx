@@ -10,7 +10,6 @@ import {
   Play,
   Square,
   Save,
-  Users,
   Settings,
   Moon,
   Sun,
@@ -19,8 +18,6 @@ import {
   Loader2,
   Terminal,
   HelpCircle,
-  LogOut,
-  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import {
@@ -28,16 +25,9 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/Tooltip';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/Dropdown';
 import { LanguageSelector } from '@/components/ui/LanguageSelector';
 import { useUIStore } from '@/stores/uiStore';
 import { useProjectStore } from '@/stores/projectStore';
-import { useAuthStore } from '@/stores/authStore';
 import { useExecution } from '@/hooks/useExecution';
 import { useProject } from '@/hooks/useProject';
 
@@ -46,13 +36,11 @@ export function TopBar() {
   const {
     isDarkMode,
     toggleDarkMode,
-    openCollaborationModal,
     openSettingsModal,
     toggleBottomPanel,
     isBottomPanelOpen,
   } = useUIStore();
-  const { currentProject, isSaving, hasUnsavedChanges } = useProjectStore();
-  const { profile, signOut } = useAuthStore();
+  const { hasUnsavedChanges } = useProjectStore();
   const { saveCurrentProject } = useProject();
   const {
     runPipeline,
@@ -61,10 +49,6 @@ export function TopBar() {
     isPyodideReady,
     isPyodideLoading,
   } = useExecution();
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   const handleRun = () => {
     if (isRunning) {
@@ -160,21 +144,11 @@ export function TopBar() {
               variant="ghost"
               size="sm"
               onClick={handleSave}
-              isLoading={isSaving}
             >
               <Save size={18} />
             </Button>
           </TooltipTrigger>
           <TooltipContent>{t('topBar.saveProject')}</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="sm" onClick={openCollaborationModal}>
-              <Users size={18} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{t('topBar.collaborate')}</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -220,47 +194,6 @@ export function TopBar() {
           </TooltipTrigger>
           <TooltipContent>{t('topBar.settings')}</TooltipContent>
         </Tooltip>
-
-        {/* User Menu */}
-        {profile && (
-          <>
-            <div className="w-px h-6 bg-border-default mx-1" />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors">
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-electric-indigo to-soft-violet flex items-center justify-center">
-                    <span className="text-xs font-medium text-white">
-                      {profile.firstName.charAt(0).toUpperCase()}
-                      {profile.lastName.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <span className="text-small font-medium hidden sm:inline">
-                    {profile.firstName}
-                  </span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-3 py-2 border-b border-border-default">
-                  <p className="text-small font-medium text-text-primary">
-                    {profile.firstName} {profile.lastName}
-                  </p>
-                  <p className="text-small text-text-muted truncate">
-                    {profile.email}
-                  </p>
-                  {profile.company && (
-                    <p className="text-small text-text-muted">
-                      {profile.company}
-                    </p>
-                  )}
-                </div>
-                <DropdownMenuItem onClick={handleSignOut} className="text-warm-coral">
-                  <LogOut size={16} className="mr-2" />
-                  {t('topBar.signOut')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        )}
       </div>
     </header>
   );
