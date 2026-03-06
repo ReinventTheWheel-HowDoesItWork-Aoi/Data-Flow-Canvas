@@ -6,4 +6,3 @@
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
 export { useExecution } from './useExecution';
 export { useProject } from './useProject';
-export { useCollaboration } from './useCollaboration';
