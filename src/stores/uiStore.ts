@@ -14,7 +14,6 @@ interface UIState {
   bottomPanelTab: 'logs' | 'output';
 
   // Modals
-  isCollaborationModalOpen: boolean;
   isSettingsModalOpen: boolean;
   isNewProjectModalOpen: boolean;
   isExportModalOpen: boolean;
@@ -29,8 +28,6 @@ interface UIState {
   toggleBottomPanel: () => void;
   setRightPanelTab: (tab: 'config' | 'preview' | 'visualization') => void;
   setBottomPanelTab: (tab: 'logs' | 'output') => void;
-  openCollaborationModal: () => void;
-  closeCollaborationModal: () => void;
   openSettingsModal: () => void;
   closeSettingsModal: () => void;
   openNewProjectModal: () => void;
@@ -52,7 +49,6 @@ export const useUIStore = create<UIState>((set) => ({
   bottomPanelTab: 'logs',
 
   // Modals
-  isCollaborationModalOpen: false,
   isSettingsModalOpen: false,
   isNewProjectModalOpen: false,
   isExportModalOpen: false,
@@ -69,8 +65,6 @@ export const useUIStore = create<UIState>((set) => ({
   toggleBottomPanel: () => set((state) => ({ isBottomPanelOpen: !state.isBottomPanelOpen })),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
   setBottomPanelTab: (tab) => set({ bottomPanelTab: tab }),
-  openCollaborationModal: () => set({ isCollaborationModalOpen: true }),
-  closeCollaborationModal: () => set({ isCollaborationModalOpen: false }),
   openSettingsModal: () => set({ isSettingsModalOpen: true }),
   closeSettingsModal: () => set({ isSettingsModalOpen: false }),
   openNewProjectModal: () => set({ isNewProjectModalOpen: true }),
