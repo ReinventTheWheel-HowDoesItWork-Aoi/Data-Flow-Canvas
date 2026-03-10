@@ -665,7 +665,7 @@
     "hero": {
       "titleLine1": "Canvas for",
       "titleLine2": "Data Science",
-      "description": "Build powerful data pipelines visually. Drag, drop, and connect blocks to transform, analyze, and visualize your data — all without writing code.",
+      "description": "Build powerful data pipelines visually. Drag, drop, and connect blocks to transform, analyze, and visualize your data all without writing code.",
       "ctaPrimary": "Start Building Free",
       "ctaExamples": "View Examples",
       "ctaGuide": "Get Started Guide",
@@ -681,7 +681,7 @@
       },
       "quickStart": {
         "title": "Quick Start",
-        "description": "No installation needed. Create a free account and start building data pipelines immediately."
+        "description": "No installation or sign in needed. Start building data pipelines immediately."
       },
       "collaborate": {
         "title": "Collaborate Live",
