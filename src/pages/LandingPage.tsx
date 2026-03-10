@@ -12,7 +12,7 @@ import {
   Sparkles,
   Lock,
   Zap,
-  Users,
+  LayoutGrid,
   Code2,
   Github,
   Play,
@@ -1231,7 +1231,7 @@ const features = [
   {
     titleKey: 'landing.features.collaborate.title',
     descriptionKey: 'landing.features.collaborate.description',
-    icon: Users,
+    icon: LayoutGrid,
     bgColor: 'bg-plasma-purple/20',
     iconColor: 'text-plasma-purple',
   },
