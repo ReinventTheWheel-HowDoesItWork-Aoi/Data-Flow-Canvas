@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
-const GITHUB_REPO = 'https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas';
+const GITHUB_REPO = 'https://github.com/lavellehatcherjr/Data-Flow-Canvas';
 const LAST_UPDATED = 'November 27, 2025';
 
 interface SectionProps {
