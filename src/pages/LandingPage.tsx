@@ -641,7 +641,7 @@ export default function LandingPage() {
           </motion.button>
 
           <motion.a
-            href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas"
+            href="https://github.com/lavellehatcherjr/Data-Flow-Canvas"
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
@@ -1166,7 +1166,7 @@ export default function LandingPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <a
-              href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas/blob/main/README.md"
+              href="https://github.com/lavellehatcherjr/Data-Flow-Canvas/blob/main/README.md"
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
@@ -1195,7 +1195,7 @@ export default function LandingPage() {
               {t('landing.footer.privacy')}
             </Link>
             <a
-              href="https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas"
+              href="https://github.com/lavellehatcherjr/Data-Flow-Canvas"
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
