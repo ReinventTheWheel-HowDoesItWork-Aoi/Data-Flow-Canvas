@@ -51,7 +51,7 @@
 ### インストール
 ```bash
 # リポジトリをクローン
-git clone https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas.git
+git clone https://github.com/lavellehatcherjr/Data-Flow-Canvas.git
 cd Data-Flow-Canvas
 
 # 依存関係をインストール
@@ -131,6 +131,10 @@ AGPL-3.0ライセンスでは、変更や派生作品も同じライセンスの
 - カスタム条件でのエンタープライズ展開
 
 💼 **お問い合わせ**: [Lavelle Hatcher Jr](https://www.linkedin.com/in/lavellemhatcherjr)
+
+## 📋 サードパーティライセンス
+
+このプロジェクトは複数のオープンソースライブラリを使用しています。すべてのランタイム依存関係の完全なライセンステキストについては、[THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) ファイルを参照してください。
 
 ## 🙏 謝辞
 
