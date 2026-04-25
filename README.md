@@ -1,6 +1,6 @@
 # Data Flow Canvas
 
-English | [日本語](README.ja.md) 
+English | [日本語](README.ja.md)
 
 **Canvas for Data Science** — A browser-based visual data science platform that enables users to build, execute, and share data transformation and analysis pipelines through an intuitive drag-and-drop interface.
 
@@ -51,7 +51,7 @@ English | [日本語](README.ja.md)
 ### Installation
 ```bash
 # Clone the repository
-git clone https://github.com/ReinventTheWheel-HowDoesItWork-Aoi/Data-Flow-Canvas.git
+git clone https://github.com/lavellehatcherjr/Data-Flow-Canvas.git
 cd Data-Flow-Canvas
 
 # Install dependencies
@@ -131,6 +131,10 @@ The AGPL-3.0 license requires that any modifications or derivative works also be
 - Enterprise deployment with custom terms
 
 💼 **Contact**: [Lavelle Hatcher Jr](https://www.linkedin.com/in/lavellemhatcherjr)
+
+## 📋 Third-Party Licenses
+
+This project uses several open-source libraries. See the [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) file for the full license texts of all runtime dependencies.
 
 ## 🙏 Acknowledgments
 
